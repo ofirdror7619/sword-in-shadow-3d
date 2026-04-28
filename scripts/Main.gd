@@ -91,7 +91,7 @@ const FADED_DIAMOND_CATALOG := [
 ]
 const SPELL_CATALOG := [
 	# --- Attack ---
-	{"id": "searing_fire",       "name": "Searing Fire",          "description": "Fire Storm deals 25% more damage.",                    "diamond_cost": 4,  "category": "attack",  "image": "res://assets/images/spells/attack/SearingFire.png"},
+	{"id": "fire_storm",       "name": "Firestorm",          "description": "Fire Storm deals 25% more damage.",                    "diamond_cost": 4,  "category": "attack",  "image": "res://assets/images/spells/attack/firestorm.png"},
 	{"id": "absolute_zero",      "name": "Absolute Zero",         "description": "Freeze all nearby enemies briefly.",                    "diamond_cost": 6,  "category": "attack",  "image": "res://assets/images/spells/attack/AbsoluteZero.png"},
 	{"id": "abyssal_blade",      "name": "Abyssal Blade",         "description": "Shadow slash attack deals dark damage.",                "diamond_cost": 5,  "category": "attack",  "image": "res://assets/images/spells/attack/AbyssalBlade.png"},
 	{"id": "call_from_beyond",   "name": "Call From The Beyond",  "description": "Summon a demon ally from the void.",                   "diamond_cost": 7,  "category": "attack",  "image": "res://assets/images/spells/attack/CallFromTheBeyond.png"},
@@ -1967,7 +1967,7 @@ func _on_firestorm_requested(target_position: Vector3) -> void:
 		storm.radius += 1.35
 		storm.strikes += 4
 	storm.damage = int(round(float(storm.damage) * player.get_damage_multiplier()))
-	if player.has_spell("searing_fire"):
+	if player.has_spell("fire_storm"):
 		storm.damage = int(round(float(storm.damage) * 1.25))
 	storm.damage = int(round(float(storm.damage) * player.get_skill_damage_multiplier()))
 	storm.enemy_hit.connect(_on_firestorm_enemy_hit)

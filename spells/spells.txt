@@ -20,8 +20,8 @@ Soul Drain – steal HP
 Abyssal blade – shadow slash attack
 
 
-🛡️ 2. Defense Spells
-Titanum – reduced damage (you have it ✅)
+🛡️ 2. Defense` Spells
+Titanium – reduced damage (you have it ✅)
 Armor Of The Undead – absorbs damage
 Eclipse Shield – reflects part of damage
 

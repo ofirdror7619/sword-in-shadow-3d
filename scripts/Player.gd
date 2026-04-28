@@ -322,7 +322,7 @@ func get_active_attack_spell_damage() -> int:
 	var total_damage := 28 + level * 7
 	total_damage = int(round(float(total_damage) * _damage_multiplier))
 	total_damage = int(round(float(total_damage) * _socket_damage_multiplier))
-	if has_spell("searing_fire"):
+	if has_spell("fire_storm"):
 		total_damage = int(round(float(total_damage) * 1.25))
 	total_damage = int(round(float(total_damage) * get_skill_damage_multiplier()))
 	return total_damage

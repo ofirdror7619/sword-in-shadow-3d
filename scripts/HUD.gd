@@ -61,7 +61,7 @@ const SPELL_SLOT_HOVER_LABELS := {
 	"debuff": "Debuff"
 }
 const SPELL_ID_TO_DISPLAY_NAME := {
-	"searing_fire": "Searing Fire",
+	"fire_storm": "Firestorm",
 	"wide_flame": "Widened Flame",
 	"quickened_ritual": "Quickened Ritual",
 	"ember_stride": "Ember Stride"
@@ -92,20 +92,23 @@ const SPELL_STORE_CELL_SIZE := Vector2(104.0, 104.0)
 const SPELL_STORE_NAME_BLOCK_HEIGHT := 24.0
 const SPELL_STORE_PRICE_BLOCK_HEIGHT := 12.0
 const INVENTORY_DIAMOND_ICON_SIZE := Vector2(28.0, 28.0)
-const INVENTORY_SOCKET_COUNT := 8
+const INVENTORY_SOCKET_COUNT := 10
 const INVENTORY_SOCKET_HITBOX_SIZE := Vector2(56.0, 56.0)
+const INVENTORY_SOCKET_CORNER_RADIUS := 28
 const INVENTORY_SOCKET_POSITIONS := [
-	Vector2(62.0, 82.0),
-	Vector2(50.0, 146.0),
-	Vector2(48.0, 214.0),
-	Vector2(64.0, 282.0),
-	Vector2(274.0, 80.0),
-	Vector2(287.0, 145.0),
-	Vector2(288.0, 214.0),
-	Vector2(274.0, 282.0)
+	Vector2(83.0, 110.0),
+	Vector2(115.0, 102.0),
+	Vector2(148.0, 88.0),
+	Vector2(181.0, 84.0),
+	Vector2(214.0, 95.0),
+	Vector2(248.0, 91.0),
+	Vector2(281.0, 81.0),
+	Vector2(317.0, 86.0),
+	Vector2(352.0, 102.0),
+	Vector2(386.0, 110.0)
 ]
 const DEMON_MENU_BUTTON_SIZE := Vector2(92.0, 92.0)
-const CHARACTER_PANEL_SIZE := Vector2(980.0, 620.0)
+const CHARACTER_PANEL_SIZE := Vector2(980.0, 700.0)
 const CHARACTER_PANEL_TAB_STATS := "stats"
 const CHARACTER_PANEL_TAB_SPELLS := "spells"
 const CHARACTER_PANEL_TAB_INVENTORY := "inventory"
@@ -1564,7 +1567,7 @@ func _make_spell_cell(item: Dictionary) -> Control:
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
-	vbox.add_theme_constant_override("separation", 2)
+	vbox.add_theme_constant_override("separation", 1)
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn.add_child(vbox)
 
@@ -1573,16 +1576,26 @@ func _make_spell_cell(item: Dictionary) -> Control:
 	if not img_path.is_empty():
 		var tex: Texture2D = load(img_path) as Texture2D
 		if tex != null:
+			var sigil_slot := CenterContainer.new()
+			sigil_slot.custom_minimum_size = Vector2(0.0, 34.0)
+			sigil_slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			sigil_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			vbox.add_child(sigil_slot)
+
+			var icon_frame := Control.new()
+			icon_frame.custom_minimum_size = Vector2(34.0, 34.0)
+			icon_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			sigil_slot.add_child(icon_frame)
+
 			var tex_rect := TextureRect.new()
 			tex_rect.texture = tex
-			tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+			tex_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			tex_rect.custom_minimum_size = Vector2(34.0, 34.0)
-			tex_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			if learned:
 				tex_rect.modulate = Color(0.55, 0.88, 0.55, 0.85)
-			vbox.add_child(tex_rect)
+			icon_frame.add_child(tex_rect)
 		else:
 			vbox.add_child(_make_spell_fallback_sigil(spell_name, learned))
 	else:
@@ -1591,8 +1604,9 @@ func _make_spell_cell(item: Dictionary) -> Control:
 	var name_label := _label(spell_name, 10)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	name_label.custom_minimum_size = Vector2(88.0, SPELL_STORE_NAME_BLOCK_HEIGHT)
+	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.custom_minimum_size = Vector2(88.0, SPELL_STORE_NAME_BLOCK_HEIGHT - 2.0)
 	name_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	name_label.clip_text = true
 	if learned:
@@ -2009,11 +2023,12 @@ func _on_spell_chip_mouse_exited() -> void:
 func _make_inventory_view() -> Control:
 	var inventory: HBoxContainer = HBoxContainer.new()
 	inventory.add_theme_constant_override("separation", 24)
+	inventory.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	inventory.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 	# --- Left: Gloves with invisible socket hit-areas ---
 	var equip_frame: Control = Control.new()
-	equip_frame.custom_minimum_size = Vector2(430.0, 500.0)
+	equip_frame.custom_minimum_size = Vector2(520.0, 580.0)
 	equip_frame.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	equip_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inventory.add_child(equip_frame)
@@ -2167,7 +2182,7 @@ func _apply_inventory_socket_style(socket: Panel, color: Color, filled: bool, ho
 	style.set_border_width_all(0)
 	if hovered_drop_target:
 		style.bg_color = style.bg_color.lightened(0.16)
-	style.set_corner_radius_all(34)
+	style.set_corner_radius_all(INVENTORY_SOCKET_CORNER_RADIUS)
 	socket.add_theme_stylebox_override("panel", style)
 
 func _inventory_socket_hitbox_style(fill: Color) -> StyleBoxFlat:
@@ -2175,7 +2190,7 @@ func _inventory_socket_hitbox_style(fill: Color) -> StyleBoxFlat:
 	style.bg_color = fill
 	style.border_color = Color(0.0, 0.0, 0.0, 0.0)
 	style.set_border_width_all(0)
-	style.set_corner_radius_all(34)
+	style.set_corner_radius_all(INVENTORY_SOCKET_CORNER_RADIUS)
 	return style
 
 func _update_inventory_socket_glow() -> void:
@@ -2221,6 +2236,7 @@ func _refresh_inventory_diamond_grid(owned_data: Variant, catalog: Array) -> voi
 		# Cell container
 		var cell := Panel.new()
 		cell.custom_minimum_size = Vector2(50.0, 60.0)
+		cell.clip_contents = true
 		cell.mouse_filter = Control.MOUSE_FILTER_STOP
 		cell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		var cell_style := StyleBoxFlat.new()
@@ -2234,6 +2250,8 @@ func _refresh_inventory_diamond_grid(owned_data: Variant, catalog: Array) -> voi
 
 		var cell_content := VBoxContainer.new()
 		cell_content.set_anchors_preset(Control.PRESET_FULL_RECT)
+		cell_content.offset_top = 3.0
+		cell_content.offset_bottom = -2.0
 		cell_content.alignment = BoxContainer.ALIGNMENT_CENTER
 		cell_content.add_theme_constant_override("separation", 2)
 		cell_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2733,7 +2751,7 @@ func _slot_spell_name_for_category(category: String) -> String:
 	return "None"
 
 func _spell_category_for_id(spell_id: String) -> String:
-	if spell_id in ["searing_fire", "wide_flame"]:
+	if spell_id in ["fire_storm", "wide_flame"]:
 		return "attack"
 	if spell_id in ["quickened_ritual", "ember_stride"]:
 		return "buff"
