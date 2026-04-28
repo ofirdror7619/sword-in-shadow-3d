@@ -1,0 +1,74 @@
+SPELL SYSTEM EXPANSION
+⚔️ 1. Attack Spells (Offense)
+🔥 Fire / Chaos
+Firestorm – raining fire (you have it ✅)
+Infernal Burst – explosion around player
+Hell Spear – piercing fire projectile
+Ashen Rain – continuous burn zone
+
+❄️ Ice / Control
+Ice Smash – falling ice (you have it ✅)
+Absolute Zero – freeze everything briefly ❄️
+
+⚡ Lightning / Speed
+Electricity Vortex – jumps between enemies
+
+
+🩸 Dark / Demon (YOUR CORE THEME)
+Call From the Beyond – summon (you have it ✅)
+Soul Drain – steal HP
+Abyssal blade – shadow slash attack
+
+
+🛡️ 2. Defense Spells
+Titanum – reduced damage (you have it ✅)
+Armor Of The Undead – absorbs damage
+Eclipse Shield – reflects part of damage
+
+❤️ 3. Healing Spells
+Reincarnation – faster healing rate
+Soul Harvest – heal on enemy kill
+
+
+💪 4. Buff Spells
+Power of the Underworld – more damage (you have it ✅)
+Killing Radius – bigger AoE (you have it ✅)
+Demonic Frenzy – attack speed ↑
+Void Infusion – attacks apply shadow damage
+Unholy Momentum – movement speed ↑
+
+
+☠️ 5. Debuff Spells
+Mark of Weakness – enemies take more damage (you have it ✅)
+Curse of Laziness – slow enemies
+Slowly We Rot – damage over time
+Fear Pulse – enemies run away
+Silence – disable enemy abilities
+Chain of Torment – link enemies, share damage
+
+🧠 NEXT LEVEL IDEAS (THIS IS WHERE IT GETS REALLY GOOD)
+🔗 Spell Synergies (VERY IMPORTANT)
+Fire + Wind → bigger explosions
+Ice + Lightning → stun + freeze combo
+Void + Summon → stronger demons
+Curse + Fire → massive burn damage
+
+👉 This makes builds feel unique.
+
+💀 Demon Evolution System (INSANE IDEA FOR YOUR GAME)
+
+Spells change based on corruption level:
+
+Low corruption → normal spells
+High corruption → mutated versions
+
+Example:
+
+Firestorm → Hellstorm (bigger, chaotic, harder to control)
+Heal → Blood Heal (stronger but costs HP)
+
+🎮 Casting Styles (adds depth)
+Instant cast
+Channeling (hold key)
+Charged spells (stronger if held)
+Passive aura spells (like your flame ring 🔥)

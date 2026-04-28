@@ -1,0 +1,88 @@
+diamonds
+💎 Diamond List (balanced + game-ready)
+🔴 1. Diamond of Rush
+
+Effect: -X% cooldown on abilities
+👉 Fast, aggressive playstyle
+
+🔵 2. Diamond of Focus
+
+Effect: +X% damage
+👉 Pure DPS
+
+🟢 3. Diamond of Vitality
+
+Effect: +X% max HP / life steal
+👉 Survivability
+
+🟡 4. Diamond of Fortune
+
+Effect: +X% gold / loot drop
+👉 Farming build
+
+🟣 5. Diamond of Corruption
+
+Effect: Attacks apply damage over time (shadow burn)
+👉 Fits your demon theme PERFECTLY
+
+🔷 6. Diamond of Echo
+
+Effect: X% chance to repeat attack (double cast)
+👉 Feels AMAZING in gameplay
+
+⚫ 7. Diamond of Void
+
+Effect: Attacks pierce enemies
+👉 Great for crowd control
+
+🟠 8. Diamond of Fury
+
+Effect: Increase attack speed
+👉 Aggressive melee builds
+
+⚪ 9. Diamond of Guardian
+
+Effect: Temporary shield on hit / low HP
+👉 Defensive clutch mechanic
+
+🔥 10. Diamond of Flame Ring
+
+Effect: Expands your fire aura (fits your ring of flames idea 🔥)
+👉 This one is VERY on-brand
+
+❄️ 11. Diamond of Frostbind
+
+Effect: Chance to slow / freeze enemies
+👉 Control playstyle
+
+⚡ 12. Diamond of Storm
+
+Effect: Chain lightning between enemies
+👉 Visually satisfying + strong
+
+🧠 Advanced Mechanics (THIS is where it becomes 🔥🔥🔥)
+🧩 Synergies (super important)
+
+Example combos:
+
+🔴 Rush + 🟠 Fury → Berserker build
+🟣 Corruption + ⚫ Void → AOE DoT build
+🔵 Focus x8 → Glass cannon
+🟢 Vitality + ⚪ Guardian → Tank build
+💎 Socket Bonuses (INSANE potential)
+
+If player fills all 8:
+
+8 same color → Ultimate bonus
+Example: 8x Red → Cooldown almost zero (broken fast build)
+Mixed combos:
+4 red + 4 purple → unlock "Demon Overdrive"
+
+My recommendation (for your game)
+
+Use 4 core elements:
+
+🔥 Fire → damage / explosions
+❄️ Ice → control / freeze
+⚡ Lightning → speed / chain
+🟣 Void → manipulation / spread
