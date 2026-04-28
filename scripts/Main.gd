@@ -13,10 +13,12 @@ const FLOOR_TEXTURE: Texture2D = preload("res://assets/images/floor/castle-stone
 const OPENING_LOGO_TEXTURE: Texture2D = preload("res://assets/images/opening/logo.png")
 const OPENING_WHISPER_FONT: FontFile = preload("res://assets/fonts/Simbiot.ttf")
 const LEVEL_ONE_MUSIC: AudioStreamMP3 = preload("res://assets/audio/music/music-level-1.mp3")
+const TOWN_MUSIC: AudioStreamMP3 = preload("res://assets/audio/music/town.mp3")
 const OPENING_AURA_SOUND: AudioStreamMP3 = preload("res://assets/audio/sounds/aura.mp3")
 const ANGEL_DEAD_SOUND: AudioStream = preload("res://assets/audio/sounds/angel-dead.mp3")
 const EXIT_SOUND: AudioStream = preload("res://assets/audio/sounds/exit.mp3")
 const FIRE_STORM_SOUND: AudioStream = preload("res://assets/audio/sounds/fire-storm.mp3")
+const FIRE_STORM_BOOM_SOUND: AudioStream = preload("res://assets/audio/sounds/fire-storm-boom.mp3")
 const TREASURE_CHEST_SOUND: AudioStream = preload("res://assets/audio/sounds/treasure-chest.mp3")
 const PORTAL_FRAME_TEXTURE_PATH := "res://assets/images/objects/PortalFrame.png"
 const VENDOR_FRONT_TEXTURE_PATH := "res://assets/images/NPC/vendor-1/vendor-front.png"
@@ -24,6 +26,15 @@ const VENDOR_SIDE_TEXTURE_PATH := "res://assets/images/NPC/vendor-1/vendor-side.
 const VENDOR_BACK_TEXTURE_PATH := "res://assets/images/NPC/vendor-1/vendor-back.png"
 const SPELL_SHOP_MODEL_PATH := "res://assets/images/NPC/spell-shop/spell-shop.glb"
 const SPELL_SHOP_TEXTURE_PATH := "res://assets/images/NPC/spell-shop/spell-shop.png"
+const TOWN_BARREL_TEXTURE_PATH := "res://assets/images/objects/town/barrel.png"
+const TOWN_VENDOR_MAN_TEXTURE_PATH := "res://assets/images/objects/town/man-1.png"
+const TOWN_VENDOR_WOMAN_TEXTURE_PATH := "res://assets/images/objects/town/woman-1.png"
+const TOWN_TREE_TEXTURE_PATHS := [
+	"res://assets/images/objects/town/tree-1.png",
+	"res://assets/images/objects/town/tree-2.png",
+	"res://assets/images/objects/town/tree-3.png",
+	"res://assets/images/objects/town/tree-4.png"
+]
 const WHISPER_INTRODUCTION_PATH := "res://theWhisper/introduction.txt"
 const WHISPER_AFTER_KILLING_PATH := "res://theWhisper/after-killing.txt"
 const WHISPER_WAITING_PATH := "res://theWhisper/waiting.txt"
@@ -116,6 +127,10 @@ var active_vendor_id := ""
 var vendor_front_texture: Texture2D
 var vendor_side_texture: Texture2D
 var vendor_back_texture: Texture2D
+var town_barrel_texture: Texture2D
+var town_vendor_man_texture: Texture2D
+var town_vendor_woman_texture: Texture2D
+var town_tree_textures: Array[Texture2D] = []
 var spell_shop_texture: Texture2D
 var spell_shop_scene: PackedScene
 var vendor_sprites: Array[Dictionary] = []
@@ -222,9 +237,12 @@ func _reset_camera_zoom() -> void:
 func _make_hud() -> void:
 	hud = HudScript.new() as SISHUD
 	add_child(hud)
+	if player != null:
+		player.set_mouse_block_check(Callable(hud, "is_mouse_over_character_panel"))
 	hud.resurrect_requested.connect(_on_resurrect_requested)
 	hud.shop_purchase_requested.connect(_on_shop_purchase_requested)
 	hud.shop_closed.connect(_on_shop_closed)
+	hud.skill_tree_point_requested.connect(_on_skill_tree_point_requested)
 	hud.update_stats(player.get_stats())
 	_update_possession()
 
@@ -245,14 +263,23 @@ func _make_whisper_system() -> void:
 func _make_music_player() -> void:
 	music_player = AudioStreamPlayer.new()
 	music_player.name = "LevelOneMusic"
-	var music_stream := LEVEL_ONE_MUSIC.duplicate() as AudioStreamMP3
-	if music_stream != null:
-		music_stream.loop = true
-		music_player.stream = music_stream
-	else:
-		music_player.stream = LEVEL_ONE_MUSIC
+	_set_background_music(LEVEL_ONE_MUSIC)
 	music_player.volume_db = -7.0
 	add_child(music_player)
+
+func _set_background_music(track: AudioStreamMP3) -> void:
+	if music_player == null:
+		return
+	var stream_to_use: AudioStream = track
+	var looped_track := track.duplicate() as AudioStreamMP3
+	if looped_track != null:
+		looped_track.loop = true
+		stream_to_use = looped_track
+	var was_playing := music_player.playing
+	music_player.stop()
+	music_player.stream = stream_to_use
+	if was_playing and DisplayServer.get_name() != "headless":
+		music_player.play()
 
 func _make_opening_aura_player() -> void:
 	opening_aura_player = AudioStreamPlayer.new()
@@ -809,6 +836,18 @@ func _load_vendor_textures() -> void:
 		vendor_side_texture = load(VENDOR_SIDE_TEXTURE_PATH) as Texture2D
 	if vendor_back_texture == null and ResourceLoader.exists(VENDOR_BACK_TEXTURE_PATH):
 		vendor_back_texture = load(VENDOR_BACK_TEXTURE_PATH) as Texture2D
+	if town_barrel_texture == null and ResourceLoader.exists(TOWN_BARREL_TEXTURE_PATH):
+		town_barrel_texture = load(TOWN_BARREL_TEXTURE_PATH) as Texture2D
+	if town_vendor_man_texture == null and ResourceLoader.exists(TOWN_VENDOR_MAN_TEXTURE_PATH):
+		town_vendor_man_texture = load(TOWN_VENDOR_MAN_TEXTURE_PATH) as Texture2D
+	if town_vendor_woman_texture == null and ResourceLoader.exists(TOWN_VENDOR_WOMAN_TEXTURE_PATH):
+		town_vendor_woman_texture = load(TOWN_VENDOR_WOMAN_TEXTURE_PATH) as Texture2D
+	if town_tree_textures.is_empty():
+		for tree_texture_path in TOWN_TREE_TEXTURE_PATHS:
+			if ResourceLoader.exists(tree_texture_path):
+				var tree_texture := load(tree_texture_path) as Texture2D
+				if tree_texture != null:
+					town_tree_textures.append(tree_texture)
 	if spell_shop_scene == null and ResourceLoader.exists(SPELL_SHOP_MODEL_PATH):
 		spell_shop_scene = load(SPELL_SHOP_MODEL_PATH) as PackedScene
 	if spell_shop_texture == null and ResourceLoader.exists(SPELL_SHOP_TEXTURE_PATH):
@@ -1019,7 +1058,7 @@ func _make_shopfront(parent: Node3D, vendor_id: String, vendor_name: String, sta
 		_:
 			pass
 
-	_make_vendor_figure(parent, Vector3(0.0, 1.08, -0.15), accent)
+	_make_vendor_figure(parent, Vector3(0.0, 0.0, 2.2), accent, vendor_id)
 
 func _make_diamond_shop_details(parent: Node3D, accent: Color) -> void:
 	_make_diamond_icon(parent, Vector3(0.0, 3.42, 1.1), 0.78, accent)
@@ -1108,12 +1147,14 @@ func _make_town_street_dressing() -> void:
 		{"position": Vector3(10.8, 0.0, -14.0), "yaw": -8.0}
 	]:
 		_make_town_crate(crate_data["position"], float(crate_data["yaw"]))
-	for barrel_position in [Vector3(-17.0, 0.0, 10.8), Vector3(17.2, 0.0, -2.4), Vector3(3.7, 0.0, -18.8)]:
-		_make_town_barrel(barrel_position)
+	for _index in range(16):
+		_make_town_barrel(_random_town_decor_position())
 	_make_town_banner(Vector3(-22.4, 2.5, 5.0), 90.0, Color(0.16, 0.04, 0.2), Color(0.78, 0.18, 1.0))
 	_make_town_banner(Vector3(22.4, 2.7, -6.0), -90.0, Color(0.05, 0.11, 0.18), Color(0.12, 0.78, 1.0))
 	_make_town_market_canopy(Vector3(-5.3, 0.0, -16.2), -8.0, Color(0.18, 0.035, 0.045), Color(0.95, 0.36, 0.12))
 	_make_town_market_canopy(Vector3(6.4, 0.0, -17.2), 12.0, Color(0.06, 0.1, 0.13), Color(0.15, 0.8, 1.0))
+	_make_town_greenery()
+	_make_town_fences()
 
 func _make_town_crate(position: Vector3, yaw_degrees: float) -> void:
 	var root := Node3D.new()
@@ -1126,6 +1167,11 @@ func _make_town_crate(position: Vector3, yaw_degrees: float) -> void:
 	_make_town_box(root, "CrateBandB", Vector3(1.05, 0.11, 0.08), Vector3(0.0, 0.56, 0.5), _material(Color(0.07, 0.052, 0.038), Color.BLACK, 0.0))
 
 func _make_town_barrel(position: Vector3) -> void:
+	if town_barrel_texture != null:
+		var barrel_sprite := _make_town_billboard_sprite(town_barrel_texture, "TownBarrel", 0.004, Vector3.ONE * rng.randf_range(0.22, 0.34), Color.WHITE)
+		barrel_sprite.position = position + Vector3(0.0, 0.2, 0.0)
+		barrel_sprite.rotation_degrees.y = rng.randf_range(0.0, 360.0)
+		return
 	var barrel := MeshInstance3D.new()
 	barrel.name = "TownBarrel"
 	var mesh := CylinderMesh.new()
@@ -1180,6 +1226,174 @@ func _make_town_market_canopy(position: Vector3, yaw_degrees: float, cloth: Colo
 		_make_town_box(root, "CanopyPost", Vector3(0.13, 2.1, 0.13), Vector3(x, 1.05, 0.65), _town_wood_material())
 	for x in [-1.1, 0.0, 1.1]:
 		_make_diamond_icon(root, Vector3(x, 0.86, 0.68), 0.24, accent)
+
+func _populate_town_people(count: int) -> void:
+	var outfit_accents := [
+		Color(0.58, 0.22, 0.14),
+		Color(0.12, 0.28, 0.52),
+		Color(0.42, 0.35, 0.16),
+		Color(0.2, 0.42, 0.26),
+		Color(0.36, 0.2, 0.46)
+	]
+	for i in range(count):
+		var citizen := Node3D.new()
+		citizen.name = "TownCitizen%s" % i
+		citizen.position = _random_town_citizen_position()
+		citizen.rotation_degrees.y = rng.randf_range(0.0, 360.0)
+		town_root.add_child(citizen)
+		var accent: Color = outfit_accents[rng.randi_range(0, outfit_accents.size() - 1)]
+		_make_town_citizen_figure(citizen, accent)
+
+func _random_town_citizen_position() -> Vector3:
+	var position := Vector3(0.0, 0.0, 0.0)
+	for _attempt in range(20):
+		position = Vector3(rng.randf_range(-18.0, 18.0), 0.0, rng.randf_range(-18.0, 18.0))
+		if abs(position.x) < 4.2:
+			continue
+		if position.distance_to(Vector3(0.0, 0.0, 20.0)) < 4.2:
+			continue
+		if position.distance_to(Vector3(-14.0, 0.0, 2.5)) < 4.5:
+			continue
+		if position.distance_to(Vector3(14.0, 0.0, 2.0)) < 4.5:
+			continue
+		if position.distance_to(Vector3(0.0, 0.0, -13.5)) < 4.8:
+			continue
+		break
+	return position
+
+func _make_town_citizen_figure(parent: Node3D, accent: Color) -> void:
+	var skin := _material(Color(0.58, 0.44, 0.35), Color.BLACK, 0.0)
+	var cloth := _material(accent.darkened(0.2), accent, 0.05)
+	var cloth_dark := _material(accent.darkened(0.42), accent.darkened(0.2), 0.0)
+	_make_town_box(parent, "CitizenBody", Vector3(0.46, 0.84, 0.32), Vector3(0.0, 0.92, 0.0), cloth)
+	_make_town_box(parent, "CitizenHead", Vector3(0.28, 0.28, 0.28), Vector3(0.0, 1.52, 0.0), skin)
+	for x in [-0.14, 0.14]:
+		_make_town_box(parent, "CitizenLeg", Vector3(0.12, 0.7, 0.14), Vector3(x, 0.35, 0.0), cloth_dark)
+	if vendor_front_texture != null:
+		var cloak := Sprite3D.new()
+		cloak.texture = vendor_front_texture
+		cloak.pixel_size = 0.0045
+		cloak.double_sided = true
+		cloak.shaded = true
+		cloak.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		cloak.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		cloak.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		cloak.position = Vector3(0.0, 1.0, 0.18)
+		cloak.scale = Vector3.ONE * 0.48
+		cloak.modulate = Color(1.0, 1.0, 1.0, 0.68).lerp(accent, 0.18)
+		parent.add_child(cloak)
+
+func _make_town_greenery() -> void:
+	if town_tree_textures.is_empty():
+		for tree_data in [
+			{"position": Vector3(-21.0, 0.0, 16.5), "scale": 1.0},
+			{"position": Vector3(21.5, 0.0, 14.0), "scale": 1.08},
+			{"position": Vector3(-20.5, 0.0, -14.8), "scale": 0.92},
+			{"position": Vector3(20.8, 0.0, -17.0), "scale": 1.14},
+			{"position": Vector3(-12.8, 0.0, 21.4), "scale": 0.88},
+			{"position": Vector3(13.0, 0.0, 21.6), "scale": 0.9}
+		]:
+			_make_town_tree(tree_data["position"], float(tree_data["scale"]))
+		return
+
+	for _index in range(52):
+		var tree_texture := town_tree_textures[rng.randi_range(0, town_tree_textures.size() - 1)]
+		var tree_scale := rng.randf_range(0.9, 1.45)
+		var tree_sprite := _make_town_billboard_sprite(tree_texture, "TownTree", 0.0068, Vector3.ONE * tree_scale, Color.WHITE)
+		tree_sprite.position = _random_town_decor_position(5.4) + Vector3(0.0, 1.95 * tree_scale, 0.0)
+		tree_sprite.rotation_degrees.y = rng.randf_range(0.0, 360.0)
+
+func _random_town_decor_position(street_half_width: float = 3.6) -> Vector3:
+	var position := Vector3.ZERO
+	for _attempt in range(35):
+		position = Vector3(
+			rng.randf_range(-TOWN_HALF_SIZE + 2.0, TOWN_HALF_SIZE - 2.0),
+			0.0,
+			rng.randf_range(-TOWN_HALF_SIZE + 2.0, TOWN_HALF_SIZE - 2.0)
+		)
+		if absf(position.x) < street_half_width:
+			continue
+		if position.distance_to(Vector3(0.0, 0.0, 20.0)) < 4.8:
+			continue
+		if position.distance_to(Vector3(-14.0, 0.0, 2.5)) < 8.5:
+			continue
+		if position.distance_to(Vector3(14.0, 0.0, 2.0)) < 8.5:
+			continue
+		if position.distance_to(Vector3(0.0, 0.0, -13.5)) < 8.5:
+			continue
+		break
+	return position
+
+func _make_town_billboard_sprite(texture: Texture2D, sprite_name: String, pixel_size: float, sprite_scale: Vector3, tint: Color) -> Sprite3D:
+	var sprite := Sprite3D.new()
+	sprite.name = sprite_name
+	sprite.texture = texture
+	sprite.pixel_size = pixel_size
+	sprite.shaded = true
+	sprite.double_sided = true
+	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+	sprite.scale = sprite_scale
+	sprite.modulate = tint
+	town_root.add_child(sprite)
+	return sprite
+
+func _make_town_tree(position: Vector3, scale_value: float) -> void:
+	var root := Node3D.new()
+	root.name = "TownTree"
+	root.position = position
+	root.scale = Vector3.ONE * scale_value
+	town_root.add_child(root)
+
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.18
+	trunk_mesh.bottom_radius = 0.24
+	trunk_mesh.height = 2.4
+	trunk.mesh = trunk_mesh
+	trunk.position = Vector3(0.0, 1.2, 0.0)
+	trunk.material_override = _town_wood_material()
+	root.add_child(trunk)
+
+	var leaf_material := _material(Color(0.1, 0.28, 0.15), Color(0.04, 0.09, 0.05), 0.06)
+	for offset in [Vector3(0.0, 2.38, 0.0), Vector3(0.58, 2.22, 0.08), Vector3(-0.55, 2.16, -0.12), Vector3(0.0, 2.75, 0.35)]:
+		var leaves := MeshInstance3D.new()
+		var leaves_mesh := SphereMesh.new()
+		leaves_mesh.radius = 0.72
+		leaves_mesh.height = 1.1
+		leaves.mesh = leaves_mesh
+		leaves.position = offset
+		leaves.material_override = leaf_material
+		root.add_child(leaves)
+
+func _make_town_fences() -> void:
+	_make_town_fence_row(Vector3(-17.5, 0.0, 18.8), Vector3(-6.0, 0.0, 18.8), 8)
+	_make_town_fence_row(Vector3(6.0, 0.0, 18.8), Vector3(17.5, 0.0, 18.8), 8)
+	_make_town_fence_row(Vector3(-22.0, 0.0, -11.5), Vector3(-22.0, 0.0, 6.0), 9)
+	_make_town_fence_row(Vector3(22.0, 0.0, -10.0), Vector3(22.0, 0.0, 7.5), 9)
+
+func _make_town_fence_row(start: Vector3, end: Vector3, segments: int) -> void:
+	var fence_material := _town_wood_material()
+	var rail_height := [0.55, 0.9]
+	for i in range(segments + 1):
+		var t := float(i) / float(maxi(segments, 1))
+		var post_position := start.lerp(end, t)
+		_make_town_box(town_root, "FencePost", Vector3(0.11, 1.05, 0.11), post_position + Vector3(0.0, 0.52, 0.0), fence_material)
+	for i in range(segments):
+		var from := start.lerp(end, float(i) / float(maxi(segments, 1)))
+		var to := start.lerp(end, float(i + 1) / float(maxi(segments, 1)))
+		var center := (from + to) * 0.5
+		var direction := to - from
+		var length := Vector2(direction.x, direction.z).length()
+		if length <= 0.001:
+			continue
+		var yaw := rad_to_deg(atan2(direction.z, direction.x))
+		for y in rail_height:
+			var rail := _make_decoration_bar(length, 0.075, fence_material)
+			rail.position = center + Vector3(0.0, y, 0.0)
+			rail.rotation_degrees.y = yaw
+			town_root.add_child(rail)
 
 func _make_town_puddle(parent: Node3D, position: Vector3) -> void:
 	var puddle := MeshInstance3D.new()
@@ -1289,8 +1503,9 @@ func _make_spell_shop_image(parent: Node3D, accent: Color) -> void:
 	sprite.modulate = Color(1.02, 0.98, 0.92, 1.0).lerp(accent, 0.05)
 	parent.add_child(sprite)
 
-func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color) -> void:
-	if vendor_front_texture != null:
+func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendor_id: String = "") -> void:
+	var vendor_texture := _town_vendor_texture_for(vendor_id)
+	if vendor_texture != null:
 		var shadow := MeshInstance3D.new()
 		shadow.name = "VendorShadow"
 		var shadow_mesh := CylinderMesh.new()
@@ -1299,7 +1514,7 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color) -> vo
 		shadow_mesh.height = 0.012
 		shadow_mesh.radial_segments = 24
 		shadow.mesh = shadow_mesh
-		shadow.position = position + Vector3(0.0, -0.57, 0.08)
+		shadow.position = position + Vector3(0.0, 0.02, 0.0)
 		shadow.scale = Vector3(1.25, 1.0, 0.56)
 		shadow.material_override = _portal_smoke_material(Color(0.0, 0.0, 0.0, 0.34), Color.BLACK, 0.0)
 		shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -1307,20 +1522,22 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color) -> vo
 
 		var sprite := Sprite3D.new()
 		sprite.name = "VendorSprite"
-		sprite.texture = vendor_front_texture
-		sprite.pixel_size = 0.009
-		sprite.shaded = true
+		sprite.texture = vendor_texture
+		sprite.pixel_size = 0.003
+		sprite.shaded = false
 		sprite.double_sided = true
-		sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 		sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
-		sprite.position = position
-		sprite.modulate = Color(1.04, 0.98, 0.9, 1.0).lerp(accent, 0.08)
+		sprite.position = position + Vector3(0.0, 0.88, 0.0)
+		sprite.scale = Vector3.ONE
+		sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
 		parent.add_child(sprite)
-		vendor_sprites.append({
-			"sprite": sprite,
-			"parent": parent
-		})
+		if vendor_texture == vendor_front_texture and vendor_side_texture != null and vendor_back_texture != null:
+			vendor_sprites.append({
+				"sprite": sprite,
+				"parent": parent
+			})
 		return
 
 	var body := MeshInstance3D.new()
@@ -1343,6 +1560,21 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color) -> vo
 	head.position = position + Vector3(0.0, 0.78, 0.0)
 	head.material_override = _material(Color(0.62, 0.48, 0.34), Color.BLACK, 0.0)
 	parent.add_child(head)
+
+func _town_vendor_texture_for(vendor_id: String) -> Texture2D:
+	match vendor_id:
+		"diamond_vendor":
+			if town_vendor_man_texture != null:
+				return town_vendor_man_texture
+		"spell_vendor":
+			if town_vendor_woman_texture != null:
+				return town_vendor_woman_texture
+		"relic_vendor":
+			if town_vendor_woman_texture != null:
+				return town_vendor_woman_texture
+	if vendor_front_texture != null:
+		return vendor_front_texture
+	return null
 
 func _update_vendor_sprites() -> void:
 	if camera == null or vendor_sprites.is_empty():
@@ -1525,6 +1757,12 @@ func _make_exit() -> void:
 	_make_exit_fx()
 
 func _spawn_encounter() -> void:
+	current_area = AREA_CASTLE
+	_set_background_music(LEVEL_ONE_MUSIC)
+	if player != null:
+		player.set_attacks_enabled(true)
+	if hud != null:
+		hud.set_minimap_visible(true)
 	var spawn_points: Array[Vector3] = _enemy_spawn_points()
 	for i in range(spawn_points.size()):
 		var enemy_kind := SISEnemy.ENEMY_KIND_ANGEL
@@ -1619,18 +1857,31 @@ func _enemy_spawn_points() -> Array[Vector3]:
 	]
 
 func _on_firestorm_requested(target_position: Vector3) -> void:
+	if current_area == AREA_TOWN:
+		return
 	_play_sound(FIRE_STORM_SOUND, -2.0)
+	_play_firestorm_impact_sequence()
 	var storm: SISFireStorm = FireStormScript.new() as SISFireStorm
 	add_child(storm)
 	storm.configure(target_position, enemies, player.level)
+	storm.radius += player.get_skill_radius_bonus()
 	if player.has_spell("wide_flame"):
 		storm.radius += 1.35
 		storm.strikes += 4
 	storm.damage = int(round(float(storm.damage) * player.get_damage_multiplier()))
 	if player.has_spell("searing_fire"):
 		storm.damage = int(round(float(storm.damage) * 1.25))
+	storm.damage = int(round(float(storm.damage) * player.get_skill_damage_multiplier()))
 	storm.enemy_hit.connect(_on_firestorm_enemy_hit)
 	_say_whisper("Yes. Let the ceiling learn to burn.")
+
+func _play_firestorm_impact_sequence() -> void:
+	var boom_delays := [0.24, 0.42, 0.60, 0.78, 1.04, 1.30, 1.48]
+	for delay in boom_delays:
+		var boom_timer := get_tree().create_timer(delay)
+		boom_timer.timeout.connect(func() -> void:
+			_play_sound(FIRE_STORM_BOOM_SOUND, -8.5)
+		)
 
 func _on_firestorm_enemy_hit(enemy: Node3D, damage: int) -> void:
 	if is_instance_valid(enemy) and enemy.has_method("take_damage"):
@@ -1754,9 +2005,13 @@ func _on_exit_entered(body: Node3D) -> void:
 func _enter_town() -> void:
 	_make_town()
 	current_area = AREA_TOWN
+	_set_background_music(TOWN_MUSIC)
 	active_vendor_id = ""
 	if hud != null:
 		hud.hide_shop()
+		hud.set_minimap_visible(false)
+	if player != null:
+		player.set_attacks_enabled(false)
 	player.teleport_to(TOWN_SPAWN_POSITION)
 	camera.global_position = player.global_position + _camera_follow_offset()
 	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
@@ -1876,6 +2131,11 @@ func _buy_spell(item_id: String) -> String:
 func _on_shop_closed() -> void:
 	pass
 
+func _on_skill_tree_point_requested(node_key: String) -> void:
+	if player == null:
+		return
+	player.unlock_skill_node(node_key)
+
 func _update_objective() -> void:
 	if current_area == AREA_TOWN:
 		hud.set_objective("Town reached. Visit vendors to buy diamonds and spells.")
@@ -1887,9 +2147,6 @@ func _update_objective() -> void:
 
 func _update_possession() -> void:
 	if hud == null:
-		return
-	if whisper_system != null:
-		hud.set_possession_ratio(whisper_system.get_corruption_ratio())
 		return
 	var directive_steps := 0
 	if exit_open:
@@ -1904,8 +2161,10 @@ func _update_minimap() -> void:
 		return
 	var enemy_positions: Array[Vector3] = []
 	if current_area == AREA_TOWN:
+		hud.set_minimap_visible(false)
 		hud.update_minimap(player.global_position - TOWN_ORIGIN, enemy_positions, TOWN_HALF_SIZE)
 		return
+	hud.set_minimap_visible(true)
 	var can_see_enemies := reveal_enemies_on_minimap
 	if whisper_system != null and whisper_system.corruption >= 70.0:
 		can_see_enemies = true
@@ -1918,7 +2177,7 @@ func _update_minimap() -> void:
 func _on_corruption_changed(corruption: float, ratio: float) -> void:
 	if hud == null:
 		return
-	hud.set_possession_ratio(ratio)
+	_update_possession()
 	hud.set_corruption_ui(corruption, _current_hp_percent())
 	if corruption >= 100.0 and not possession_fx_played:
 		possession_fx_played = true

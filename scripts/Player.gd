@@ -34,6 +34,7 @@ var life := 120
 var level := 1
 var xp := 0
 var xp_to_next := 100
+var skill_points := 0
 var gold := 0
 var diamonds := 0
 var firestorm_cooldown := 0.0
@@ -42,7 +43,10 @@ var alive := true
 var move_target: Vector3
 var has_move_target := false
 var learned_spells: Array[String] = []
+var unlocked_skill_nodes: Array[String] = []
 var _ignore_mouse_until_released := false
+var _attacks_enabled := true
+var _mouse_block_check: Callable
 
 var _heal_timer := 0.0
 var _damage_multiplier := 1.0
@@ -107,11 +111,18 @@ func get_stats() -> Dictionary:
 		"level": level,
 		"xp": xp,
 		"xp_to_next": xp_to_next,
+		"skill_points": skill_points,
 		"gold": gold,
 		"diamonds": diamonds,
 		"learned_spells": learned_spells.duplicate(),
+		"unlocked_skill_nodes": unlocked_skill_nodes.duplicate(),
 		"firestorm_cooldown": firestorm_cooldown,
-		"shield": shield
+		"shield": shield,
+		"damage_multiplier": _damage_multiplier,
+		"active_attack_spell": get_active_attack_spell_name(),
+		"active_attack_damage_min": get_active_attack_spell_damage(),
+		"active_attack_damage_max": get_active_attack_spell_damage(),
+		"active_attack_cooldown_duration": get_active_attack_spell_cooldown_duration()
 	}
 
 func take_damage(amount: int) -> void:
@@ -159,6 +170,7 @@ func gain_xp(amount: int) -> bool:
 	while xp >= xp_to_next:
 		xp -= xp_to_next
 		level += 1
+		skill_points += 1
 		xp_to_next = int(float(xp_to_next) * 1.35) + 35
 		max_life += 18
 		life = max_life
@@ -197,6 +209,18 @@ func learn_spell(spell_id: String) -> bool:
 
 func has_spell(spell_id: String) -> bool:
 	return learned_spells.has(spell_id)
+
+func unlock_skill_node(node_key: String) -> bool:
+	if node_key not in ["damage", "radius", "cooldown"]:
+		return false
+	if unlocked_skill_nodes.has(node_key):
+		return false
+	if skill_points <= 0:
+		return false
+	skill_points -= 1
+	unlocked_skill_nodes.append(node_key)
+	stats_changed.emit(get_stats())
+	return true
 
 func heal_full() -> void:
 	life = max_life
@@ -258,6 +282,35 @@ func flash_possession_red() -> void:
 func get_damage_multiplier() -> float:
 	return _damage_multiplier
 
+func get_skill_damage_multiplier() -> float:
+	if unlocked_skill_nodes.has("damage"):
+		return 1.15
+	return 1.0
+
+func get_skill_radius_bonus() -> float:
+	if unlocked_skill_nodes.has("radius"):
+		return 0.9
+	return 0.0
+
+func get_skill_cooldown_reduction() -> float:
+	if unlocked_skill_nodes.has("cooldown"):
+		return 0.4
+	return 0.0
+
+func get_active_attack_spell_name() -> String:
+	return "Firestorm"
+
+func get_active_attack_spell_damage() -> int:
+	var total_damage := 28 + level * 7
+	total_damage = int(round(float(total_damage) * _damage_multiplier))
+	if has_spell("searing_fire"):
+		total_damage = int(round(float(total_damage) * 1.25))
+	total_damage = int(round(float(total_damage) * get_skill_damage_multiplier()))
+	return total_damage
+
+func get_active_attack_spell_cooldown_duration() -> float:
+	return _firestorm_cooldown_duration()
+
 func set_move_target(target: Vector3) -> void:
 	move_target = target
 	move_target.y = global_position.y
@@ -271,6 +324,12 @@ func prepare_clean_start() -> void:
 	has_move_target = false
 	velocity = Vector3.ZERO
 	_ignore_mouse_until_released = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+
+func set_attacks_enabled(enabled: bool) -> void:
+	_attacks_enabled = enabled
+
+func set_mouse_block_check(callback: Callable) -> void:
+	_mouse_block_check = callback
 
 func _handle_input() -> void:
 	if _control_lapse_timer > 0.0:
@@ -304,12 +363,16 @@ func _handle_input() -> void:
 		else:
 			_ignore_mouse_until_released = false
 
+	if _is_mouse_blocked_by_ui() and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_ignore_mouse_until_released = true
+		can_use_mouse = false
+
 	if can_use_mouse and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		var target: Variant = _mouse_ground_position()
 		if target is Vector3:
 			set_move_target(target)
 
-	if Input.is_key_pressed(KEY_SPACE) and firestorm_cooldown <= 0.0:
+	if _attacks_enabled and Input.is_key_pressed(KEY_SPACE) and firestorm_cooldown <= 0.0:
 		var cast_target := move_target
 		var mouse_target: Variant = _mouse_ground_position()
 		if mouse_target is Vector3:
@@ -391,10 +454,20 @@ func _effective_move_speed() -> float:
 		spell_speed_bonus = 1.12
 	return MOVE_SPEED * _move_speed_multiplier * spell_speed_bonus
 
+func _is_mouse_blocked_by_ui() -> bool:
+	if not _mouse_block_check.is_valid():
+		return false
+	var result: Variant = _mouse_block_check.call()
+	if result is bool:
+		return result
+	return false
+
 func _firestorm_cooldown_duration() -> float:
+	var cooldown := 4.5
 	if has_spell("quickened_ritual"):
-		return 3.2
-	return 4.5
+		cooldown = 3.2
+	cooldown = maxf(0.8, cooldown - get_skill_cooldown_reduction())
+	return cooldown
 
 func _mouse_ground_position() -> Variant:
 	if _camera == null:

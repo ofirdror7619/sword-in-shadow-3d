@@ -84,14 +84,14 @@ func _make_flash(impact: Vector3) -> void:
 	light.light_color = Color(1.0, 0.48, 0.08)
 	light.light_energy = 4.2
 	light.omni_range = 6.0
-	light.global_position = impact + Vector3(0.0, 1.0, 0.0)
-	get_tree().current_scene.add_child(light)
+	light.position = Vector3(0.0, 0.25, 0.0)
+	flash.add_child(light)
+	get_tree().current_scene.add_child(flash)
 
-	var tween := create_tween()
+	var tween := flash.create_tween()
 	tween.tween_property(flash, "scale", Vector3.ONE * 2.8, 0.22)
 	tween.parallel().tween_property(light, "light_energy", 0.0, 0.26)
 	tween.tween_callback(Callable(flash, "queue_free"))
-	tween.tween_callback(Callable(light, "queue_free"))
 
 func _make_impact_smoke(impact: Vector3) -> void:
 	var root := Node3D.new()
@@ -111,13 +111,13 @@ func _make_impact_smoke(impact: Vector3) -> void:
 		root.add_child(puff)
 
 		var drift := Vector3(_rng.randf_range(-0.85, 0.85), _rng.randf_range(1.0, 1.9), _rng.randf_range(-0.85, 0.85))
-		var tween := create_tween()
+		var tween := puff.create_tween()
 		tween.tween_property(puff, "position", puff.position + drift, _rng.randf_range(1.0, 1.45)).set_trans(Tween.TRANS_SINE)
 		tween.parallel().tween_property(puff, "scale", puff.scale * _rng.randf_range(2.4, 3.5), 1.25)
 		tween.parallel().tween_property(material, "albedo_color:a", 0.0, 1.25)
 		tween.tween_callback(Callable(puff, "queue_free"))
 
-	var cleanup := create_tween()
+	var cleanup := root.create_tween()
 	cleanup.tween_interval(1.7)
 	cleanup.tween_callback(Callable(root, "queue_free"))
 
@@ -146,14 +146,14 @@ func _make_ash_splash(impact: Vector3) -> void:
 		var endpoint := direction * distance + Vector3(0.0, 0.045, 0.0)
 		ash.rotation_degrees = Vector3(_rng.randf_range(0.0, 360.0), _rng.randf_range(0.0, 360.0), _rng.randf_range(0.0, 360.0))
 
-		var tween := create_tween()
+		var tween := ash.create_tween()
 		tween.tween_property(ash, "position", midpoint, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tween.tween_property(ash, "position", endpoint, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tween.tween_interval(0.25)
 		tween.tween_property(ash, "scale", Vector3.ZERO, 0.28)
 		tween.tween_callback(Callable(ash, "queue_free"))
 
-	var cleanup := create_tween()
+	var cleanup := root.create_tween()
 	cleanup.tween_interval(1.0)
 	cleanup.tween_callback(Callable(root, "queue_free"))
 
@@ -180,12 +180,12 @@ func _make_scorch_splatter(impact: Vector3) -> void:
 			mark.material_override = _smoke_material(Color(0.0, 0.0, 0.0, 0.88))
 		root.add_child(mark)
 
-		var tween := create_tween()
+		var tween := mark.create_tween()
 		tween.tween_interval(_rng.randf_range(0.35, 0.7))
 		tween.tween_property(mark, "scale", mark.scale * 0.35, 0.45)
 		tween.tween_callback(Callable(mark, "queue_free"))
 
-	var cleanup := create_tween()
+	var cleanup := root.create_tween()
 	cleanup.tween_interval(1.25)
 	cleanup.tween_callback(Callable(root, "queue_free"))
 
@@ -223,7 +223,7 @@ func _make_fireball() -> Node3D:
 	light.omni_range = 4.5
 	root.add_child(light)
 
-	var tween: Tween = create_tween()
+	var tween: Tween = root.create_tween()
 	tween.set_loops()
 	tween.tween_property(outer, "scale", Vector3.ONE * 1.16, 0.08)
 	tween.parallel().tween_property(light, "light_energy", 4.0, 0.08)

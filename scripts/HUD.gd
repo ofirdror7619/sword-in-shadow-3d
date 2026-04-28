@@ -6,12 +6,16 @@ signal offer_accepted
 signal offer_rejected
 signal shop_purchase_requested(item_id: String)
 signal shop_closed
+signal skill_tree_point_requested(node_key: String)
 
 const FIRESTORM_TEXTURE: Texture2D = preload("res://assets/images/spells/attack/firestorm.png")
 const LIFE_BAR_TEXTURE: Texture2D = preload("res://assets/images/hud/health-bar.png")
-const SPELL_SLOT_TEXTURE: Texture2D = preload("res://assets/images/hud/spell-slot.png")
+const LIFE_FILL_TEXTURE: Texture2D = preload("res://assets/images/hud/life-bar.png")
+const SPELL_SLOT_TEXTURE: Texture2D = preload("res://assets/images/hud/spell-slot-new.png")
 const POSSESSION_BAR_TEXTURE: Texture2D = preload("res://assets/images/hud/possession-bar.png")
+const POSSESSION_FILL_TEXTURE: Texture2D = preload("res://assets/images/hud/possessing-bar.png")
 const EXP_BAR_TEXTURE: Texture2D = preload("res://assets/images/hud/exp-bar.png")
+const EXP_FILL_TEXTURE: Texture2D = preload("res://assets/images/hud/exp-actual-bar.png")
 const MINIMAP_TEXTURE: Texture2D = preload("res://assets/images/hud/minimap.png")
 const DEMON_MENU_TEXTURE: Texture2D = preload("res://assets/images/hud/demon.png")
 const EQUIP_TEXTURE: Texture2D = preload("res://assets/images/hud/equip/equip.png")
@@ -25,20 +29,44 @@ const LIFE_BAR_POSITION := Vector2(0.0, HUD_CLUSTER_SIZE.y - LIFE_BAR_SIZE.y - H
 const LIFE_FILL_POSITION := Vector2(111.0, 64.0)
 const LIFE_FILL_SIZE := Vector2(241.0, 18.0)
 const EXP_BAR_SOURCE_RECT := Rect2(20.0, 288.0, 1496.0, 360.0)
+const EXP_FILL_SOURCE_RECT := Rect2(0.0, 0.0, 363.0, 20.0)
 const EXP_BAR_SIZE := Vector2(520.0, 125.0)
-const EXP_FILL_POSITION := Vector2(72.0, 73.0)
-const EXP_FILL_SIZE := Vector2(376.0, 14.0)
+const EXP_FILL_POSITION := Vector2(50.0, 75.0)
+const EXP_FILL_SIZE := Vector2(402.0, 20.0)
 const EXP_BAR_SLOT_GAP := 2.0
 const SPELL_SLOT_SOURCE_SIZE := Vector2(573.0, 97.0)
 const SPELL_SLOT_SIZE := Vector2(400.0, 68.0)
 const SPELL_SLOT_BOTTOM_MARGIN := 15.0
 const FIRESTORM_SLOT_CENTER_SOURCE := Vector2(57.5, 48.5)
 const FIRESTORM_ICON_SIZE := Vector2(50.0, 50.0)
+const SPELL_SLOT_HOVER_FONT_SIZE := 15
+const SPELL_SLOT_HOVER_REGION_SIZE := Vector2(74.0, 58.0)
+const SPELL_SLOT_TOOLTIP_SIZE := Vector2(220.0, 46.0)
+const SPELL_SLOT_HOVER_CENTER_SOURCES := [
+	Vector2(57.5, 48.5),
+	Vector2(172.0, 48.5),
+	Vector2(286.5, 48.5),
+	Vector2(401.0, 48.5),
+	Vector2(515.5, 48.5)
+]
+const SPELL_SLOT_HOVER_CATEGORIES := ["attack", "defense", "healing", "buff", "debuff"]
+const SPELL_SLOT_HOVER_LABELS := {
+	"attack": "Attack",
+	"defense": "Defense",
+	"healing": "Healing",
+	"buff": "Buff",
+	"debuff": "Debuff"
+}
+const SPELL_ID_TO_DISPLAY_NAME := {
+	"searing_fire": "Searing Fire",
+	"wide_flame": "Widened Flame",
+	"quickened_ritual": "Quickened Ritual",
+	"ember_stride": "Ember Stride"
+}
 const SKILL_COOLDOWN_FONT_SIZE := 20
 const POSSESSION_BAR_SIZE := Vector2(392.0, 134.0)
-const POSSESSION_FILL_POSITION := Vector2(35.0, 66.0)
-const POSSESSION_FILL_SIZE := Vector2(246.0, 17.0)
-const STATS_ROW_POSITION := Vector2(8.0, LIFE_BAR_POSITION.y - 32.0)
+const POSSESSION_FILL_POSITION := Vector2(35.0, 65.0)
+const POSSESSION_FILL_SIZE := Vector2(246.0, 15.0)
 const WHISPER_COLOR := Color(0.95, 0.05, 0.03, 1.0)
 const WHISPER_FONT_SIZE := 18
 const WHISPER_TOP_OFFSET := -260.0
@@ -49,14 +77,17 @@ const MISSION_FONT_SIZE := 30
 const MINIMAP_SIZE := Vector2(210.0, 140.0)
 const MINIMAP_DOT_SIZE := 6.0
 const MINIMAP_PLAYER_DOT_SIZE := 8.0
+const MINIMAP_HOLE_SHADE_ALPHA := 0.56
 const WHISPER_PANEL_SIZE := Vector2(430.0, 205.0)
 const DIRECTIVE_PANEL_SIZE := Vector2(360.0, 92.0)
 const SHOP_PANEL_SIZE := Vector2(520.0, 410.0)
 const DEMON_MENU_BUTTON_SIZE := Vector2(92.0, 92.0)
 const CHARACTER_PANEL_SIZE := Vector2(560.0, 470.0)
 const CHARACTER_PANEL_TAB_STATS := "stats"
-const CHARACTER_PANEL_TAB_SKILLS := "skills"
+const CHARACTER_PANEL_TAB_SPELLS := "spells"
 const CHARACTER_PANEL_TAB_INVENTORY := "inventory"
+const CHARACTER_PANEL_TAB_SKILL_TREE := "skill_tree"
+const LEVEL_UP_BLINK_SPEED := 0.35
 const CORRUPTION_STAGE_LINES := [
 	"I am only near you.",
 	"We are learning the same rhythm.",
@@ -72,14 +103,14 @@ var _root_control: Control
 var _hud_cluster: Control
 var _spell_cluster: Control
 var _skill_slot: Control
-var _life_fill: ColorRect
-var _exp_fill: ColorRect
-var _exp_fill_glow: ColorRect
-var _possession_fill: ColorRect
-var _possession_fill_glow: ColorRect
+var _life_fill_clip: Control
+var _life_fill_texture: TextureRect
+var _life_hover_region: Button
+var _exp_fill_clip: Control
+var _possession_fill_clip: Control
+var _possession_fill_texture: TextureRect
+var _possession_hover_region: Button
 var _possession_cluster: Control
-var _gold_label: Label
-var _level_label: Label
 var _skill_icon: TextureRect
 var _skill_cooldown_label: Label
 var _objective_label: Label
@@ -109,13 +140,19 @@ var _directive_progress_label: Label
 var _directive_time_fill: ColorRect
 var _demon_menu_button: Button
 var _demon_menu_image: TextureRect
+var _demon_level_label: Label
 var _character_panel: PanelContainer
 var _character_content_label: Label
+var _spells_view: Control
+var _spells_hover_label: Label
 var _inventory_view: Control
 var _inventory_gold_label: Label
 var _inventory_status_label: Label
 var _skill_tree_view: SkillTreeView
 var _character_tab_buttons := {}
+var _spell_category_rows := {}
+var _spells_view_signature := "__uninitialized__"
+var _spells_hovered_name := ""
 var _distortion_overlay: ColorRect
 var _vignette_overlay: ColorRect
 var _chromatic_flash_overlay: ColorRect
@@ -123,9 +160,7 @@ var _vein_cracks_overlay: Control
 var _heartbeat_pulse_overlay: ColorRect
 var _screen_noise_overlay: ColorRect
 var _heartbeat_player: AudioStreamPlayer
-var _exp_tween: Tween
 var _whisper_tween: Tween
-var _displayed_level := 1
 var _whispers_enabled := false
 var _corruption := 0.0
 var _corruption_ratio := 0.0
@@ -143,7 +178,15 @@ var _heartbeat_timer := 0.0
 var _skill_slot_base_position := Vector2.ZERO
 var _latest_stats := {}
 var _character_panel_tab := CHARACTER_PANEL_TAB_STATS
+var _demon_menu_hovered := false
+var _level_up_pending_ack := false
+var _last_displayed_level := -1
+var _possession_ratio := 0.0
 var _rng := RandomNumberGenerator.new()
+var _spell_slot_hover_regions: Array[Control] = []
+var _spell_slot_hover_tooltip: PanelContainer
+var _spell_slot_hover_tooltip_label: Label
+var _spell_slot_hovered_index := -1
 
 func _ready() -> void:
 	_rng.randomize()
@@ -151,9 +194,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_update_corruption_fx(delta)
+	_update_level_up_feedback(delta)
 
 func update_stats(stats: Dictionary) -> void:
-	if _life_fill == null:
+	if _life_fill_clip == null:
 		return
 	_latest_stats = stats.duplicate(true)
 	var max_life: float = float(stats.get("max_life", 100))
@@ -162,11 +206,15 @@ func update_stats(stats: Dictionary) -> void:
 	_set_life_ratio(_hp_percent)
 	var xp: float = float(stats.get("xp", 0))
 	var xp_to_next: float = float(stats.get("xp_to_next", 100))
-	var exp_ratio: float = xp / maxf(xp_to_next, 1.0)
+	_set_exp_ratio(xp / maxf(xp_to_next, 1.0))
 	var next_level: int = int(stats.get("level", 1))
-	_update_exp_display(exp_ratio, next_level)
-	_gold_label.text = "Gold %s   Diamonds %s" % [stats.get("gold", 0), stats.get("diamonds", 0)]
-	_level_label.text = "Level %s" % next_level
+	if _last_displayed_level < 0:
+		_last_displayed_level = next_level
+	elif next_level > _last_displayed_level:
+		_trigger_level_up_feedback(next_level - _last_displayed_level)
+		_last_displayed_level = next_level
+	else:
+		_last_displayed_level = next_level
 	var cooldown: float = float(stats.get("firestorm_cooldown", 0.0))
 	if cooldown <= 0.05:
 		_skill_icon.modulate = Color(1.0, 1.0, 1.0, 1.0)
@@ -174,16 +222,23 @@ func update_stats(stats: Dictionary) -> void:
 	else:
 		_skill_icon.modulate = Color(1.0, 1.0, 1.0, 0.82)
 		_skill_cooldown_label.text = "%.1f" % cooldown
+	_refresh_bar_tooltips()
 	if _character_panel != null and _character_panel.visible:
 		_sync_character_panel()
 	if _shop_panel != null and _shop_panel.visible:
 		_shop_wallet_label.text = "Gold %s    Diamonds %s" % [stats.get("gold", 0), stats.get("diamonds", 0)]
+	if _spell_slot_hovered_index >= 0:
+		_refresh_spell_slot_tooltip()
 
 func set_objective(text: String) -> void:
 	_objective_label.text = _mission_title_case(text)
 
 func set_possession_ratio(ratio: float) -> void:
-	_set_possession_ratio(ratio)
+	_possession_ratio = clampf(ratio, 0.0, 1.0)
+	_set_possession_ratio(_possession_ratio)
+	_refresh_bar_tooltips()
+	if _character_panel != null and _character_panel.visible and _character_panel_tab == CHARACTER_PANEL_TAB_STATS:
+		_sync_character_panel()
 
 func set_corruption_ui(corruption: float, hp_percent: float = -1.0) -> void:
 	_corruption = clampf(corruption, 0.0, 100.0)
@@ -222,6 +277,11 @@ func update_minimap(player_position: Vector3, enemy_positions: Array[Vector3], a
 		dot.visible = i < enemy_positions.size()
 		if dot.visible:
 			_place_minimap_dot(dot, enemy_positions[i], arena_half_size, center, radius, MINIMAP_DOT_SIZE)
+
+func set_minimap_visible(visible: bool) -> void:
+	if _minimap_cluster == null:
+		return
+	_minimap_cluster.visible = visible
 
 func set_whispers_enabled(enabled: bool) -> void:
 	_whispers_enabled = enabled
@@ -301,6 +361,14 @@ func hide_shop() -> void:
 		_shop_panel.visible = false
 	shop_closed.emit()
 
+func is_mouse_over_character_panel() -> bool:
+	if _character_panel == null or not _character_panel.visible:
+		return false
+	var viewport := get_viewport()
+	if viewport == null:
+		return false
+	return _character_panel.get_global_rect().has_point(viewport.get_mouse_position())
+
 func show_directive(directive: Dictionary) -> void:
 	if _directive_panel == null:
 		return
@@ -358,11 +426,23 @@ func _make_ui() -> void:
 	life_image.stretch_mode = TextureRect.STRETCH_SCALE
 	life_plate.add_child(life_image)
 
-	_life_fill = ColorRect.new()
-	_life_fill.color = Color(0.92, 0.02, 0.035, 0.95)
-	_life_fill.position = LIFE_FILL_POSITION
-	_life_fill.size = LIFE_FILL_SIZE
-	life_plate.add_child(_life_fill)
+	_life_fill_clip = Control.new()
+	_life_fill_clip.position = LIFE_FILL_POSITION
+	_life_fill_clip.size = LIFE_FILL_SIZE
+	_life_fill_clip.clip_contents = true
+	life_plate.add_child(_life_fill_clip)
+
+	_life_fill_texture = TextureRect.new()
+	_life_fill_texture.texture = LIFE_FILL_TEXTURE
+	_life_fill_texture.position = Vector2.ZERO
+	_life_fill_texture.size = LIFE_FILL_SIZE
+	_life_fill_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_life_fill_texture.stretch_mode = TextureRect.STRETCH_SCALE
+	_life_fill_clip.add_child(_life_fill_texture)
+
+	_life_hover_region = _make_hover_region()
+	_life_hover_region.set_anchors_preset(Control.PRESET_FULL_RECT)
+	life_plate.add_child(_life_hover_region)
 
 	var spell_cluster := Control.new()
 	spell_cluster.anchor_left = 0.5
@@ -379,6 +459,10 @@ func _make_ui() -> void:
 	var exp_bar_texture := AtlasTexture.new()
 	exp_bar_texture.atlas = EXP_BAR_TEXTURE
 	exp_bar_texture.region = EXP_BAR_SOURCE_RECT
+
+	var exp_fill_texture := AtlasTexture.new()
+	exp_fill_texture.atlas = EXP_FILL_TEXTURE
+	exp_fill_texture.region = EXP_FILL_SOURCE_RECT
 
 	var exp_cluster := Control.new()
 	exp_cluster.anchor_left = 0.5
@@ -398,17 +482,19 @@ func _make_ui() -> void:
 	exp_bar.stretch_mode = TextureRect.STRETCH_SCALE
 	exp_cluster.add_child(exp_bar)
 
-	_exp_fill_glow = ColorRect.new()
-	_exp_fill_glow.color = Color(1.0, 0.72, 0.1, 0.22)
-	_exp_fill_glow.position = EXP_FILL_POSITION + Vector2(-2.0, -3.0)
-	_exp_fill_glow.size = Vector2(0.0, EXP_FILL_SIZE.y + 6.0)
-	exp_cluster.add_child(_exp_fill_glow)
+	_exp_fill_clip = Control.new()
+	_exp_fill_clip.position = EXP_FILL_POSITION
+	_exp_fill_clip.size = Vector2.ZERO
+	_exp_fill_clip.clip_contents = true
+	exp_bar.add_child(_exp_fill_clip)
 
-	_exp_fill = ColorRect.new()
-	_exp_fill.color = Color(1.0, 0.66, 0.12, 0.9)
-	_exp_fill.position = EXP_FILL_POSITION
-	_exp_fill.size = Vector2.ZERO
-	exp_cluster.add_child(_exp_fill)
+	var exp_fill := TextureRect.new()
+	exp_fill.texture = exp_fill_texture
+	exp_fill.position = Vector2.ZERO
+	exp_fill.size = EXP_FILL_SIZE
+	exp_fill.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	exp_fill.stretch_mode = TextureRect.STRETCH_SCALE
+	_exp_fill_clip.add_child(exp_fill)
 
 	var spell_slots := TextureRect.new()
 	spell_slots.texture = SPELL_SLOT_TEXTURE
@@ -416,6 +502,7 @@ func _make_ui() -> void:
 	spell_slots.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	spell_slots.stretch_mode = TextureRect.STRETCH_SCALE
 	spell_cluster.add_child(spell_slots)
+	_make_spell_slot_hover_ui(spell_cluster)
 
 	var skill_slot := Control.new()
 	skill_slot.position = _spell_slot_source_to_local(FIRESTORM_SLOT_CENTER_SOURCE) - FIRESTORM_ICON_SIZE * 0.5
@@ -429,6 +516,8 @@ func _make_ui() -> void:
 	_skill_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_skill_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_skill_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_skill_icon.mouse_entered.connect(_on_spell_slot_mouse_entered.bind(0))
+	_skill_icon.mouse_exited.connect(_on_spell_slot_mouse_exited.bind(0))
 	skill_slot.add_child(_skill_icon)
 
 	_skill_cooldown_label = _label("", SKILL_COOLDOWN_FONT_SIZE)
@@ -437,17 +526,6 @@ func _make_ui() -> void:
 	_skill_cooldown_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_skill_cooldown_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.62))
 	skill_slot.add_child(_skill_cooldown_label)
-
-	var stats_row := HBoxContainer.new()
-	stats_row.position = STATS_ROW_POSITION
-	stats_row.size = Vector2(360.0, 24.0)
-	stats_row.add_theme_constant_override("separation", 16)
-	hud_cluster.add_child(stats_row)
-
-	_level_label = _label("Level 1", 16)
-	stats_row.add_child(_level_label)
-	_gold_label = _label("Gold 0", 16)
-	stats_row.add_child(_gold_label)
 
 	_objective_label = _label(_mission_title_case("Slay everyone in the castle."), MISSION_FONT_SIZE)
 	_objective_label.add_theme_font_override("font", MISSION_FONT)
@@ -480,6 +558,27 @@ func _make_ui() -> void:
 	root.add_child(minimap_cluster)
 	_minimap_cluster = minimap_cluster
 	_minimap_cluster.pivot_offset = MINIMAP_SIZE * 0.5
+
+	var minimap_hole_shade := ColorRect.new()
+	minimap_hole_shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	minimap_hole_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	minimap_hole_shade.material = _shader_material("""
+shader_type canvas_item;
+uniform vec4 shade_color : source_color = vec4(0.01, 0.01, 0.01, 0.34);
+uniform vec2 hole_center = vec2(0.5, 0.5);
+uniform vec2 hole_radius = vec2(0.29, 0.44);
+uniform float feather = 0.04;
+void fragment() {
+	vec2 normalized = (UV - hole_center) / hole_radius;
+	float dist = length(normalized);
+	float mask = 1.0 - smoothstep(1.0 - feather, 1.0, dist);
+	COLOR = vec4(shade_color.rgb, shade_color.a * mask);
+}
+""")
+	var minimap_hole_shade_material := minimap_hole_shade.material as ShaderMaterial
+	if minimap_hole_shade_material != null:
+		minimap_hole_shade_material.set_shader_parameter("shade_color", Color(0.01, 0.01, 0.01, MINIMAP_HOLE_SHADE_ALPHA))
+	minimap_cluster.add_child(minimap_hole_shade)
 
 	_minimap_marker_layer = Control.new()
 	_minimap_marker_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -536,17 +635,23 @@ func _make_ui() -> void:
 	possession_image.stretch_mode = TextureRect.STRETCH_SCALE
 	possession_cluster.add_child(possession_image)
 
-	_possession_fill_glow = ColorRect.new()
-	_possession_fill_glow.color = Color(0.0, 0.45, 1.0, 0.28)
-	_possession_fill_glow.position = POSSESSION_FILL_POSITION + Vector2(-2.0, -3.0)
-	_possession_fill_glow.size = Vector2(0.0, POSSESSION_FILL_SIZE.y + 6.0)
-	possession_cluster.add_child(_possession_fill_glow)
+	_possession_fill_clip = Control.new()
+	_possession_fill_clip.position = Vector2(POSSESSION_FILL_POSITION.x + POSSESSION_FILL_SIZE.x, POSSESSION_FILL_POSITION.y)
+	_possession_fill_clip.size = Vector2.ZERO
+	_possession_fill_clip.clip_contents = true
+	possession_cluster.add_child(_possession_fill_clip)
 
-	_possession_fill = ColorRect.new()
-	_possession_fill.color = Color(0.04, 0.72, 1.0, 0.92)
-	_possession_fill.position = POSSESSION_FILL_POSITION
-	_possession_fill.size = Vector2.ZERO
-	possession_cluster.add_child(_possession_fill)
+	_possession_fill_texture = TextureRect.new()
+	_possession_fill_texture.texture = POSSESSION_FILL_TEXTURE
+	_possession_fill_texture.position = Vector2.ZERO
+	_possession_fill_texture.size = POSSESSION_FILL_SIZE
+	_possession_fill_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_possession_fill_texture.stretch_mode = TextureRect.STRETCH_SCALE
+	_possession_fill_clip.add_child(_possession_fill_texture)
+
+	_possession_hover_region = _make_hover_region()
+	_possession_hover_region.set_anchors_preset(Control.PRESET_FULL_RECT)
+	possession_cluster.add_child(_possession_hover_region)
 
 	_death_panel = PanelContainer.new()
 	_death_panel.visible = false
@@ -583,9 +688,9 @@ func _make_ui() -> void:
 
 	_scroll_panel = PanelContainer.new()
 	_scroll_panel.visible = false
-	_scroll_panel.anchor_left = 0.24
+	_scroll_panel.anchor_left = 0.18
 	_scroll_panel.anchor_top = 0.02
-	_scroll_panel.anchor_right = 0.76
+	_scroll_panel.anchor_right = 0.82
 	_scroll_panel.anchor_bottom = 0.98
 	_scroll_panel.add_theme_stylebox_override("panel", _scroll_panel_style())
 	root.add_child(_scroll_panel)
@@ -968,6 +1073,25 @@ func _make_character_menu(root: Control) -> void:
 	_demon_menu_button.add_child(demon_image)
 	_demon_menu_image = demon_image
 
+	_demon_level_label = _label("", 18)
+	_demon_level_label.anchor_left = 0.02
+	_demon_level_label.anchor_top = 0.08
+	_demon_level_label.anchor_right = 0.02
+	_demon_level_label.anchor_bottom = 0.08
+	_demon_level_label.offset_left = -16.0
+	_demon_level_label.offset_top = DEMON_MENU_BUTTON_SIZE.y + 16.0
+	_demon_level_label.offset_right = DEMON_MENU_BUTTON_SIZE.x + 36.0
+	_demon_level_label.offset_bottom = DEMON_MENU_BUTTON_SIZE.y + 44.0
+	_demon_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_demon_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_demon_level_label.add_theme_font_override("font", MISSION_FONT)
+	_demon_level_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.48))
+	_demon_level_label.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.01, 0.95))
+	_demon_level_label.add_theme_constant_override("outline_size", 2)
+	_demon_level_label.visible = false
+	root.add_child(_demon_level_label)
+	_refresh_demon_menu_visuals()
+
 	_character_panel = PanelContainer.new()
 	_character_panel.visible = false
 	_character_panel.anchor_left = 0.02
@@ -1023,8 +1147,9 @@ func _make_character_menu(root: Control) -> void:
 	tabs.add_theme_constant_override("separation", 6)
 	content.add_child(tabs)
 	_add_character_tab_button(tabs, "Stats", CHARACTER_PANEL_TAB_STATS)
-	_add_character_tab_button(tabs, "Skills", CHARACTER_PANEL_TAB_SKILLS)
+	_add_character_tab_button(tabs, "Spells", CHARACTER_PANEL_TAB_SPELLS)
 	_add_character_tab_button(tabs, "Inventory", CHARACTER_PANEL_TAB_INVENTORY)
+	_add_character_tab_button(tabs, "Skill Tree", CHARACTER_PANEL_TAB_SKILL_TREE)
 
 	_character_content_label = _label("", 18)
 	_character_content_label.add_theme_color_override("font_color", Color(0.96, 0.88, 0.72))
@@ -1035,6 +1160,10 @@ func _make_character_menu(root: Control) -> void:
 	_character_content_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(_character_content_label)
 
+	_spells_view = _make_spells_view()
+	_spells_view.visible = false
+	content.add_child(_spells_view)
+
 	_inventory_view = _make_inventory_view()
 	_inventory_view.visible = false
 	content.add_child(_inventory_view)
@@ -1043,6 +1172,7 @@ func _make_character_menu(root: Control) -> void:
 	_skill_tree_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_skill_tree_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_skill_tree_view.visible = false
+	_skill_tree_view.point_spend_requested.connect(_on_skill_tree_point_spend_requested)
 	content.add_child(_skill_tree_view)
 	_sync_character_panel()
 
@@ -1052,7 +1182,8 @@ func _add_character_tab_button(tabs: HBoxContainer, text: String, tab: String) -
 	button.custom_minimum_size = Vector2(120.0, 34.0)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_size_override("font_size", 14)
+	button.add_theme_font_override("font", MISSION_FONT)
+	button.add_theme_font_size_override("font_size", 16)
 	button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	button.pressed.connect(Callable(self, "_set_character_panel_tab").bind(tab))
 	tabs.add_child(button)
@@ -1063,6 +1194,7 @@ func _toggle_character_panel() -> void:
 		return
 	_character_panel.visible = not _character_panel.visible
 	if _character_panel.visible:
+		_acknowledge_level_up_feedback()
 		_sync_character_panel()
 		_character_panel.move_to_front()
 		_demon_menu_button.move_to_front()
@@ -1073,6 +1205,8 @@ func _hide_character_panel() -> void:
 
 func _set_character_panel_tab(tab: String) -> void:
 	_character_panel_tab = tab
+	if tab != CHARACTER_PANEL_TAB_SPELLS:
+		_spells_hovered_name = ""
 	_sync_character_panel()
 
 func _sync_character_panel() -> void:
@@ -1092,15 +1226,206 @@ func _sync_character_panel() -> void:
 			button.add_theme_stylebox_override("normal", _button_style(Color(0.06, 0.052, 0.058, 0.96)))
 			button.add_theme_stylebox_override("hover", _button_style(Color(0.16, 0.08, 0.07, 0.98)))
 			button.add_theme_stylebox_override("pressed", _button_style(Color(0.04, 0.032, 0.038, 1.0)))
+	if _spells_view != null:
+		_spells_view.visible = _character_panel_tab == CHARACTER_PANEL_TAB_SPELLS
 	if _skill_tree_view != null:
-		_skill_tree_view.visible = _character_panel_tab == CHARACTER_PANEL_TAB_SKILLS
+		_skill_tree_view.visible = _character_panel_tab == CHARACTER_PANEL_TAB_SKILL_TREE
 	if _inventory_view != null:
 		_inventory_view.visible = _character_panel_tab == CHARACTER_PANEL_TAB_INVENTORY
 	_character_content_label.visible = _character_panel_tab == CHARACTER_PANEL_TAB_STATS
 	if _character_panel_tab == CHARACTER_PANEL_TAB_INVENTORY:
 		_sync_inventory_view()
+	elif _character_panel_tab == CHARACTER_PANEL_TAB_SPELLS:
+		_sync_spells_view()
+	elif _character_panel_tab == CHARACTER_PANEL_TAB_SKILL_TREE:
+		_sync_skill_tree_view()
 	elif _character_panel_tab == CHARACTER_PANEL_TAB_STATS:
 		_character_content_label.text = _character_stats_text()
+
+func _sync_skill_tree_view() -> void:
+	if _skill_tree_view == null:
+		return
+	var points: int = int(_latest_stats.get("skill_points", 0))
+	var unlocked_nodes: Array = _latest_stats.get("unlocked_skill_nodes", [])
+	_skill_tree_view.set_skill_data(points, unlocked_nodes)
+	_skill_tree_view.set_corruption_ratio(_corruption_ratio)
+
+func _make_spells_view() -> Control:
+	var spells := VBoxContainer.new()
+	spells.add_theme_constant_override("separation", 12)
+	spells.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	_spells_hover_label = _label("Hover over each sigil to reveal its name.", 15)
+	_spells_hover_label.add_theme_color_override("font_color", Color(0.82, 0.73, 0.63))
+	spells.add_child(_spells_hover_label)
+
+	for category_variant in SPELL_SLOT_HOVER_CATEGORIES:
+		var category := String(category_variant)
+		var section := VBoxContainer.new()
+		section.add_theme_constant_override("separation", 6)
+		spells.add_child(section)
+
+		var header := _label("%s Spells:" % String(SPELL_SLOT_HOVER_LABELS.get(category, category.capitalize())), 17)
+		header.add_theme_color_override("font_color", Color(0.96, 0.88, 0.72))
+		section.add_child(header)
+
+		var row := HFlowContainer.new()
+		row.add_theme_constant_override("h_separation", 8)
+		row.add_theme_constant_override("v_separation", 8)
+		section.add_child(row)
+		_spell_category_rows[category] = row
+
+	return spells
+
+func _sync_spells_view() -> void:
+	if _spells_hover_label != null:
+		if _spells_hovered_name.is_empty():
+			_spells_hover_label.text = "Hover over each sigil to reveal its name."
+		else:
+			_spells_hover_label.text = "Spell: %s" % _spells_hovered_name
+	var next_signature := _spells_signature_for_current_stats()
+	if next_signature == _spells_view_signature:
+		return
+	_spells_view_signature = next_signature
+	for category_variant in SPELL_SLOT_HOVER_CATEGORIES:
+		var category := String(category_variant)
+		var row := _spell_category_rows.get(category) as HFlowContainer
+		if row == null:
+			continue
+		for child in row.get_children():
+			row.remove_child(child)
+			child.queue_free()
+		var entries := _spell_entries_for_category(category)
+		if entries.is_empty():
+			var empty_label := _label("None", 15)
+			empty_label.add_theme_color_override("font_color", Color(0.56, 0.5, 0.47))
+			row.add_child(empty_label)
+			continue
+		for entry in entries:
+			row.add_child(_make_spell_chip(entry))
+
+func _spells_signature_for_current_stats() -> String:
+	var learned_spells: Array = _latest_stats.get("learned_spells", [])
+	var tokens: Array[String] = []
+	for spell_id_variant in learned_spells:
+		tokens.append(String(spell_id_variant))
+	tokens.sort()
+	return "|".join(tokens)
+
+func _spell_entries_for_category(category: String) -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
+	if category == "attack":
+		entries.append({
+			"name": "Firestorm",
+			"tooltip": "Firestorm",
+			"icon": FIRESTORM_TEXTURE,
+			"category": category
+		})
+	var learned_spells: Array = _latest_stats.get("learned_spells", [])
+	for spell_id_variant in learned_spells:
+		var spell_id := String(spell_id_variant)
+		if _spell_category_for_id(spell_id) != category:
+			continue
+		var display_name := _spell_display_name(spell_id)
+		entries.append({
+			"name": display_name,
+			"tooltip": display_name,
+			"text": _spell_chip_abbreviation(display_name),
+			"category": category
+		})
+	return entries
+
+func _make_spell_chip(entry: Dictionary) -> Control:
+	var chip := Button.new()
+	chip.text = ""
+	chip.custom_minimum_size = Vector2(54.0, 54.0)
+	chip.focus_mode = Control.FOCUS_NONE
+	chip.tooltip_text = String(entry.get("tooltip", entry.get("name", "Spell")))
+	chip.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var chip_style := _spell_chip_style(String(entry.get("category", "attack")))
+	chip.add_theme_stylebox_override("normal", chip_style)
+	chip.add_theme_stylebox_override("hover", chip_style)
+	chip.add_theme_stylebox_override("pressed", chip_style)
+	chip.mouse_entered.connect(_on_spell_chip_mouse_entered.bind(String(entry.get("name", "Spell"))))
+	chip.mouse_exited.connect(_on_spell_chip_mouse_exited)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(center)
+
+	var icon := entry.get("icon", null) as Texture2D
+	if icon != null:
+		var icon_rect := TextureRect.new()
+		icon_rect.texture = icon
+		icon_rect.custom_minimum_size = Vector2(34.0, 34.0)
+		icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		center.add_child(icon_rect)
+	else:
+		var glyph := _label(String(entry.get("text", "?")), 16)
+		glyph.add_theme_font_override("font", MISSION_FONT)
+		glyph.add_theme_color_override("font_color", Color(1.0, 0.9, 0.78))
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		center.add_child(glyph)
+
+	return chip
+
+func _spell_chip_style(category: String) -> StyleBoxFlat:
+	var accent := _spell_category_color(category)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.065, 0.038, 0.036, 0.96)
+	style.border_color = accent
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 8
+	style.content_margin_right = 8
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
+
+func _spell_category_color(category: String) -> Color:
+	match category:
+		"attack":
+			return Color(0.95, 0.4, 0.18, 0.98)
+		"defense":
+			return Color(0.42, 0.7, 1.0, 0.98)
+		"healing":
+			return Color(0.54, 0.92, 0.64, 0.98)
+		"buff":
+			return Color(0.9, 0.72, 0.3, 0.98)
+		"debuff":
+			return Color(0.8, 0.42, 0.92, 0.98)
+		_:
+			return Color(0.74, 0.25, 0.12, 0.95)
+
+func _spell_chip_abbreviation(display_name: String) -> String:
+	var parts := display_name.split(" ", false)
+	var abbreviation := ""
+	for part in parts:
+		if part.is_empty():
+			continue
+		abbreviation += part.substr(0, 1).to_upper()
+	if abbreviation.length() >= 2:
+		return abbreviation.substr(0, 3)
+	if display_name.length() >= 2:
+		return display_name.substr(0, 2).to_upper()
+	return display_name.to_upper()
+
+func _on_spell_chip_mouse_entered(spell_name: String) -> void:
+	_spells_hovered_name = spell_name
+	if _spells_hover_label == null:
+		return
+	_spells_hover_label.text = "Spell: %s" % spell_name
+
+func _on_spell_chip_mouse_exited() -> void:
+	_spells_hovered_name = ""
+	if _spells_hover_label == null:
+		return
+	_spells_hover_label.text = "Hover over each sigil to reveal its name."
 
 func _make_inventory_view() -> Control:
 	var inventory := HBoxContainer.new()
@@ -1123,15 +1448,10 @@ func _make_inventory_view() -> Control:
 	equip_frame.add_child(equip_image)
 
 	var details := VBoxContainer.new()
-	details.add_theme_constant_override("separation", 8)
+	details.add_theme_constant_override("separation", 6)
 	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	details.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inventory.add_child(details)
-
-	var title := _label("Inventory", 22)
-	title.add_theme_font_override("font", MISSION_FONT)
-	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.35))
-	details.add_child(title)
 
 	_inventory_gold_label = _label("", 18)
 	_inventory_gold_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.58))
@@ -1161,35 +1481,90 @@ func _character_stats_text() -> String:
 	var xp: int = int(_latest_stats.get("xp", 0))
 	var xp_to_next: int = int(_latest_stats.get("xp_to_next", 100))
 	var shield: int = int(_latest_stats.get("shield", 0))
-	var diamonds: int = int(_latest_stats.get("diamonds", 0))
-	var learned_spells: Array = _latest_stats.get("learned_spells", [])
-	var cooldown: float = float(_latest_stats.get("firestorm_cooldown", 0.0))
-	return "Stats\nLife: %s / %s\nShield: %s\nLevel: %s\nXP: %s / %s\nDiamonds: %s\nSpells: %s\nPossession: %s%%\nFire Storm: %.1fs" % [
+	var active_attack_spell := String(_latest_stats.get("active_attack_spell", "Firestorm"))
+	var active_attack_damage_min: int = int(_latest_stats.get("active_attack_damage_min", 0))
+	var active_attack_damage_max: int = int(_latest_stats.get("active_attack_damage_max", active_attack_damage_min))
+	var active_attack_cooldown: float = float(_latest_stats.get("active_attack_cooldown_duration", 4.5))
+	return "Life: %s / %s\nPossession: %s%%\nShield: %s\nLevel: %s\nXP: %s / %s\n\nActive Attack Spell: %s\ndamage: %s - %s\ncooldown: %.1fs" % [
 		life,
 		max_life,
+		int(round(_possession_ratio * 100.0)),
 		shield,
 		level,
 		xp,
 		xp_to_next,
-		diamonds,
-		learned_spells.size(),
-		int(round(_corruption)),
-		cooldown
+		active_attack_spell,
+		active_attack_damage_min,
+		active_attack_damage_max,
+		active_attack_cooldown
 	]
 
 func _on_demon_menu_button_mouse_entered() -> void:
-	if _demon_menu_button == null:
-		return
-	_demon_menu_button.scale = Vector2(1.08, 1.08)
-	_demon_menu_button.modulate = Color(1.0, 0.82, 0.72, 1.0)
-	_set_demon_outline_alpha(0.96)
+	_demon_menu_hovered = true
+	_refresh_demon_menu_visuals()
 
 func _on_demon_menu_button_mouse_exited() -> void:
+	_demon_menu_hovered = false
+	_refresh_demon_menu_visuals()
+
+func _trigger_level_up_feedback(level_gain: int) -> void:
+	_level_up_pending_ack = true
+	if _demon_level_label != null:
+		_demon_level_label.text = "+1 Level"
+		_demon_level_label.visible = true
+	_refresh_demon_menu_visuals()
+
+func _update_level_up_feedback(delta: float) -> void:
+	if not _level_up_pending_ack:
+		if _demon_level_label != null and _demon_level_label.visible:
+			_demon_level_label.visible = false
+			_refresh_demon_menu_visuals()
+		return
+	if _demon_level_label != null:
+		var rise := sin(_ui_time * (LEVEL_UP_BLINK_SPEED * 0.9)) * 2.5
+		_demon_level_label.offset_top = DEMON_MENU_BUTTON_SIZE.y + 16.0 - rise
+		_demon_level_label.offset_bottom = DEMON_MENU_BUTTON_SIZE.y + 44.0 - rise
+		var blink_on := int(_ui_time * (LEVEL_UP_BLINK_SPEED * 2.0)) % 2 == 0
+		_demon_level_label.modulate = Color(1.0, 0.84, 0.48, 1.0 if blink_on else 0.45)
+		_demon_level_label.visible = true
+	_refresh_demon_menu_visuals()
+
+func _refresh_demon_menu_visuals() -> void:
 	if _demon_menu_button == null:
 		return
-	_demon_menu_button.scale = Vector2.ONE
-	_demon_menu_button.modulate = Color.WHITE
-	_set_demon_outline_alpha(0.34)
+	var flash_active := _level_up_pending_ack
+	var flash_on := flash_active and int(_ui_time * (LEVEL_UP_BLINK_SPEED * 2.0)) % 2 == 0
+	var button_scale := Vector2.ONE
+	var button_modulate := Color.WHITE
+	var image_modulate := Color.WHITE
+	var outline_alpha := 0.34
+	if _demon_menu_hovered:
+		button_scale = Vector2(1.08, 1.08)
+		button_modulate = Color(1.0, 0.82, 0.72, 1.0)
+		outline_alpha = 0.96
+	if flash_active:
+		var slow_blink_on := int(_ui_time * (LEVEL_UP_BLINK_SPEED * 2.0)) % 2 == 0
+		button_scale *= 1.03 if flash_on else 0.98
+		button_modulate = Color(1.0, 0.7 if slow_blink_on else 0.55, 0.56, 1.0)
+		image_modulate = Color(1.0, 0.8 if slow_blink_on else 0.4, 0.72 if slow_blink_on else 0.5, 1.0 if slow_blink_on else 0.32)
+		outline_alpha = maxf(outline_alpha, 0.78 if slow_blink_on else 0.48)
+	elif _demon_menu_hovered:
+		image_modulate = Color(1.0, 0.92, 0.88, 1.0)
+	_demon_menu_button.scale = button_scale
+	_demon_menu_button.modulate = button_modulate
+	if _demon_menu_image != null:
+		_demon_menu_image.modulate = image_modulate
+	_set_demon_outline_alpha(outline_alpha)
+
+func _acknowledge_level_up_feedback() -> void:
+	if not _level_up_pending_ack:
+		return
+	_level_up_pending_ack = false
+	if _demon_level_label != null:
+		_demon_level_label.visible = false
+		_demon_level_label.offset_top = DEMON_MENU_BUTTON_SIZE.y + 16.0
+		_demon_level_label.offset_bottom = DEMON_MENU_BUTTON_SIZE.y + 44.0
+	_refresh_demon_menu_visuals()
 
 func _apply_corruption_stage() -> void:
 	var next_stage := _corruption_stage_for(_corruption)
@@ -1222,10 +1597,10 @@ func _show_stage_whisper() -> void:
 	_show_whisper(CORRUPTION_STAGE_LINES[index])
 
 func _update_static_corruption_layers() -> void:
-	if _possession_fill == null or _possession_fill_glow == null:
+	if _possession_fill_texture == null:
 		return
-	var power_color := Color(0.04, 0.72, 1.0, 0.92).lerp(Color(1.0, 0.05, 0.025, 0.96), _corruption_ratio)
-	_possession_fill.color = power_color
+	var power_color := Color(0.65, 0.85, 1.0, 0.95).lerp(Color(1.0, 0.5, 0.5, 0.98), _corruption_ratio)
+	_possession_fill_texture.modulate = power_color
 	if _vignette_overlay != null:
 		var vignette_material := _vignette_overlay.material as ShaderMaterial
 		if vignette_material != null:
@@ -1251,18 +1626,16 @@ func _update_corruption_fx(delta: float) -> void:
 	_update_passive_whispers(delta)
 
 func _update_bar_pulses() -> void:
-	if _possession_fill == null or _possession_fill_glow == null:
+	if _possession_fill_texture == null:
 		return
 	var possession_wave := 0.5 + 0.5 * sin(_ui_time * (2.2 + _corruption_ratio * 4.8))
-	var glow_alpha := 0.18 + _corruption_ratio * 0.42 + possession_wave * (0.04 + _corruption_ratio * 0.16)
-	_possession_fill_glow.color = Color(0.08 + _corruption_ratio * 0.72, 0.46 - _corruption_ratio * 0.24, 1.0 - _corruption_ratio * 0.72, clampf(glow_alpha, 0.0, 0.82))
-	if _corruption_stage >= 3 and _life_fill != null:
+	if _corruption_stage >= 3 and _life_fill_texture != null:
 		var life_wave := 0.5 + 0.5 * sin(_ui_time * 5.1 + PI)
-		_life_fill.modulate.a = 0.78 + life_wave * 0.22
-		_possession_fill.modulate.a = 0.76 + possession_wave * 0.24
-	elif _life_fill != null:
-		_life_fill.modulate.a = 1.0
-		_possession_fill.modulate.a = 1.0
+		_life_fill_texture.modulate.a = 0.78 + life_wave * 0.22
+		_possession_fill_texture.modulate.a = 0.78 + possession_wave * 0.2
+	elif _life_fill_texture != null:
+		_life_fill_texture.modulate.a = 1.0
+		_possession_fill_texture.modulate.a = 1.0
 	if _possession_cluster != null:
 		var scale_wave := 1.0 + sin(_ui_time * 2.0) * (0.002 + _corruption_ratio * 0.006)
 		_possession_cluster.scale = Vector2.ONE * scale_wave
@@ -1401,44 +1774,151 @@ func _mission_title_case(text: String) -> String:
 
 func _set_life_ratio(ratio: float) -> void:
 	ratio = clampf(ratio, 0.0, 1.0)
-	_life_fill.size = Vector2(LIFE_FILL_SIZE.x * ratio, LIFE_FILL_SIZE.y)
-
-func _update_exp_display(ratio: float, next_level: int) -> void:
-	ratio = clampf(ratio, 0.0, 1.0)
-	if next_level > _displayed_level:
-		if _exp_tween != null:
-			_exp_tween.kill()
-		_set_exp_ratio(1.0)
-		_exp_tween = create_tween()
-		_exp_tween.tween_interval(0.16)
-		_exp_tween.tween_method(_set_exp_ratio, 1.0, ratio, 0.24)
-		_displayed_level = next_level
+	if _life_fill_clip == null:
 		return
-	if _exp_tween != null and _exp_tween.is_running():
-		return
-	_exp_tween = null
-	_set_exp_ratio(ratio)
-	_displayed_level = next_level
+	var fill_width := LIFE_FILL_SIZE.x * ratio
+	_life_fill_clip.visible = ratio > 0.001
+	_life_fill_clip.size = Vector2(fill_width, LIFE_FILL_SIZE.y)
 
 func _set_exp_ratio(ratio: float) -> void:
 	ratio = clampf(ratio, 0.0, 1.0)
-	if _exp_fill == null or _exp_fill_glow == null:
+	if _exp_fill_clip == null:
 		return
-	var fill_width: float = EXP_FILL_SIZE.x * ratio
-	_exp_fill.visible = ratio > 0.001
-	_exp_fill_glow.visible = ratio > 0.001
-	_exp_fill.size = Vector2(fill_width, EXP_FILL_SIZE.y)
-	_exp_fill_glow.size = Vector2(fill_width + 4.0, EXP_FILL_SIZE.y + 6.0)
+	var fill_width := EXP_FILL_SIZE.x * ratio
+	_exp_fill_clip.visible = ratio > 0.001
+	_exp_fill_clip.size = Vector2(fill_width, EXP_FILL_SIZE.y)
+
+func _make_spell_slot_hover_ui(parent: Control) -> void:
+	var tooltip := PanelContainer.new()
+	tooltip.name = "SpellSlotTooltip"
+	tooltip.visible = false
+	tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tooltip.size = SPELL_SLOT_TOOLTIP_SIZE
+	tooltip.add_theme_stylebox_override("panel", _spell_slot_tooltip_style())
+	parent.add_child(tooltip)
+	_spell_slot_hover_tooltip = tooltip
+
+	var tooltip_label := _label("", SPELL_SLOT_HOVER_FONT_SIZE)
+	tooltip_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tooltip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tooltip_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tooltip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tooltip_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.84, 1.0))
+	tooltip_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.95))
+	tooltip_label.add_theme_constant_override("outline_size", 2)
+	tooltip.add_child(tooltip_label)
+	_spell_slot_hover_tooltip_label = tooltip_label
+
+	for i in range(SPELL_SLOT_HOVER_CATEGORIES.size()):
+		var hitbox := Control.new()
+		hitbox.name = "SpellSlotHoverRegion%s" % i
+		hitbox.mouse_filter = Control.MOUSE_FILTER_STOP
+		hitbox.size = SPELL_SLOT_HOVER_REGION_SIZE
+		hitbox.position = _spell_slot_source_to_local(SPELL_SLOT_HOVER_CENTER_SOURCES[i]) - hitbox.size * 0.5
+		hitbox.mouse_entered.connect(_on_spell_slot_mouse_entered.bind(i))
+		hitbox.mouse_exited.connect(_on_spell_slot_mouse_exited.bind(i))
+		parent.add_child(hitbox)
+		_spell_slot_hover_regions.append(hitbox)
+
+func _spell_slot_tooltip_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.03, 0.02, 0.94)
+	style.border_color = Color(0.96, 0.58, 0.18, 0.94)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
+
+func _on_spell_slot_mouse_entered(slot_index: int) -> void:
+	_spell_slot_hovered_index = slot_index
+	if _spell_cluster != null:
+		_spell_cluster.move_to_front()
+	_refresh_spell_slot_tooltip()
+	if _spell_slot_hover_tooltip != null:
+		_spell_slot_hover_tooltip.visible = true
+
+func _on_spell_slot_mouse_exited(slot_index: int) -> void:
+	if _spell_slot_hovered_index != slot_index:
+		return
+	_spell_slot_hovered_index = -1
+	if _spell_slot_hover_tooltip != null:
+		_spell_slot_hover_tooltip.visible = false
+
+func _refresh_spell_slot_tooltip() -> void:
+	if _spell_slot_hover_tooltip == null or _spell_slot_hover_tooltip_label == null:
+		return
+	if _spell_slot_hovered_index < 0 or _spell_slot_hovered_index >= SPELL_SLOT_HOVER_CATEGORIES.size():
+		_spell_slot_hover_tooltip.visible = false
+		return
+	var category: String = SPELL_SLOT_HOVER_CATEGORIES[_spell_slot_hovered_index]
+	var title: String = String(SPELL_SLOT_HOVER_LABELS.get(category, category.capitalize()))
+	var spell_name := _slot_spell_name_for_category(category)
+	_spell_slot_hover_tooltip_label.text = "%s: %s" % [title, spell_name]
+	var slot_center := _spell_slot_source_to_local(SPELL_SLOT_HOVER_CENTER_SOURCES[_spell_slot_hovered_index])
+	var target_position := slot_center - _spell_slot_hover_tooltip.size * 0.5 + Vector2(0.0, -84.0)
+	target_position.x = clampf(target_position.x, 0.0, SPELL_SLOT_SIZE.x - _spell_slot_hover_tooltip.size.x)
+	target_position.y = clampf(target_position.y, -96.0, SPELL_SLOT_SIZE.y - _spell_slot_hover_tooltip.size.y)
+	_spell_slot_hover_tooltip.position = target_position
+
+func _slot_spell_name_for_category(category: String) -> String:
+	if category == "attack":
+		return "Firestorm"
+	var learned_spells: Array = _latest_stats.get("learned_spells", [])
+	for spell_id_variant in learned_spells:
+		var spell_id := String(spell_id_variant)
+		if _spell_category_for_id(spell_id) == category:
+			return _spell_display_name(spell_id)
+	return "None"
+
+func _spell_category_for_id(spell_id: String) -> String:
+	if spell_id in ["searing_fire", "wide_flame"]:
+		return "attack"
+	if spell_id in ["quickened_ritual", "ember_stride"]:
+		return "buff"
+	if spell_id.contains("defense") or spell_id.contains("shield") or spell_id.contains("guard"):
+		return "defense"
+	if spell_id.contains("heal") or spell_id.contains("recovery") or spell_id.contains("life"):
+		return "healing"
+	if spell_id.contains("debuff") or spell_id.contains("curse") or spell_id.contains("slow") or spell_id.contains("weaken"):
+		return "debuff"
+	if spell_id.contains("buff"):
+		return "buff"
+	return "attack"
+
+func _spell_display_name(spell_id: String) -> String:
+	if SPELL_ID_TO_DISPLAY_NAME.has(spell_id):
+		return String(SPELL_ID_TO_DISPLAY_NAME[spell_id])
+	return _mission_title_case(spell_id.replace("_", " "))
 
 func _set_possession_ratio(ratio: float) -> void:
 	ratio = clampf(ratio, 0.0, 1.0)
-	if _possession_fill == null or _possession_fill_glow == null:
+	if _possession_fill_clip == null or _possession_fill_texture == null:
 		return
 	var fill_width: float = POSSESSION_FILL_SIZE.x * ratio
-	_possession_fill.visible = ratio > 0.001
-	_possession_fill_glow.visible = ratio > 0.001
-	_possession_fill.size = Vector2(fill_width, POSSESSION_FILL_SIZE.y)
-	_possession_fill_glow.size = Vector2(fill_width + 4.0, POSSESSION_FILL_SIZE.y + 6.0)
+	var clip_x := POSSESSION_FILL_POSITION.x + POSSESSION_FILL_SIZE.x - fill_width
+	_possession_fill_clip.visible = ratio > 0.001
+	_possession_fill_clip.position = Vector2(clip_x, POSSESSION_FILL_POSITION.y)
+	_possession_fill_clip.size = Vector2(fill_width, POSSESSION_FILL_SIZE.y)
+	_possession_fill_texture.position = Vector2(fill_width - POSSESSION_FILL_SIZE.x, 0.0)
+
+func _refresh_bar_tooltips() -> void:
+	if _life_hover_region != null:
+		_life_hover_region.tooltip_text = "Life: %s%%" % int(round(_hp_percent * 100.0))
+	if _possession_hover_region != null:
+		_possession_hover_region.tooltip_text = "Possesion: %s%%" % int(round(_possession_ratio * 100.0))
+
+func _make_hover_region() -> Button:
+	var hover_region := Button.new()
+	hover_region.text = ""
+	hover_region.focus_mode = Control.FOCUS_NONE
+	hover_region.mouse_default_cursor_shape = Control.CURSOR_ARROW
+	hover_region.add_theme_stylebox_override("normal", _icon_button_style(Color.TRANSPARENT, Color.TRANSPARENT))
+	hover_region.add_theme_stylebox_override("hover", _icon_button_style(Color.TRANSPARENT, Color.TRANSPARENT))
+	hover_region.add_theme_stylebox_override("pressed", _icon_button_style(Color.TRANSPARENT, Color.TRANSPARENT))
+	return hover_region
 
 func _spell_slot_source_to_local(source_position: Vector2) -> Vector2:
 	return Vector2(
@@ -1500,10 +1980,10 @@ func _scroll_panel_style() -> StyleBoxTexture:
 	style.texture_margin_top = 190
 	style.texture_margin_right = 160
 	style.texture_margin_bottom = 220
-	style.content_margin_left = 112
-	style.content_margin_top = 126
-	style.content_margin_right = 112
-	style.content_margin_bottom = 104
+	style.content_margin_left = 140
+	style.content_margin_top = 110
+	style.content_margin_right = 140
+	style.content_margin_bottom = 90
 	return style
 
 func _button_style(color: Color) -> StyleBoxFlat:
@@ -1556,6 +2036,11 @@ func _on_shop_item_pressed(item_id: String) -> void:
 	if item_id.is_empty():
 		return
 	shop_purchase_requested.emit(item_id)
+
+func _on_skill_tree_point_spend_requested(node_key: String) -> void:
+	if node_key.is_empty():
+		return
+	skill_tree_point_requested.emit(node_key)
 
 func _bar_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
