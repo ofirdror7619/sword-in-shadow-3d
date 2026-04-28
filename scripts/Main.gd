@@ -30,6 +30,9 @@ const TOWN_BARREL_TEXTURE_PATH := "res://assets/images/objects/town/barrel.png"
 const TOWN_VENDOR_MAN_TEXTURE_PATH := "res://assets/images/objects/town/aldric.png"
 const TOWN_VENDOR_WOMAN_TEXTURE_PATH := "res://assets/images/objects/town/syra.png"
 const TOWN_VENDOR_WARLOCK_TEXTURE_PATH := "res://assets/images/objects/town/zethyr.png"
+const TOWN_VENDOR_MAN_FACE_PATH := "res://assets/images/objects/town/aldric-face.png"
+const TOWN_VENDOR_WOMAN_FACE_PATH := "res://assets/images/objects/town/syra-face.png"
+const TOWN_VENDOR_WARLOCK_FACE_PATH := "res://assets/images/objects/town/zethyr-face.png"
 const TOWN_TREE_TEXTURE_PATHS := [
 	"res://assets/images/objects/town/tree-1.png",
 	"res://assets/images/objects/town/tree-2.png",
@@ -63,14 +66,15 @@ const IDLE_WHISPER_INTERVAL_MIN := 11.0
 const IDLE_WHISPER_INTERVAL_MAX := 18.0
 const AFTER_KILL_WHISPER_CHANCE := 0.62
 const START_IN_TOWN_FOR_TESTING := true
-const TEST_TOWN_START_GOLD := 500
-const TEST_TOWN_START_DIAMONDS := 10
+const TEST_TOWN_START_GOLD := 1000
+const TEST_TOWN_START_DIAMONDS := 0
+const VENDOR_SPRITE_GROUND_CLEARANCE := 0.06
 const AREA_CASTLE := "castle"
 const AREA_TOWN := "town"
 const TOWN_ORIGIN := Vector3(118.0, 0.0, 0.0)
 const TOWN_HALF_SIZE := 26.0
 const TOWN_SPAWN_POSITION := Vector3(118.0, 0.1, 18.0)
-const GLOVE_SOCKET_COUNT := 4
+const GLOVE_SOCKET_COUNT := 8
 const FADED_DIAMOND_CATALOG := [
 	{"id": "faded_rush", "icon": "🔴", "name": "Faded Diamond of Rush", "description": "-6% cooldown on abilities. Fast, aggressive playstyle.", "gold_cost": 120, "color": Color(0.93, 0.24, 0.24)},
 	{"id": "faded_focus", "icon": "🔵", "name": "Faded Diamond of Focus", "description": "+6% damage. Pure DPS.", "gold_cost": 120, "color": Color(0.25, 0.54, 1.0)},
@@ -86,10 +90,30 @@ const FADED_DIAMOND_CATALOG := [
 	{"id": "faded_storm", "icon": "⚡", "name": "Faded Diamond of Storm", "description": "Chain lightning between enemies. Strong and satisfying.", "gold_cost": 150, "color": Color(1.0, 0.94, 0.44)}
 ]
 const SPELL_CATALOG := [
-	{"id": "searing_fire", "name": "Searing Fire", "description": "Fire Storm deals 25% more damage.", "diamond_cost": 4},
-	{"id": "wide_flame", "name": "Widened Flame", "description": "Fire Storm covers a wider area and strikes more often.", "diamond_cost": 5},
-	{"id": "quickened_ritual", "name": "Quickened Ritual", "description": "Fire Storm cooldown drops to 3.2 seconds.", "diamond_cost": 6},
-	{"id": "ember_stride", "name": "Ember Stride", "description": "Move 12% faster while exploring and fighting.", "diamond_cost": 3}
+	# --- Attack ---
+	{"id": "searing_fire",       "name": "Searing Fire",          "description": "Fire Storm deals 25% more damage.",                    "diamond_cost": 4,  "category": "attack",  "image": "res://assets/images/spells/attack/SearingFire.png"},
+	{"id": "absolute_zero",      "name": "Absolute Zero",         "description": "Freeze all nearby enemies briefly.",                    "diamond_cost": 6,  "category": "attack",  "image": "res://assets/images/spells/attack/AbsoluteZero.png"},
+	{"id": "abyssal_blade",      "name": "Abyssal Blade",         "description": "Shadow slash attack deals dark damage.",                "diamond_cost": 5,  "category": "attack",  "image": "res://assets/images/spells/attack/AbyssalBlade.png"},
+	{"id": "call_from_beyond",   "name": "Call From The Beyond",  "description": "Summon a demon ally from the void.",                   "diamond_cost": 7,  "category": "attack",  "image": "res://assets/images/spells/attack/CallFromTheBeyond.png"},
+	{"id": "electricity_vortex", "name": "Electricity Vortex",    "description": "Lightning chains between nearby enemies.",              "diamond_cost": 6,  "category": "attack",  "image": "res://assets/images/spells/attack/ElectricityVortex.png"},
+	{"id": "icesmash",           "name": "Ice Smash",             "description": "Falling ice crushes enemies below.",                   "diamond_cost": 5,  "category": "attack",  "image": "res://assets/images/spells/attack/Icesmash.png"},
+	{"id": "soul_drain",         "name": "Soul Drain",            "description": "Steal HP directly from enemies.",                      "diamond_cost": 5,  "category": "attack",  "image": "res://assets/images/spells/attack/SoulDrain.png"},
+	# --- Buff ---
+	{"id": "demonic_frenzy",        "name": "Demonic Frenzy",           "description": "Attack speed greatly increased.",                    "diamond_cost": 5,  "category": "buff",    "image": "res://assets/images/spells/buff/DemonicFrenzy.png"},
+	{"id": "killing_radius",        "name": "Killing Radius",           "description": "Bigger area of effect on all attacks.",              "diamond_cost": 5,  "category": "buff",    "image": "res://assets/images/spells/buff/KillingRadius.png"},
+	{"id": "power_of_underworld",   "name": "Power of the Underworld",  "description": "Significantly increases all damage output.",         "diamond_cost": 6,  "category": "buff",    "image": "res://assets/images/spells/buff/PowerOfTheUnderWorld.png"},
+	{"id": "void_infusion",         "name": "Void Infusion",            "description": "Attacks apply shadow damage on hit.",               "diamond_cost": 6,  "category": "buff",    "image": "res://assets/images/spells/buff/VoidInfusion.png"},
+	# --- Debuff ---
+	{"id": "curse_of_laziness",  "name": "Curse of Laziness",     "description": "Slow all nearby enemies.",                             "diamond_cost": 4,  "category": "debuff",  "image": "res://assets/images/spells/debuff/CurseOfLaziness.png"},
+	{"id": "mark_of_weakness",   "name": "Mark of Weakness",      "description": "Marked enemies take increased damage.",                 "diamond_cost": 4,  "category": "debuff",  "image": "res://assets/images/spells/debuff/MarkOfWeakness.png"},
+	{"id": "slowly_we_rot",      "name": "Slowly We Rot",         "description": "Applies damage over time to all enemies.",              "diamond_cost": 5,  "category": "debuff",  "image": "res://assets/images/spells/debuff/SlowlyWeRot.png"},
+	# --- Defense ---
+	{"id": "armor_of_undead",    "name": "Armor of the Undead",   "description": "Absorb a portion of incoming damage.",                  "diamond_cost": 5,  "category": "defense", "image": "res://assets/images/spells/defense/ArmorOfTheUndead.png"},
+	{"id": "eclipse_shield",     "name": "Eclipse Shield",        "description": "Reflects part of damage back to attackers.",            "diamond_cost": 6,  "category": "defense", "image": "res://assets/images/spells/defense/EclipseShield.png"},
+	{"id": "titanium",           "name": "Titanium",              "description": "Reduced damage taken from all sources.",                "diamond_cost": 5,  "category": "defense", "image": "res://assets/images/spells/defense/Titanium.png"},
+	# --- Healing ---
+	{"id": "reincarnation",      "name": "Reincarnation",         "description": "Faster healing rate at all times.",                     "diamond_cost": 5,  "category": "healing", "image": "res://assets/images/spells/healing/Reincarnation.png"},
+	{"id": "soul_harvest",       "name": "Soul Harvest",          "description": "Heal on each enemy kill.",                              "diamond_cost": 4,  "category": "healing", "image": "res://assets/images/spells/healing/SoulHarvest.png"},
 ]
 
 var player: SISPlayer
@@ -106,7 +130,7 @@ var music_player: AudioStreamPlayer
 var opening_aura_player: AudioStreamPlayer
 var enemies: Array[Node3D] = []
 var rng := RandomNumberGenerator.new()
-var game_level := 1
+var game_level := 2
 var kills := 0
 var exit_open := false
 var exit_directive_completed := false
@@ -144,6 +168,9 @@ var town_barrel_texture: Texture2D
 var town_vendor_man_texture: Texture2D
 var town_vendor_woman_texture: Texture2D
 var town_vendor_warlock_texture: Texture2D
+var town_vendor_man_face_texture: Texture2D
+var town_vendor_woman_face_texture: Texture2D
+var town_vendor_warlock_face_texture: Texture2D
 var town_tree_textures: Array[Texture2D] = []
 var spell_shop_texture: Texture2D
 var spell_shop_scene: PackedScene
@@ -193,17 +220,29 @@ func _process(delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if not opening_active:
+		var block_zoom := hud != null and hud.is_blocking_ui_visible()
 		if event is InputEventKey and event.pressed:
 			_mark_player_activity()
 			if event.keycode == KEY_Z:
+				if block_zoom:
+					get_viewport().set_input_as_handled()
+					return
 				_reset_camera_zoom()
 				get_viewport().set_input_as_handled()
 		elif event is InputEventMouseButton and event.pressed:
 			_mark_player_activity()
+			if hud != null and hud.handle_spell_store_mouse_wheel(event):
+				return
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				if block_zoom:
+					get_viewport().set_input_as_handled()
+					return
 				_adjust_camera_zoom(-CAMERA_ZOOM_STEP)
 				get_viewport().set_input_as_handled()
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				if block_zoom:
+					get_viewport().set_input_as_handled()
+					return
 				_adjust_camera_zoom(CAMERA_ZOOM_STEP)
 				get_viewport().set_input_as_handled()
 		return
@@ -254,7 +293,7 @@ func _make_hud() -> void:
 	hud = HudScript.new() as SISHUD
 	add_child(hud)
 	if player != null:
-		player.set_mouse_block_check(Callable(hud, "is_mouse_over_character_panel"))
+		player.set_mouse_block_check(Callable(hud, "is_blocking_ui_visible"))
 	hud.resurrect_requested.connect(_on_resurrect_requested)
 	hud.shop_purchase_requested.connect(_on_shop_purchase_requested)
 	hud.shop_closed.connect(_on_shop_closed)
@@ -864,6 +903,12 @@ func _load_vendor_textures() -> void:
 		town_vendor_woman_texture = load(TOWN_VENDOR_WOMAN_TEXTURE_PATH) as Texture2D
 	if town_vendor_warlock_texture == null and ResourceLoader.exists(TOWN_VENDOR_WARLOCK_TEXTURE_PATH):
 		town_vendor_warlock_texture = load(TOWN_VENDOR_WARLOCK_TEXTURE_PATH) as Texture2D
+	if town_vendor_man_face_texture == null and ResourceLoader.exists(TOWN_VENDOR_MAN_FACE_PATH):
+		town_vendor_man_face_texture = load(TOWN_VENDOR_MAN_FACE_PATH) as Texture2D
+	if town_vendor_woman_face_texture == null and ResourceLoader.exists(TOWN_VENDOR_WOMAN_FACE_PATH):
+		town_vendor_woman_face_texture = load(TOWN_VENDOR_WOMAN_FACE_PATH) as Texture2D
+	if town_vendor_warlock_face_texture == null and ResourceLoader.exists(TOWN_VENDOR_WARLOCK_FACE_PATH):
+		town_vendor_warlock_face_texture = load(TOWN_VENDOR_WARLOCK_FACE_PATH) as Texture2D
 	if town_tree_textures.is_empty():
 		for tree_texture_path in TOWN_TREE_TEXTURE_PATHS:
 			if ResourceLoader.exists(tree_texture_path):
@@ -1081,7 +1126,6 @@ func _make_shopfront(parent: Node3D, vendor_id: String, vendor_name: String, sta
 			pass
 
 	_make_vendor_figure(parent, Vector3(0.0, 0.0, 2.2), accent, vendor_id)
-	_make_town_label(parent, _vendor_npc_name(vendor_id), Vector3(0.0, 2.15, 2.2), accent, 18)
 
 func _make_diamond_shop_details(parent: Node3D, accent: Color) -> void:
 	if diamond_item_texture != null:
@@ -1576,14 +1620,15 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendo
 		var sprite: Sprite3D = Sprite3D.new()
 		sprite.name = "VendorSprite"
 		sprite.texture = vendor_texture
-		sprite.pixel_size = 0.003
+		sprite.pixel_size = 0.0048
 		sprite.shaded = false
 		sprite.double_sided = true
 		sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 		sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
-		sprite.position = position + Vector3(0.0, 0.88, 0.0)
 		sprite.scale = Vector3.ONE
+		var sprite_height_world: float = float(vendor_texture.get_height()) * sprite.pixel_size * absf(sprite.scale.y)
+		sprite.position = position + Vector3(0.0, sprite_height_world * 0.5 + VENDOR_SPRITE_GROUND_CLEARANCE, 0.0)
 		sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
 		parent.add_child(sprite)
 		if vendor_texture == vendor_front_texture and vendor_side_texture != null and vendor_back_texture != null:
@@ -2193,6 +2238,8 @@ func _enter_town() -> void:
 	active_vendor_id = ""
 	if hud != null:
 		hud.hide_shop()
+		hud.hide_diamond_store()
+		hud.hide_spell_store()
 		hud.set_minimap_visible(false)
 	if player != null:
 		player.set_attacks_enabled(false)
@@ -2214,11 +2261,19 @@ func _on_vendor_exited(body: Node3D, vendor_id: String) -> void:
 	active_vendor_id = ""
 	if hud != null:
 		hud.hide_shop()
+		hud.hide_diamond_store()
+		hud.hide_spell_store()
 
 func _show_vendor_shop(vendor_id: String, status_text: String) -> void:
 	if hud == null:
 		return
-	hud.show_shop(_vendor_title(vendor_id), _shop_items_for_vendor(vendor_id), status_text, _wallet_text())
+	match vendor_id:
+		"diamond_vendor":
+			hud.show_diamond_store(_vendor_title(vendor_id), _diamond_store_items(), _wallet_text(), status_text, town_vendor_woman_face_texture)
+		"spell_vendor":
+			hud.show_spell_store(_vendor_title(vendor_id), _spell_store_items(), _wallet_text(), status_text, town_vendor_warlock_face_texture)
+		_:
+			hud.show_shop(_vendor_title(vendor_id), _shop_items_for_vendor(vendor_id), status_text, _wallet_text(), town_vendor_man_face_texture)
 
 func _vendor_npc_name(vendor_id: String) -> String:
 	match vendor_id:
@@ -2304,6 +2359,51 @@ func _shop_items_for_vendor(vendor_id: String) -> Array[Dictionary]:
 
 func _wallet_text() -> String:
 	return "Gold %s    Diamonds %s" % [player.gold, player.diamonds]
+
+func _diamond_store_items() -> Array[Dictionary]:
+	var items: Array[Dictionary] = []
+	if game_level <= 1:
+		items.append({
+			"id": "faded_locked",
+			"name": "Faded Diamonds (Locked)",
+			"description": "Reach level 2 to unlock Syra's full faded catalog.",
+			"price": "—",
+			"color": Color(0.5, 0.5, 0.5),
+			"owned_count": 0
+		})
+		return items
+	for diamond in FADED_DIAMOND_CATALOG:
+		var item_id := String(diamond["id"])
+		var owned_count := int(owned_faded_diamonds.get(item_id, 0))
+		var socketed_count := _socketed_count(item_id)
+		var available_count := _available_faded_diamond_count(item_id)
+		var description := String(diamond["description"])
+		if owned_count > 0:
+			description += "\nOwned: %s  |  Socketed: %s  |  Available: %s" % [owned_count, socketed_count, available_count]
+		items.append({
+			"id": item_id,
+			"name": String(diamond["name"]),
+			"description": description,
+			"price": "%s gold" % int(diamond["gold_cost"]),
+			"color": diamond["color"],
+			"owned_count": owned_count
+		})
+	return items
+
+func _spell_store_items() -> Array[Dictionary]:
+	var items: Array[Dictionary] = []
+	for spell in SPELL_CATALOG:
+		var spell_id := String(spell["id"])
+		items.append({
+			"id": spell_id,
+			"name": String(spell["name"]),
+			"description": String(spell["description"]),
+			"category": String(spell.get("category", "attack")),
+			"image": String(spell.get("image", "")),
+			"diamond_cost": int(spell["diamond_cost"]),
+			"learned": player.has_spell(spell_id)
+		})
+	return items
 
 func _on_shop_purchase_requested(item_id: String) -> void:
 	if active_vendor_id.is_empty() or player == null:

@@ -21,6 +21,7 @@ const EXP_FILL_TEXTURE: Texture2D = preload("res://assets/images/hud/exp-actual-
 const MINIMAP_TEXTURE: Texture2D = preload("res://assets/images/hud/minimap.png")
 const DEMON_MENU_TEXTURE: Texture2D = preload("res://assets/images/hud/demon.png")
 const EQUIP_TEXTURE: Texture2D = preload("res://assets/images/hud/equip/equip.png")
+const DIAMOND_TEXTURE: Texture2D = preload("res://assets/images/objects/diamond.png")
 const SCROLL_OPEN_TEXTURE: Texture2D = preload("res://assets/images/objects/scroll-open.png")
 const WHISPER_FONT: FontFile = preload("res://assets/fonts/Simbiot.ttf")
 const MISSION_FONT: FontFile = preload("res://assets/fonts/PICKYSIDE.otf")
@@ -83,8 +84,28 @@ const MINIMAP_HOLE_SHADE_ALPHA := 0.56
 const WHISPER_PANEL_SIZE := Vector2(430.0, 205.0)
 const DIRECTIVE_PANEL_SIZE := Vector2(360.0, 92.0)
 const SHOP_PANEL_SIZE := Vector2(520.0, 410.0)
+const DIAMOND_STORE_PANEL_SIZE := Vector2(700.0, 540.0)
+const DIAMOND_STORE_NAME_BLOCK_HEIGHT := 26.0
+const DIAMOND_STORE_PRICE_BLOCK_HEIGHT := 16.0
+const SPELL_STORE_PANEL_SIZE := Vector2(860.0, 660.0)
+const SPELL_STORE_CELL_SIZE := Vector2(104.0, 104.0)
+const SPELL_STORE_NAME_BLOCK_HEIGHT := 24.0
+const SPELL_STORE_PRICE_BLOCK_HEIGHT := 12.0
+const INVENTORY_DIAMOND_ICON_SIZE := Vector2(28.0, 28.0)
+const INVENTORY_SOCKET_COUNT := 8
+const INVENTORY_SOCKET_HITBOX_SIZE := Vector2(56.0, 56.0)
+const INVENTORY_SOCKET_POSITIONS := [
+	Vector2(62.0, 82.0),
+	Vector2(50.0, 146.0),
+	Vector2(48.0, 214.0),
+	Vector2(64.0, 282.0),
+	Vector2(274.0, 80.0),
+	Vector2(287.0, 145.0),
+	Vector2(288.0, 214.0),
+	Vector2(274.0, 282.0)
+]
 const DEMON_MENU_BUTTON_SIZE := Vector2(92.0, 92.0)
-const CHARACTER_PANEL_SIZE := Vector2(560.0, 470.0)
+const CHARACTER_PANEL_SIZE := Vector2(980.0, 620.0)
 const CHARACTER_PANEL_TAB_STATS := "stats"
 const CHARACTER_PANEL_TAB_SPELLS := "spells"
 const CHARACTER_PANEL_TAB_INVENTORY := "inventory"
@@ -136,6 +157,20 @@ var _shop_title_label: Label
 var _shop_wallet_label: Label
 var _shop_status_label: Label
 var _shop_items: VBoxContainer
+var _shop_face: TextureRect
+var _diamond_store_panel: PanelContainer
+var _diamond_store_title_label: Label
+var _diamond_store_wallet_label: Label
+var _diamond_store_status_label: Label
+var _diamond_store_grid: GridContainer
+var _diamond_store_face: TextureRect
+var _spell_store_panel: PanelContainer
+var _spell_store_title_label: Label
+var _spell_store_wallet_label: Label
+var _spell_store_status_label: Label
+var _spell_store_scroll: ScrollContainer
+var _spell_store_content: VBoxContainer
+var _spell_store_face: TextureRect
 var _directive_panel: PanelContainer
 var _directive_text_label: Label
 var _directive_progress_label: Label
@@ -151,6 +186,7 @@ var _inventory_view: Control
 var _inventory_gold_label: Label
 var _inventory_status_label: Label
 var _inventory_diamond_list: VBoxContainer
+var _inventory_diamond_grid: GridContainer
 var _inventory_socket_nodes: Array[Panel] = []
 var _inventory_socket_labels: Array[Label] = []
 var _inventory_socket_ids: Array[String] = []
@@ -207,6 +243,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_corruption_fx(delta)
 	_update_level_up_feedback(delta)
+	_update_inventory_socket_glow()
 	_update_inventory_drag_preview()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -248,6 +285,10 @@ func update_stats(stats: Dictionary) -> void:
 		_sync_character_panel()
 	if _shop_panel != null and _shop_panel.visible:
 		_shop_wallet_label.text = "Gold %s    Diamonds %s" % [stats.get("gold", 0), stats.get("diamonds", 0)]
+	if _diamond_store_panel != null and _diamond_store_panel.visible:
+		_diamond_store_wallet_label.text = "Gold %s    Diamonds %s" % [stats.get("gold", 0), stats.get("diamonds", 0)]
+	if _spell_store_panel != null and _spell_store_panel.visible:
+		_spell_store_wallet_label.text = "Gold %s    Diamonds %s" % [stats.get("gold", 0), stats.get("diamonds", 0)]
 	if _spell_slot_hovered_index >= 0:
 		_refresh_spell_slot_tooltip()
 
@@ -363,12 +404,18 @@ func hide_offer() -> void:
 	if _offer_panel != null:
 		_offer_panel.visible = false
 
-func show_shop(title: String, items: Array[Dictionary], status_text: String, wallet_text: String) -> void:
+func show_shop(title: String, items: Array[Dictionary], status_text: String, wallet_text: String, face_texture: Texture2D = null) -> void:
 	if _shop_panel == null:
 		return
 	_shop_title_label.text = title
 	_shop_wallet_label.text = wallet_text
 	_shop_status_label.text = status_text
+	if _shop_face != null:
+		if face_texture != null:
+			_shop_face.texture = face_texture
+			_shop_face.visible = true
+		else:
+			_shop_face.visible = false
 	for child in _shop_items.get_children():
 		_shop_items.remove_child(child)
 		child.queue_free()
@@ -380,6 +427,8 @@ func show_shop(title: String, items: Array[Dictionary], status_text: String, wal
 func hide_shop() -> void:
 	if _shop_panel != null:
 		_shop_panel.visible = false
+	hide_diamond_store()
+	hide_spell_store()
 	shop_closed.emit()
 
 func is_mouse_over_character_panel() -> bool:
@@ -389,6 +438,79 @@ func is_mouse_over_character_panel() -> bool:
 	if viewport == null:
 		return false
 	return _character_panel.get_global_rect().has_point(viewport.get_mouse_position())
+
+func is_mouse_over_blocking_ui() -> bool:
+	var viewport := get_viewport()
+	if viewport == null:
+		return false
+	var mouse_position := viewport.get_mouse_position()
+	if _character_panel != null and _character_panel.visible and _character_panel.get_global_rect().has_point(mouse_position):
+		return true
+	if _shop_panel != null and _shop_panel.visible and _shop_panel.get_global_rect().has_point(mouse_position):
+		return true
+	if _diamond_store_panel != null and _diamond_store_panel.visible and _diamond_store_panel.get_global_rect().has_point(mouse_position):
+		return true
+	if _spell_store_panel != null and _spell_store_panel.visible and _spell_store_panel.get_global_rect().has_point(mouse_position):
+		return true
+	if _offer_panel != null and _offer_panel.visible and _offer_panel.get_global_rect().has_point(mouse_position):
+		return true
+	if _scroll_panel != null and _scroll_panel.visible and _scroll_panel.get_global_rect().has_point(mouse_position):
+		return true
+	if _death_panel != null and _death_panel.visible and _death_panel.get_global_rect().has_point(mouse_position):
+		return true
+	if _directive_panel != null and _directive_panel.visible and _directive_panel.get_global_rect().has_point(mouse_position):
+		return true
+	return false
+
+func handle_spell_store_mouse_wheel(event: InputEvent) -> bool:
+	if not (event is InputEventMouseButton):
+		return false
+	var mouse_event := event as InputEventMouseButton
+	if not mouse_event.pressed:
+		return false
+	if mouse_event.button_index != MOUSE_BUTTON_WHEEL_UP and mouse_event.button_index != MOUSE_BUTTON_WHEEL_DOWN:
+		return false
+	if _spell_store_panel == null or not _spell_store_panel.visible:
+		return false
+	var viewport := get_viewport()
+	if viewport == null:
+		return false
+	var mouse_position := viewport.get_mouse_position()
+	if not _spell_store_panel.get_global_rect().has_point(mouse_position):
+		return false
+	if _spell_store_scroll == null:
+		viewport.set_input_as_handled()
+		return true
+	var vertical_bar := _spell_store_scroll.get_v_scroll_bar()
+	if vertical_bar == null:
+		viewport.set_input_as_handled()
+		return true
+	if vertical_bar.max_value <= 0.0:
+		viewport.set_input_as_handled()
+		return true
+	var delta := -56 if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP else 56
+	_spell_store_scroll.scroll_vertical = int(clampf(float(_spell_store_scroll.scroll_vertical + delta), 0.0, vertical_bar.max_value))
+	viewport.set_input_as_handled()
+	return true
+
+func is_blocking_ui_visible() -> bool:
+	if _character_panel != null and _character_panel.visible:
+		return true
+	if _shop_panel != null and _shop_panel.visible:
+		return true
+	if _diamond_store_panel != null and _diamond_store_panel.visible:
+		return true
+	if _spell_store_panel != null and _spell_store_panel.visible:
+		return true
+	if _offer_panel != null and _offer_panel.visible:
+		return true
+	if _scroll_panel != null and _scroll_panel.visible:
+		return true
+	if _death_panel != null and _death_panel.visible:
+		return true
+	if _directive_panel != null and _directive_panel.visible:
+		return true
+	return false
 
 func show_directive(directive: Dictionary) -> void:
 	if _directive_panel == null:
@@ -635,6 +757,8 @@ void fragment() {
 	_make_offer_panel(root)
 	_make_directive_panel(root)
 	_make_shop_panel(root)
+	_make_diamond_store_panel(root)
+	_make_spell_store_panel(root)
 
 	var possession_cluster: Control = Control.new()
 	possession_cluster.anchor_left = 1.0
@@ -996,7 +1120,7 @@ func _make_shop_panel(root: Control) -> void:
 	_shop_panel.add_child(margin)
 
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 10)
+	content.add_theme_constant_override("separation", 6)
 	margin.add_child(content)
 
 	var header := HBoxContainer.new()
@@ -1008,6 +1132,13 @@ func _make_shop_panel(root: Control) -> void:
 	_shop_title_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.35))
 	_shop_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_shop_title_label)
+
+	_shop_face = TextureRect.new()
+	_shop_face.custom_minimum_size = Vector2(64.0, 64.0)
+	_shop_face.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_shop_face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_shop_face.visible = false
+	header.add_child(_shop_face)
 
 	var close_button := Button.new()
 	close_button.text = "X"
@@ -1064,6 +1195,429 @@ func _make_shop_item_button(item: Dictionary) -> Button:
 	button.add_theme_stylebox_override("pressed", _button_style(Color(0.04, 0.032, 0.038, 1.0)))
 	button.pressed.connect(_on_shop_item_pressed.bind(String(item.get("id", ""))))
 	return button
+
+# ─── Diamond Store ────────────────────────────────────────────────────────────
+
+func _make_diamond_store_panel(root: Control) -> void:
+	_diamond_store_panel = PanelContainer.new()
+	_diamond_store_panel.visible = false
+	_diamond_store_panel.anchor_left = 0.5
+	_diamond_store_panel.anchor_top = 0.5
+	_diamond_store_panel.anchor_right = 0.5
+	_diamond_store_panel.anchor_bottom = 0.5
+	_diamond_store_panel.offset_left = -DIAMOND_STORE_PANEL_SIZE.x * 0.5
+	_diamond_store_panel.offset_top = -DIAMOND_STORE_PANEL_SIZE.y * 0.5
+	_diamond_store_panel.offset_right = DIAMOND_STORE_PANEL_SIZE.x * 0.5
+	_diamond_store_panel.offset_bottom = DIAMOND_STORE_PANEL_SIZE.y * 0.5
+	_diamond_store_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.026, 0.018, 0.024, 0.97)))
+	root.add_child(_diamond_store_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	_diamond_store_panel.add_child(margin)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 10)
+	margin.add_child(content)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	content.add_child(header)
+
+	_diamond_store_title_label = _label("Diamond Broker", 26)
+	_diamond_store_title_label.add_theme_font_override("font", MISSION_FONT)
+	_diamond_store_title_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.35))
+	_diamond_store_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(_diamond_store_title_label)
+
+	_diamond_store_face = TextureRect.new()
+	_diamond_store_face.custom_minimum_size = Vector2(64.0, 64.0)
+	_diamond_store_face.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_diamond_store_face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_diamond_store_face.visible = false
+	header.add_child(_diamond_store_face)
+
+	var close_btn := Button.new()
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(34.0, 30.0)
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.add_theme_font_size_override("font_size", 14)
+	close_btn.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
+	close_btn.add_theme_stylebox_override("normal", _button_style(Color(0.12, 0.045, 0.04, 0.92)))
+	close_btn.add_theme_stylebox_override("hover", _button_style(Color(0.25, 0.075, 0.055, 0.98)))
+	close_btn.add_theme_stylebox_override("pressed", _button_style(Color(0.075, 0.026, 0.026, 1.0)))
+	close_btn.pressed.connect(hide_diamond_store)
+	header.add_child(close_btn)
+
+	_diamond_store_wallet_label = _label("", 17)
+	_diamond_store_wallet_label.add_theme_color_override("font_color", Color(0.76, 0.9, 1.0))
+	content.add_child(_diamond_store_wallet_label)
+
+	_diamond_store_status_label = _label("", 16)
+	_diamond_store_status_label.add_theme_color_override("font_color", Color(0.94, 0.82, 0.66))
+	_diamond_store_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_diamond_store_status_label.custom_minimum_size = Vector2(0.0, 42.0)
+	content.add_child(_diamond_store_status_label)
+
+	var divider := ColorRect.new()
+	divider.color = Color(0.95, 0.18, 0.045, 0.62)
+	divider.custom_minimum_size = Vector2(0.0, 2.0)
+	content.add_child(divider)
+
+	_diamond_store_grid = GridContainer.new()
+	_diamond_store_grid.columns = 6
+	_diamond_store_grid.add_theme_constant_override("h_separation", 8)
+	_diamond_store_grid.add_theme_constant_override("v_separation", 8)
+	_diamond_store_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_diamond_store_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(_diamond_store_grid)
+
+func show_diamond_store(title: String, items: Array[Dictionary], wallet_text: String, status_text: String, face_texture: Texture2D = null) -> void:
+	if _diamond_store_panel == null:
+		return
+	_diamond_store_title_label.text = title
+	_diamond_store_wallet_label.text = wallet_text
+	_diamond_store_status_label.text = status_text
+	if _diamond_store_face != null:
+		if face_texture != null:
+			_diamond_store_face.texture = face_texture
+			_diamond_store_face.visible = true
+		else:
+			_diamond_store_face.visible = false
+	for child in _diamond_store_grid.get_children():
+		_diamond_store_grid.remove_child(child)
+		child.queue_free()
+	for item in items:
+		_diamond_store_grid.add_child(_make_diamond_cell(item))
+	_diamond_store_panel.visible = true
+	_diamond_store_panel.move_to_front()
+	if _spell_store_panel != null:
+		_spell_store_panel.visible = false
+	if _shop_panel != null:
+		_shop_panel.visible = false
+
+func hide_diamond_store() -> void:
+	if _diamond_store_panel != null:
+		_diamond_store_panel.visible = false
+
+func _make_diamond_cell(item: Dictionary) -> Control:
+	var btn := Button.new()
+	btn.custom_minimum_size = Vector2(100.0, 104.0)
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var item_name := String(item.get("name", "Diamond"))
+	var description := String(item.get("description", ""))
+	var price := String(item.get("price", ""))
+	var tooltip := item_name
+	if not description.is_empty():
+		tooltip += "\n" + description
+	tooltip += "\nPrice: " + price
+	btn.tooltip_text = tooltip
+	var item_color: Color = item.get("color", Color.WHITE)
+	if not (item_color is Color):
+		item_color = Color.WHITE
+	btn.add_theme_stylebox_override("normal", _button_style(Color(0.05, 0.042, 0.055, 0.96)))
+	btn.add_theme_stylebox_override("hover", _button_style(item_color.darkened(0.55).lerp(Color(0.22, 0.1, 0.08), 0.5)))
+	btn.add_theme_stylebox_override("pressed", _button_style(Color(0.04, 0.032, 0.038, 1.0)))
+	var locked := String(item.get("id", "")) == "faded_locked"
+	if not locked:
+		btn.pressed.connect(_on_shop_item_pressed.bind(String(item.get("id", ""))))
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 3)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(vbox)
+
+	var diamond_tex := TextureRect.new()
+	diamond_tex.texture = DIAMOND_TEXTURE
+	diamond_tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	diamond_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	diamond_tex.custom_minimum_size = Vector2(44.0, 44.0)
+	diamond_tex.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	diamond_tex.modulate = item_color if not locked else Color(0.45, 0.45, 0.45)
+	diamond_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(diamond_tex)
+
+	# Short label: strip "Faded Diamond of " prefix
+	var short_name := item_name
+	if item_name.begins_with("Faded Diamond of "):
+		short_name = item_name.substr(17)
+	var name_label := _label(short_name, 11)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.custom_minimum_size = Vector2(80.0, DIAMOND_STORE_NAME_BLOCK_HEIGHT)
+	name_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	name_label.clip_text = true
+	name_label.add_theme_color_override("font_color", item_color if not locked else Color(0.55, 0.55, 0.55))
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(name_label)
+
+	var price_label := _label(price, 10)
+	price_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	price_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	price_label.custom_minimum_size = Vector2(80.0, DIAMOND_STORE_PRICE_BLOCK_HEIGHT)
+	price_label.add_theme_color_override("font_color", Color(0.76, 0.9, 1.0))
+	price_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(price_label)
+
+	return btn
+
+# ─── Spell Store ──────────────────────────────────────────────────────────────
+
+func _make_spell_store_panel(root: Control) -> void:
+	_spell_store_panel = PanelContainer.new()
+	_spell_store_panel.visible = false
+	_spell_store_panel.anchor_left = 0.5
+	_spell_store_panel.anchor_top = 0.5
+	_spell_store_panel.anchor_right = 0.5
+	_spell_store_panel.anchor_bottom = 0.5
+	_spell_store_panel.offset_left = -SPELL_STORE_PANEL_SIZE.x * 0.5
+	_spell_store_panel.offset_top = -SPELL_STORE_PANEL_SIZE.y * 0.5
+	_spell_store_panel.offset_right = SPELL_STORE_PANEL_SIZE.x * 0.5
+	_spell_store_panel.offset_bottom = SPELL_STORE_PANEL_SIZE.y * 0.5
+	_spell_store_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.026, 0.018, 0.024, 0.97)))
+	root.add_child(_spell_store_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	_spell_store_panel.add_child(margin)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 10)
+	margin.add_child(content)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	content.add_child(header)
+
+	_spell_store_title_label = _label("Spells & Rituals", 26)
+	_spell_store_title_label.add_theme_font_override("font", MISSION_FONT)
+	_spell_store_title_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.35))
+	_spell_store_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(_spell_store_title_label)
+
+	_spell_store_face = TextureRect.new()
+	_spell_store_face.custom_minimum_size = Vector2(56.0, 56.0)
+	_spell_store_face.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_spell_store_face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_spell_store_face.visible = false
+	header.add_child(_spell_store_face)
+
+	var close_btn := Button.new()
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(34.0, 30.0)
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.add_theme_font_size_override("font_size", 14)
+	close_btn.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
+	close_btn.add_theme_stylebox_override("normal", _button_style(Color(0.12, 0.045, 0.04, 0.92)))
+	close_btn.add_theme_stylebox_override("hover", _button_style(Color(0.25, 0.075, 0.055, 0.98)))
+	close_btn.add_theme_stylebox_override("pressed", _button_style(Color(0.075, 0.026, 0.026, 1.0)))
+	close_btn.pressed.connect(hide_spell_store)
+	header.add_child(close_btn)
+
+	_spell_store_wallet_label = _label("", 17)
+	_spell_store_wallet_label.add_theme_color_override("font_color", Color(0.76, 0.9, 1.0))
+	content.add_child(_spell_store_wallet_label)
+
+	_spell_store_status_label = _label("", 16)
+	_spell_store_status_label.add_theme_color_override("font_color", Color(0.94, 0.82, 0.66))
+	_spell_store_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_spell_store_status_label.custom_minimum_size = Vector2(0.0, 28.0)
+	content.add_child(_spell_store_status_label)
+
+	var divider := ColorRect.new()
+	divider.color = Color(0.95, 0.18, 0.045, 0.62)
+	divider.custom_minimum_size = Vector2(0.0, 2.0)
+	content.add_child(divider)
+
+	_spell_store_scroll = ScrollContainer.new()
+	_spell_store_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_spell_store_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_spell_store_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_spell_store_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	content.add_child(_spell_store_scroll)
+
+	_spell_store_content = VBoxContainer.new()
+	_spell_store_content.add_theme_constant_override("separation", 8)
+	_spell_store_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_spell_store_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_spell_store_scroll.add_child(_spell_store_content)
+
+func show_spell_store(title: String, items: Array[Dictionary], wallet_text: String, status_text: String, face_texture: Texture2D = null) -> void:
+	if _spell_store_panel == null:
+		return
+	_spell_store_title_label.text = title
+	_spell_store_wallet_label.text = wallet_text
+	_spell_store_status_label.text = status_text
+	if _spell_store_face != null:
+		if face_texture != null:
+			_spell_store_face.texture = face_texture
+			_spell_store_face.visible = true
+		else:
+			_spell_store_face.visible = false
+
+	for child in _spell_store_content.get_children():
+		_spell_store_content.remove_child(child)
+		child.queue_free()
+
+	# Group items by category, preserving order: attack, buff, debuff, defense, healing
+	const CATEGORY_ORDER := ["attack", "buff", "debuff", "defense", "healing"]
+	const CATEGORY_LABELS := {
+		"attack": "⚔  Attack",
+		"buff": "💪  Buff",
+		"debuff": "☠  Debuff",
+		"defense": "🛡  Defense",
+		"healing": "❤  Healing"
+	}
+	const CATEGORY_COLORS := {
+		"attack": Color(1.0, 0.42, 0.28),
+		"buff": Color(0.56, 0.88, 1.0),
+		"debuff": Color(0.78, 0.36, 1.0),
+		"defense": Color(0.36, 0.78, 1.0),
+		"healing": Color(0.36, 1.0, 0.52)
+	}
+	var by_category := {}
+	for item in items:
+		var cat := String(item.get("category", "attack"))
+		if not by_category.has(cat):
+			by_category[cat] = []
+		by_category[cat].append(item)
+
+	for cat in CATEGORY_ORDER:
+		if not by_category.has(cat) or by_category[cat].is_empty():
+			continue
+		var cat_color: Color = CATEGORY_COLORS.get(cat, Color(1.0, 0.72, 0.35))
+		var section := VBoxContainer.new()
+		section.add_theme_constant_override("separation", 4)
+		_spell_store_content.add_child(section)
+
+		var cat_label := _label(CATEGORY_LABELS.get(cat, cat.capitalize()), 16)
+		cat_label.add_theme_font_override("font", MISSION_FONT)
+		cat_label.add_theme_color_override("font_color", cat_color)
+		section.add_child(cat_label)
+
+		var cat_divider := ColorRect.new()
+		cat_divider.color = cat_color.darkened(0.4)
+		cat_divider.color.a = 0.5
+		cat_divider.custom_minimum_size = Vector2(0.0, 1.0)
+		section.add_child(cat_divider)
+
+		var grid := GridContainer.new()
+		grid.columns = 7
+		grid.add_theme_constant_override("h_separation", 6)
+		grid.add_theme_constant_override("v_separation", 4)
+		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		section.add_child(grid)
+
+		for spell_item in by_category[cat]:
+			grid.add_child(_make_spell_cell(spell_item))
+
+	if _spell_store_scroll != null:
+		_spell_store_scroll.scroll_vertical = 0
+
+	_spell_store_panel.visible = true
+	_spell_store_panel.move_to_front()
+	if _diamond_store_panel != null:
+		_diamond_store_panel.visible = false
+	if _shop_panel != null:
+		_shop_panel.visible = false
+
+func hide_spell_store() -> void:
+	if _spell_store_panel != null:
+		_spell_store_panel.visible = false
+
+func _make_spell_cell(item: Dictionary) -> Control:
+	var learned: bool = bool(item.get("learned", false))
+	var btn := Button.new()
+	btn.custom_minimum_size = SPELL_STORE_CELL_SIZE
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var spell_name := String(item.get("name", "Spell"))
+	var description := String(item.get("description", ""))
+	var cost := int(item.get("diamond_cost", 0))
+	var tooltip := spell_name
+	if not description.is_empty():
+		tooltip += "\n" + description
+	tooltip += "\nCost: %d diamonds" % cost
+	if learned:
+		tooltip += "\n✓ Learned"
+	btn.tooltip_text = tooltip
+	if learned:
+		btn.add_theme_stylebox_override("normal", _spell_store_cell_style(Color(0.06, 0.08, 0.06, 0.96)))
+		btn.add_theme_stylebox_override("hover", _spell_store_cell_style(Color(0.1, 0.14, 0.1, 0.98)))
+	else:
+		btn.add_theme_stylebox_override("normal", _spell_store_cell_style(Color(0.055, 0.042, 0.065, 0.96)))
+		btn.add_theme_stylebox_override("hover", _spell_store_cell_style(Color(0.18, 0.08, 0.22, 0.98)))
+	btn.add_theme_stylebox_override("pressed", _spell_store_cell_style(Color(0.04, 0.032, 0.038, 1.0)))
+	if not learned:
+		btn.pressed.connect(_on_shop_item_pressed.bind(String(item.get("id", ""))))
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
+	vbox.add_theme_constant_override("separation", 2)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(vbox)
+
+	# Spell sigil image
+	var img_path := String(item.get("image", ""))
+	if not img_path.is_empty():
+		var tex: Texture2D = load(img_path) as Texture2D
+		if tex != null:
+			var tex_rect := TextureRect.new()
+			tex_rect.texture = tex
+			tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tex_rect.custom_minimum_size = Vector2(34.0, 34.0)
+			tex_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			if learned:
+				tex_rect.modulate = Color(0.55, 0.88, 0.55, 0.85)
+			vbox.add_child(tex_rect)
+		else:
+			vbox.add_child(_make_spell_fallback_sigil(spell_name, learned))
+	else:
+		vbox.add_child(_make_spell_fallback_sigil(spell_name, learned))
+
+	var name_label := _label(spell_name, 10)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.custom_minimum_size = Vector2(88.0, SPELL_STORE_NAME_BLOCK_HEIGHT)
+	name_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	name_label.clip_text = true
+	if learned:
+		name_label.add_theme_color_override("font_color", Color(0.55, 0.88, 0.55))
+	else:
+		name_label.add_theme_color_override("font_color", Color(0.94, 0.82, 0.66))
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(name_label)
+
+	if learned:
+		var learned_label := _label("✓", 10)
+		learned_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		learned_label.custom_minimum_size = Vector2(88.0, SPELL_STORE_PRICE_BLOCK_HEIGHT)
+		learned_label.add_theme_color_override("font_color", Color(0.45, 0.85, 0.45))
+		learned_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_child(learned_label)
+	else:
+		var cost_label := _label("%d💎" % cost, 10)
+		cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cost_label.custom_minimum_size = Vector2(88.0, SPELL_STORE_PRICE_BLOCK_HEIGHT)
+		cost_label.add_theme_color_override("font_color", Color(0.72, 0.88, 1.0))
+		cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_child(cost_label)
+
+	return btn
 
 func _make_character_menu(root: Control) -> void:
 	_demon_menu_button = Button.new()
@@ -1454,11 +2008,12 @@ func _on_spell_chip_mouse_exited() -> void:
 
 func _make_inventory_view() -> Control:
 	var inventory: HBoxContainer = HBoxContainer.new()
-	inventory.add_theme_constant_override("separation", 18)
+	inventory.add_theme_constant_override("separation", 24)
 	inventory.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
+	# --- Left: Gloves with invisible socket hit-areas ---
 	var equip_frame: Control = Control.new()
-	equip_frame.custom_minimum_size = Vector2(360.0, 390.0)
+	equip_frame.custom_minimum_size = Vector2(430.0, 500.0)
 	equip_frame.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	equip_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inventory.add_child(equip_frame)
@@ -1474,41 +2029,35 @@ func _make_inventory_view() -> Control:
 
 	_inventory_socket_nodes.clear()
 	_inventory_socket_labels.clear()
-	for socket_data in [
-		{"index": 0, "position": Vector2(124.0, 112.0)},
-		{"index": 1, "position": Vector2(232.0, 112.0)},
-		{"index": 2, "position": Vector2(124.0, 224.0)},
-		{"index": 3, "position": Vector2(232.0, 224.0)}
-	]:
+	for socket_index in range(INVENTORY_SOCKET_COUNT):
+		if socket_index >= INVENTORY_SOCKET_POSITIONS.size():
+			continue
 		var socket: Panel = Panel.new()
-		socket.custom_minimum_size = Vector2(52.0, 52.0)
+		socket.custom_minimum_size = INVENTORY_SOCKET_HITBOX_SIZE
 		socket.size = socket.custom_minimum_size
-		socket.position = socket_data["position"]
+		socket.position = INVENTORY_SOCKET_POSITIONS[socket_index]
 		socket.mouse_filter = Control.MOUSE_FILTER_STOP
 		socket.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		var socket_style: StyleBoxFlat = StyleBoxFlat.new()
-		socket_style.bg_color = Color(0.04, 0.032, 0.04, 0.92)
-		socket_style.border_color = Color(0.86, 0.34, 0.2, 0.96)
-		socket_style.set_border_width_all(2)
-		socket_style.set_corner_radius_all(26)
-		socket.add_theme_stylebox_override("panel", socket_style)
-		socket.mouse_entered.connect(_on_inventory_socket_mouse_entered.bind(int(socket_data["index"])))
-		socket.mouse_exited.connect(_on_inventory_socket_mouse_exited.bind(int(socket_data["index"])))
-		socket.gui_input.connect(_on_inventory_socket_gui_input.bind(int(socket_data["index"])))
+		socket.add_theme_stylebox_override("panel", _inventory_socket_hitbox_style(Color(0.0, 0.0, 0.0, 0.0)))
+		socket.mouse_entered.connect(_on_inventory_socket_mouse_entered.bind(socket_index))
+		socket.mouse_exited.connect(_on_inventory_socket_mouse_exited.bind(socket_index))
+		socket.gui_input.connect(_on_inventory_socket_gui_input.bind(socket_index))
 		equip_frame.add_child(socket)
 		_inventory_socket_nodes.append(socket)
 
-		var socket_label := _label("+", 18)
+		var socket_label := _label("+", 20)
 		socket_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 		socket_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		socket_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		socket_label.add_theme_font_override("font", MISSION_FONT)
+		socket_label.add_theme_color_override("font_color", Color(0.88, 0.44, 0.34, 0.72))
 		socket_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		socket.add_child(socket_label)
 		_inventory_socket_labels.append(socket_label)
 
+	# --- Right: Info + Diamond Grid ---
 	var details: VBoxContainer = VBoxContainer.new()
-	details.add_theme_constant_override("separation", 6)
+	details.add_theme_constant_override("separation", 10)
 	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	details.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inventory.add_child(details)
@@ -1517,25 +2066,25 @@ func _make_inventory_view() -> Control:
 	_inventory_gold_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.58))
 	details.add_child(_inventory_gold_label)
 
-	_inventory_status_label = _label("", 16)
-	_inventory_status_label.add_theme_color_override("font_color", Color(0.92, 0.82, 0.68))
+	_inventory_status_label = _label("", 14)
+	_inventory_status_label.add_theme_color_override("font_color", Color(0.72, 0.64, 0.58))
 	_inventory_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_inventory_status_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	details.add_child(_inventory_status_label)
 
-	var list_title := _label("Faded Diamonds", 17)
+	var list_title := _label("Diamonds", 17)
 	list_title.add_theme_font_override("font", MISSION_FONT)
 	list_title.add_theme_color_override("font_color", Color(0.88, 0.83, 1.0))
 	details.add_child(list_title)
 
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.custom_minimum_size = Vector2(0.0, 200.0)
-	details.add_child(scroll)
-
-	_inventory_diamond_list = VBoxContainer.new()
-	_inventory_diamond_list.add_theme_constant_override("separation", 6)
-	_inventory_diamond_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_inventory_diamond_list)
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 10
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	details.add_child(grid)
+	_inventory_diamond_grid = grid
 
 	_inventory_drag_preview = PanelContainer.new()
 	_inventory_drag_preview.visible = false
@@ -1551,8 +2100,6 @@ func _make_inventory_view() -> Control:
 	_inventory_drag_preview_label.add_theme_color_override("font_color", Color(0.95, 0.9, 1.0))
 	_inventory_drag_preview.add_child(_inventory_drag_preview_label)
 	_inventory_drag_preview.move_to_front()
-
-	_inventory_status_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 	return inventory
 
@@ -1570,16 +2117,16 @@ func _sync_inventory_view() -> void:
 	_inventory_socket_ids.clear()
 	for socket_value in socket_values:
 		_inventory_socket_ids.append(String(socket_value))
-	while _inventory_socket_ids.size() < 4:
+	while _inventory_socket_ids.size() < INVENTORY_SOCKET_COUNT:
 		_inventory_socket_ids.append("")
-	if _inventory_socket_ids.size() > 4:
-		_inventory_socket_ids.resize(4)
+	if _inventory_socket_ids.size() > INVENTORY_SOCKET_COUNT:
+		_inventory_socket_ids.resize(INVENTORY_SOCKET_COUNT)
 	_refresh_inventory_socket_display()
-	_refresh_inventory_diamond_list(_latest_stats.get("faded_owned", {}), catalog)
+	_refresh_inventory_diamond_grid(_latest_stats.get("faded_owned", {}), catalog)
 	if _inventory_gold_label != null:
 		_inventory_gold_label.text = "Gold: %s    Diamonds: %s" % [gold, diamonds]
 	if _inventory_status_label != null:
-		_inventory_status_label.text = "Gloves: 4 sockets available\nDrag a faded diamond into a socket to gain its bonus\nLeft-click drag to socket/swap, Right-click to unsocket.\nSpells purchased: %s" % learned_spells.size()
+		_inventory_status_label.text = "Drag a diamond onto a glove socket  |  Right-click socket to unsocket"
 
 func _refresh_inventory_socket_display() -> void:
 	for index in range(_inventory_socket_nodes.size()):
@@ -1591,27 +2138,63 @@ func _refresh_inventory_socket_display() -> void:
 		if index < _inventory_socket_ids.size():
 			diamond_id = _inventory_socket_ids[index]
 		if diamond_id.is_empty():
-			label.text = "+"
-			label.add_theme_color_override("font_color", Color(0.88, 0.44, 0.34))
+			label.text = ""
+			label.visible = false
+			_apply_inventory_socket_style(socket, Color(0.88, 0.44, 0.34, 1.0), false, index == _inventory_hovered_socket and not _inventory_dragging_diamond_id.is_empty(), 0.0)
 			socket.tooltip_text = "Empty glove socket\nLeft-click drag to socket/swap, Right-click to unsocket."
 			continue
 		var entry: Dictionary = _inventory_catalog_by_id.get(diamond_id, {}) as Dictionary
-		var icon := String(entry.get("icon", "◆"))
 		var name := String(entry.get("name", "Faded Diamond"))
 		var bonus := String(entry.get("bonus", ""))
-		var color: Color = entry.get("color", Color(0.9, 0.78, 0.58))
-		label.text = icon
-		if color is Color:
-			label.add_theme_color_override("font_color", color)
-		else:
-			label.add_theme_color_override("font_color", Color(0.92, 0.82, 0.68))
+		var color: Color = entry.get("color", Color(0.9, 0.78, 0.58)) if entry.get("color") is Color else Color(0.9, 0.78, 0.58)
+		var pulse := 0.5 + 0.5 * sin(_ui_time * 3.2 + float(index) * 0.9)
+		label.text = "✓"
+		label.visible = true
+		label.add_theme_color_override("font_color", color.lightened(0.08 + pulse * 0.1))
+		_apply_inventory_socket_style(socket, color, true, index == _inventory_hovered_socket and not _inventory_dragging_diamond_id.is_empty(), pulse)
 		socket.tooltip_text = "%s\n%s\nLeft-click drag to socket/swap, Right-click to unsocket." % [name, bonus]
 
-func _refresh_inventory_diamond_list(owned_data: Variant, catalog: Array) -> void:
-	if _inventory_diamond_list == null:
+func _apply_inventory_socket_style(socket: Panel, color: Color, filled: bool, hovered_drop_target: bool, pulse: float = 0.0) -> void:
+	if socket == null:
 		return
-	for child in _inventory_diamond_list.get_children():
-		_inventory_diamond_list.remove_child(child)
+	var style := StyleBoxFlat.new()
+	if filled:
+		style.bg_color = Color(color.r, color.g, color.b, 0.12 + pulse * 0.08)
+		style.border_color = Color(0.0, 0.0, 0.0, 0.0)
+	else:
+		style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
+		style.border_color = Color(0.0, 0.0, 0.0, 0.0)
+	style.set_border_width_all(0)
+	if hovered_drop_target:
+		style.bg_color = style.bg_color.lightened(0.16)
+	style.set_corner_radius_all(34)
+	socket.add_theme_stylebox_override("panel", style)
+
+func _inventory_socket_hitbox_style(fill: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = Color(0.0, 0.0, 0.0, 0.0)
+	style.set_border_width_all(0)
+	style.set_corner_radius_all(34)
+	return style
+
+func _update_inventory_socket_glow() -> void:
+	if _character_panel == null or not _character_panel.visible:
+		return
+	if _character_panel_tab != CHARACTER_PANEL_TAB_INVENTORY:
+		return
+	if _inventory_socket_nodes.is_empty():
+		return
+	_refresh_inventory_socket_display()
+
+func _refresh_inventory_diamond_list(_owned_data: Variant, _catalog: Array) -> void:
+	pass  # replaced by _refresh_inventory_diamond_grid
+
+func _refresh_inventory_diamond_grid(owned_data: Variant, catalog: Array) -> void:
+	if _inventory_diamond_grid == null:
+		return
+	for child in _inventory_diamond_grid.get_children():
+		_inventory_diamond_grid.remove_child(child)
 		child.queue_free()
 	var owned := {}
 	if owned_data is Dictionary:
@@ -1633,29 +2216,53 @@ func _refresh_inventory_diamond_list(owned_data: Variant, catalog: Array) -> voi
 			if socket_id == diamond_id:
 				socketed_count += 1
 		var available_count := maxi(0, owned_count - socketed_count)
-		var row := Button.new()
-		row.text = "%s %s  x%s" % [String(entry.get("icon", "◆")), String(entry.get("name", "Diamond")), available_count]
-		row.custom_minimum_size = Vector2(0.0, 42.0)
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.focus_mode = Control.FOCUS_NONE
-		row.disabled = available_count <= 0
-		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		row.add_theme_font_size_override("font_size", 14)
-		var color: Color = entry.get("color", Color(0.92, 0.82, 0.68))
-		if color is Color:
-			row.add_theme_color_override("font_color", color)
-		else:
-			row.add_theme_color_override("font_color", Color(0.92, 0.82, 0.68))
-		row.add_theme_stylebox_override("normal", _button_style(Color(0.055, 0.052, 0.058, 0.96)))
-		row.add_theme_stylebox_override("hover", _button_style(Color(0.16, 0.08, 0.07, 0.98)))
-		row.add_theme_stylebox_override("pressed", _button_style(Color(0.04, 0.032, 0.038, 1.0)))
-		row.tooltip_text = "%s\n%s\nOwned: %s  Socketed: %s" % [String(entry.get("name", "Diamond")), String(entry.get("bonus", "")), owned_count, socketed_count]
-		row.gui_input.connect(_on_inventory_diamond_gui_input.bind(diamond_id, available_count))
-		_inventory_diamond_list.add_child(row)
+		var gem_color: Color = entry.get("color", Color(0.9, 0.78, 0.58)) if entry.get("color") is Color else Color(0.9, 0.78, 0.58)
+
+		# Cell container
+		var cell := Panel.new()
+		cell.custom_minimum_size = Vector2(50.0, 60.0)
+		cell.mouse_filter = Control.MOUSE_FILTER_STOP
+		cell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var cell_style := StyleBoxFlat.new()
+		cell_style.bg_color = Color(0.06, 0.04, 0.07, 0.92)
+		cell_style.border_color = gem_color.darkened(0.3)
+		cell_style.set_border_width_all(1)
+		cell_style.set_corner_radius_all(6)
+		cell.add_theme_stylebox_override("panel", cell_style)
+		cell.tooltip_text = "%s\n%s\nOwned: %s  Available: %s" % [String(entry.get("name", "Diamond")), String(entry.get("bonus", "")), owned_count, available_count]
+		cell.gui_input.connect(_on_inventory_diamond_gui_input.bind(diamond_id, available_count))
+
+		var cell_content := VBoxContainer.new()
+		cell_content.set_anchors_preset(Control.PRESET_FULL_RECT)
+		cell_content.alignment = BoxContainer.ALIGNMENT_CENTER
+		cell_content.add_theme_constant_override("separation", 2)
+		cell_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell.add_child(cell_content)
+
+		var tex := TextureRect.new()
+		tex.texture = DIAMOND_TEXTURE
+		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex.custom_minimum_size = INVENTORY_DIAMOND_ICON_SIZE
+		tex.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tex.modulate = gem_color if available_count > 0 else gem_color.darkened(0.55)
+		cell_content.add_child(tex)
+
+		var count_lbl := _label("x%s" % available_count, 10)
+		count_lbl.custom_minimum_size = Vector2(50.0, 14.0)
+		count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		count_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var badge_color := gem_color if available_count > 0 else Color(0.45, 0.4, 0.42)
+		count_lbl.add_theme_color_override("font_color", badge_color)
+		cell_content.add_child(count_lbl)
+
+		_inventory_diamond_grid.add_child(cell)
 	if not has_any:
-		var empty := _label("No faded diamonds owned yet.", 14)
-		empty.add_theme_color_override("font_color", Color(0.64, 0.58, 0.54))
-		_inventory_diamond_list.add_child(empty)
+		var empty := _label("No diamonds owned yet.", 14)
+		empty.add_theme_color_override("font_color", Color(0.54, 0.5, 0.48))
+		_inventory_diamond_grid.add_child(empty)
 
 func _on_inventory_diamond_gui_input(event: InputEvent, diamond_id: String, available_count: int) -> void:
 	if not (event is InputEventMouseButton):
@@ -1691,14 +2298,17 @@ func _on_inventory_socket_gui_input(event: InputEvent, slot_index: int) -> void:
 
 func _on_inventory_socket_mouse_entered(slot_index: int) -> void:
 	_inventory_hovered_socket = slot_index
+	_refresh_inventory_socket_display()
 
 func _on_inventory_socket_mouse_exited(slot_index: int) -> void:
 	if _inventory_hovered_socket == slot_index:
 		_inventory_hovered_socket = -1
+	_refresh_inventory_socket_display()
 
 func _start_inventory_drag(diamond_id: String, source_slot_index: int) -> void:
 	_inventory_dragging_diamond_id = diamond_id
 	_inventory_dragging_source_slot = source_slot_index
+	_refresh_inventory_socket_display()
 	if _inventory_drag_preview == null or _inventory_drag_preview_label == null:
 		return
 	var entry: Dictionary = _inventory_catalog_by_id.get(diamond_id, {}) as Dictionary
@@ -1713,6 +2323,7 @@ func _finish_inventory_drag() -> void:
 		inventory_socket_drop_requested.emit(_inventory_hovered_socket, _inventory_dragging_diamond_id, _inventory_dragging_source_slot)
 	_inventory_dragging_diamond_id = ""
 	_inventory_dragging_source_slot = -1
+	_refresh_inventory_socket_display()
 	if _inventory_drag_preview != null:
 		_inventory_drag_preview.visible = false
 
@@ -2245,6 +2856,48 @@ func _button_style(color: Color) -> StyleBoxFlat:
 	style.content_margin_top = 8
 	style.content_margin_bottom = 8
 	return style
+
+func _spell_store_cell_style(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.border_color = Color(0.74, 0.25, 0.12, 0.95)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(5)
+	style.content_margin_left = 4
+	style.content_margin_right = 4
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
+	return style
+
+func _make_spell_fallback_sigil(spell_name: String, learned: bool) -> Control:
+	var badge := PanelContainer.new()
+	badge.custom_minimum_size = Vector2(34.0, 34.0)
+	badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.11, 0.08, 0.12, 0.95)
+	style.border_color = Color(0.74, 0.25, 0.12, 0.9)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(17)
+	badge.add_theme_stylebox_override("panel", style)
+
+	var letters := ""
+	for token in spell_name.split(" ", false):
+		if token.is_empty():
+			continue
+		letters += token.substr(0, 1).to_upper()
+		if letters.length() >= 2:
+			break
+	if letters.is_empty():
+		letters = "??"
+
+	var text := _label(letters, 10)
+	text.set_anchors_preset(Control.PRESET_FULL_RECT)
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text.add_theme_color_override("font_color", Color(0.55, 0.88, 0.55) if learned else Color(0.94, 0.82, 0.66))
+	badge.add_child(text)
+	return badge
 
 func _icon_button_style(color: Color, border_color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

@@ -358,14 +358,18 @@ func _handle_input() -> void:
 		velocity.z = move_toward(velocity.z, _control_lapse_direction.z * lapse_speed, ACCELERATION * get_physics_process_delta_time())
 		return
 
+	var movement_blocked_by_ui := _is_mouse_blocked_by_ui()
+	if movement_blocked_by_ui:
+		has_move_target = false
+
 	var input_vector := Vector2.ZERO
-	if Input.is_key_pressed(KEY_W):
+	if not movement_blocked_by_ui and Input.is_key_pressed(KEY_W):
 		input_vector.y -= 1.0
-	if Input.is_key_pressed(KEY_S):
+	if not movement_blocked_by_ui and Input.is_key_pressed(KEY_S):
 		input_vector.y += 1.0
-	if Input.is_key_pressed(KEY_A):
+	if not movement_blocked_by_ui and Input.is_key_pressed(KEY_A):
 		input_vector.x -= 1.0
-	if Input.is_key_pressed(KEY_D):
+	if not movement_blocked_by_ui and Input.is_key_pressed(KEY_D):
 		input_vector.x += 1.0
 
 	if input_vector.length() > 0.0:
@@ -382,7 +386,7 @@ func _handle_input() -> void:
 		else:
 			_ignore_mouse_until_released = false
 
-	if _is_mouse_blocked_by_ui() and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+	if movement_blocked_by_ui and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		_ignore_mouse_until_released = true
 		can_use_mouse = false
 
