@@ -7,6 +7,8 @@ signal offer_rejected
 signal shop_purchase_requested(item_id: String)
 signal shop_closed
 signal skill_tree_point_requested(node_key: String)
+signal inventory_socket_drop_requested(slot_index: int, diamond_id: String, source_slot_index: int)
+signal inventory_socket_clear_requested(slot_index: int)
 
 const FIRESTORM_TEXTURE: Texture2D = preload("res://assets/images/spells/attack/firestorm.png")
 const LIFE_BAR_TEXTURE: Texture2D = preload("res://assets/images/hud/health-bar.png")
@@ -148,6 +150,16 @@ var _spells_hover_label: Label
 var _inventory_view: Control
 var _inventory_gold_label: Label
 var _inventory_status_label: Label
+var _inventory_diamond_list: VBoxContainer
+var _inventory_socket_nodes: Array[Panel] = []
+var _inventory_socket_labels: Array[Label] = []
+var _inventory_socket_ids: Array[String] = []
+var _inventory_catalog_by_id := {}
+var _inventory_drag_preview: PanelContainer
+var _inventory_drag_preview_label: Label
+var _inventory_dragging_diamond_id := ""
+var _inventory_dragging_source_slot := -1
+var _inventory_hovered_socket := -1
 var _skill_tree_view: SkillTreeView
 var _character_tab_buttons := {}
 var _spell_category_rows := {}
@@ -182,7 +194,7 @@ var _demon_menu_hovered := false
 var _level_up_pending_ack := false
 var _last_displayed_level := -1
 var _possession_ratio := 0.0
-var _rng := RandomNumberGenerator.new()
+var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _spell_slot_hover_regions: Array[Control] = []
 var _spell_slot_hover_tooltip: PanelContainer
 var _spell_slot_hover_tooltip_label: Label
@@ -195,6 +207,15 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_corruption_fx(delta)
 	_update_level_up_feedback(delta)
+	_update_inventory_drag_preview()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _inventory_dragging_diamond_id.is_empty():
+		return
+	if event is InputEventMouseButton:
+		var mouse_event := event as InputEventMouseButton
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT and not mouse_event.pressed:
+			_finish_inventory_drag()
 
 func update_stats(stats: Dictionary) -> void:
 	if _life_fill_clip == null:
@@ -396,13 +417,13 @@ func set_corruption_distortion(ratio: float) -> void:
 	_distortion_overlay.color = Color(0.52, 0.0, 0.04, alpha)
 
 func _make_ui() -> void:
-	var root := Control.new()
+	var root: Control = Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
 	_root_control = root
 	_make_corruption_fx_layers(root)
 
-	var hud_cluster := Control.new()
+	var hud_cluster: Control = Control.new()
 	hud_cluster.anchor_left = 0.0
 	hud_cluster.anchor_top = 1.0
 	hud_cluster.anchor_right = 0.0
@@ -414,12 +435,12 @@ func _make_ui() -> void:
 	root.add_child(hud_cluster)
 	_hud_cluster = hud_cluster
 
-	var life_plate := Control.new()
+	var life_plate: Control = Control.new()
 	life_plate.position = LIFE_BAR_POSITION
 	life_plate.size = LIFE_BAR_SIZE
 	hud_cluster.add_child(life_plate)
 
-	var life_image := TextureRect.new()
+	var life_image: TextureRect = TextureRect.new()
 	life_image.texture = LIFE_BAR_TEXTURE
 	life_image.set_anchors_preset(Control.PRESET_FULL_RECT)
 	life_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -444,7 +465,7 @@ func _make_ui() -> void:
 	_life_hover_region.set_anchors_preset(Control.PRESET_FULL_RECT)
 	life_plate.add_child(_life_hover_region)
 
-	var spell_cluster := Control.new()
+	var spell_cluster: Control = Control.new()
 	spell_cluster.anchor_left = 0.5
 	spell_cluster.anchor_top = 1.0
 	spell_cluster.anchor_right = 0.5
@@ -456,15 +477,15 @@ func _make_ui() -> void:
 	root.add_child(spell_cluster)
 	_spell_cluster = spell_cluster
 
-	var exp_bar_texture := AtlasTexture.new()
+	var exp_bar_texture: AtlasTexture = AtlasTexture.new()
 	exp_bar_texture.atlas = EXP_BAR_TEXTURE
 	exp_bar_texture.region = EXP_BAR_SOURCE_RECT
 
-	var exp_fill_texture := AtlasTexture.new()
+	var exp_fill_texture: AtlasTexture = AtlasTexture.new()
 	exp_fill_texture.atlas = EXP_FILL_TEXTURE
 	exp_fill_texture.region = EXP_FILL_SOURCE_RECT
 
-	var exp_cluster := Control.new()
+	var exp_cluster: Control = Control.new()
 	exp_cluster.anchor_left = 0.5
 	exp_cluster.anchor_top = 1.0
 	exp_cluster.anchor_right = 0.5
@@ -475,7 +496,7 @@ func _make_ui() -> void:
 	exp_cluster.offset_bottom = -SPELL_SLOT_BOTTOM_MARGIN - SPELL_SLOT_SIZE.y - EXP_BAR_SLOT_GAP
 	root.add_child(exp_cluster)
 
-	var exp_bar := TextureRect.new()
+	var exp_bar: TextureRect = TextureRect.new()
 	exp_bar.texture = exp_bar_texture
 	exp_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
 	exp_bar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -488,7 +509,7 @@ func _make_ui() -> void:
 	_exp_fill_clip.clip_contents = true
 	exp_bar.add_child(_exp_fill_clip)
 
-	var exp_fill := TextureRect.new()
+	var exp_fill: TextureRect = TextureRect.new()
 	exp_fill.texture = exp_fill_texture
 	exp_fill.position = Vector2.ZERO
 	exp_fill.size = EXP_FILL_SIZE
@@ -496,7 +517,7 @@ func _make_ui() -> void:
 	exp_fill.stretch_mode = TextureRect.STRETCH_SCALE
 	_exp_fill_clip.add_child(exp_fill)
 
-	var spell_slots := TextureRect.new()
+	var spell_slots: TextureRect = TextureRect.new()
 	spell_slots.texture = SPELL_SLOT_TEXTURE
 	spell_slots.set_anchors_preset(Control.PRESET_FULL_RECT)
 	spell_slots.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -504,7 +525,7 @@ func _make_ui() -> void:
 	spell_cluster.add_child(spell_slots)
 	_make_spell_slot_hover_ui(spell_cluster)
 
-	var skill_slot := Control.new()
+	var skill_slot: Control = Control.new()
 	skill_slot.position = _spell_slot_source_to_local(FIRESTORM_SLOT_CENTER_SOURCE) - FIRESTORM_ICON_SIZE * 0.5
 	skill_slot.size = FIRESTORM_ICON_SIZE
 	spell_cluster.add_child(skill_slot)
@@ -546,7 +567,7 @@ func _make_ui() -> void:
 
 	_make_character_menu(root)
 
-	var minimap_cluster := Control.new()
+	var minimap_cluster: Control = Control.new()
 	minimap_cluster.anchor_left = 1.0
 	minimap_cluster.anchor_top = 0.0
 	minimap_cluster.anchor_right = 1.0
@@ -559,7 +580,7 @@ func _make_ui() -> void:
 	_minimap_cluster = minimap_cluster
 	_minimap_cluster.pivot_offset = MINIMAP_SIZE * 0.5
 
-	var minimap_hole_shade := ColorRect.new()
+	var minimap_hole_shade: ColorRect = ColorRect.new()
 	minimap_hole_shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	minimap_hole_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	minimap_hole_shade.material = _shader_material("""
@@ -588,7 +609,7 @@ void fragment() {
 	_minimap_player_dot = _make_minimap_dot(Color(1.0, 0.04, 0.02, 1.0), MINIMAP_PLAYER_DOT_SIZE)
 	_minimap_marker_layer.add_child(_minimap_player_dot)
 
-	var minimap_frame := TextureRect.new()
+	var minimap_frame: TextureRect = TextureRect.new()
 	minimap_frame.texture = MINIMAP_TEXTURE
 	minimap_frame.set_anchors_preset(Control.PRESET_FULL_RECT)
 	minimap_frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -615,7 +636,7 @@ void fragment() {
 	_make_directive_panel(root)
 	_make_shop_panel(root)
 
-	var possession_cluster := Control.new()
+	var possession_cluster: Control = Control.new()
 	possession_cluster.anchor_left = 1.0
 	possession_cluster.anchor_top = 1.0
 	possession_cluster.anchor_right = 1.0
@@ -628,7 +649,7 @@ void fragment() {
 	_possession_cluster = possession_cluster
 	_possession_cluster.pivot_offset = POSSESSION_BAR_SIZE * 0.5
 
-	var possession_image := TextureRect.new()
+	var possession_image: TextureRect = TextureRect.new()
 	possession_image.texture = POSSESSION_BAR_TEXTURE
 	possession_image.set_anchors_preset(Control.PRESET_FULL_RECT)
 	possession_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -662,7 +683,7 @@ void fragment() {
 	_death_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.025, 0.03, 0.95)))
 	root.add_child(_death_panel)
 
-	var death_content := VBoxContainer.new()
+	var death_content: VBoxContainer = VBoxContainer.new()
 	death_content.add_theme_constant_override("separation", 14)
 	_death_panel.add_child(death_content)
 
@@ -673,7 +694,7 @@ void fragment() {
 	death_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	death_content.add_child(death_label)
 
-	var resurrect_button := Button.new()
+	var resurrect_button: Button = Button.new()
 	resurrect_button.text = "Resurrect"
 	resurrect_button.custom_minimum_size = Vector2(190.0, 42.0)
 	resurrect_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -695,7 +716,7 @@ void fragment() {
 	_scroll_panel.add_theme_stylebox_override("panel", _scroll_panel_style())
 	root.add_child(_scroll_panel)
 
-	var scroll_content := VBoxContainer.new()
+	var scroll_content: VBoxContainer = VBoxContainer.new()
 	scroll_content.add_theme_constant_override("separation", 10)
 	_scroll_panel.add_child(scroll_content)
 
@@ -722,7 +743,7 @@ void fragment() {
 	_scroll_body_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll_content.add_child(_scroll_body_label)
 
-	var close_scroll_button := Button.new()
+	var close_scroll_button: Button = Button.new()
 	close_scroll_button.text = "Close"
 	close_scroll_button.custom_minimum_size = Vector2(150.0, 40.0)
 	close_scroll_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -817,14 +838,14 @@ func _make_vein_crack_lines() -> void:
 		[Vector2(640.0, 0.0), Vector2(616.0, 48.0), Vector2(650.0, 102.0), Vector2(626.0, 146.0)]
 	]
 	for points in crack_sets:
-		var line := Line2D.new()
+		var line: Line2D = Line2D.new()
 		line.points = PackedVector2Array(points)
 		line.width = 2.0
 		line.default_color = Color(0.78, 0.0, 0.035, 0.0)
 		line.joint_mode = Line2D.LINE_JOINT_SHARP
 		_vein_cracks_overlay.add_child(line)
 		for i in range(1, points.size() - 1):
-			var branch := Line2D.new()
+			var branch: Line2D = Line2D.new()
 			var start: Vector2 = points[i]
 			var direction := Vector2(-18.0 + float(i) * 31.0, -52.0 + float(i) * 14.0)
 			branch.points = PackedVector2Array([start, start + direction])
@@ -834,14 +855,14 @@ func _make_vein_crack_lines() -> void:
 			_vein_cracks_overlay.add_child(branch)
 
 func _shader_material(shader_code: String) -> ShaderMaterial:
-	var shader := Shader.new()
+	var shader: Shader = Shader.new()
 	shader.code = shader_code
-	var material := ShaderMaterial.new()
+	var material: ShaderMaterial = ShaderMaterial.new()
 	material.shader = shader
 	return material
 
 func _make_heartbeat_stream() -> AudioStreamWAV:
-	var stream := AudioStreamWAV.new()
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = HEARTBEAT_MIX_RATE
 	stream.stereo = false
@@ -901,7 +922,7 @@ func _make_offer_panel(root: Control) -> void:
 	_offer_cost_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(_offer_cost_label)
 
-	var buttons := HBoxContainer.new()
+	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 18)
 	content.add_child(buttons)
@@ -943,7 +964,7 @@ func _make_directive_panel(root: Control) -> void:
 	_directive_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(_directive_progress_label)
 
-	var time_back := ColorRect.new()
+	var time_back: ColorRect = ColorRect.new()
 	time_back.color = Color(0.11, 0.075, 0.08, 0.86)
 	time_back.custom_minimum_size = Vector2(DIRECTIVE_PANEL_SIZE.x - 36.0, 6.0)
 	content.add_child(time_back)
@@ -1010,7 +1031,7 @@ func _make_shop_panel(root: Control) -> void:
 	_shop_status_label.custom_minimum_size = Vector2(0.0, 46.0)
 	content.add_child(_shop_status_label)
 
-	var divider := ColorRect.new()
+	var divider: ColorRect = ColorRect.new()
 	divider.color = Color(0.95, 0.18, 0.045, 0.62)
 	divider.custom_minimum_size = Vector2(0.0, 2.0)
 	content.add_child(divider)
@@ -1033,7 +1054,11 @@ func _make_shop_item_button(item: Dictionary) -> Button:
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	button.add_theme_font_size_override("font_size", 16)
-	button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
+	var item_color: Color = item.get("color", Color(1.0, 0.86, 0.66))
+	if item_color is Color:
+		button.add_theme_color_override("font_color", item_color)
+	else:
+		button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	button.add_theme_stylebox_override("normal", _button_style(Color(0.055, 0.052, 0.058, 0.96)))
 	button.add_theme_stylebox_override("hover", _button_style(Color(0.16, 0.08, 0.07, 0.98)))
 	button.add_theme_stylebox_override("pressed", _button_style(Color(0.04, 0.032, 0.038, 1.0)))
@@ -1063,7 +1088,7 @@ func _make_character_menu(root: Control) -> void:
 	_demon_menu_button.pressed.connect(_toggle_character_panel)
 	root.add_child(_demon_menu_button)
 
-	var demon_image := TextureRect.new()
+	var demon_image: TextureRect = TextureRect.new()
 	demon_image.texture = DEMON_MENU_TEXTURE
 	demon_image.set_anchors_preset(Control.PRESET_FULL_RECT)
 	demon_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -1138,12 +1163,12 @@ func _make_character_menu(root: Control) -> void:
 	close_button.pressed.connect(_hide_character_panel)
 	header.add_child(close_button)
 
-	var ember_line := ColorRect.new()
+	var ember_line: ColorRect = ColorRect.new()
 	ember_line.color = Color(0.95, 0.17, 0.04, 0.7)
 	ember_line.custom_minimum_size = Vector2(0.0, 2.0)
 	content.add_child(ember_line)
 
-	var tabs := HBoxContainer.new()
+	var tabs: HBoxContainer = HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 6)
 	content.add_child(tabs)
 	_add_character_tab_button(tabs, "Stats", CHARACTER_PANEL_TAB_STATS)
@@ -1251,7 +1276,7 @@ func _sync_skill_tree_view() -> void:
 	_skill_tree_view.set_corruption_ratio(_corruption_ratio)
 
 func _make_spells_view() -> Control:
-	var spells := VBoxContainer.new()
+	var spells: VBoxContainer = VBoxContainer.new()
 	spells.add_theme_constant_override("separation", 12)
 	spells.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
@@ -1261,7 +1286,7 @@ func _make_spells_view() -> Control:
 
 	for category_variant in SPELL_SLOT_HOVER_CATEGORIES:
 		var category := String(category_variant)
-		var section := VBoxContainer.new()
+		var section: VBoxContainer = VBoxContainer.new()
 		section.add_theme_constant_override("separation", 6)
 		spells.add_child(section)
 
@@ -1269,7 +1294,7 @@ func _make_spells_view() -> Control:
 		header.add_theme_color_override("font_color", Color(0.96, 0.88, 0.72))
 		section.add_child(header)
 
-		var row := HFlowContainer.new()
+		var row: HFlowContainer = HFlowContainer.new()
 		row.add_theme_constant_override("h_separation", 8)
 		row.add_theme_constant_override("v_separation", 8)
 		section.add_child(row)
@@ -1336,7 +1361,7 @@ func _spell_entries_for_category(category: String) -> Array[Dictionary]:
 	return entries
 
 func _make_spell_chip(entry: Dictionary) -> Control:
-	var chip := Button.new()
+	var chip: Button = Button.new()
 	chip.text = ""
 	chip.custom_minimum_size = Vector2(54.0, 54.0)
 	chip.focus_mode = Control.FOCUS_NONE
@@ -1349,14 +1374,14 @@ func _make_spell_chip(entry: Dictionary) -> Control:
 	chip.mouse_entered.connect(_on_spell_chip_mouse_entered.bind(String(entry.get("name", "Spell"))))
 	chip.mouse_exited.connect(_on_spell_chip_mouse_exited)
 
-	var center := CenterContainer.new()
+	var center: CenterContainer = CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.add_child(center)
 
 	var icon := entry.get("icon", null) as Texture2D
 	if icon != null:
-		var icon_rect := TextureRect.new()
+		var icon_rect: TextureRect = TextureRect.new()
 		icon_rect.texture = icon
 		icon_rect.custom_minimum_size = Vector2(34.0, 34.0)
 		icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
@@ -1428,17 +1453,17 @@ func _on_spell_chip_mouse_exited() -> void:
 	_spells_hover_label.text = "Hover over each sigil to reveal its name."
 
 func _make_inventory_view() -> Control:
-	var inventory := HBoxContainer.new()
+	var inventory: HBoxContainer = HBoxContainer.new()
 	inventory.add_theme_constant_override("separation", 18)
 	inventory.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
-	var equip_frame := Control.new()
-	equip_frame.custom_minimum_size = Vector2(280.0, 340.0)
+	var equip_frame: Control = Control.new()
+	equip_frame.custom_minimum_size = Vector2(360.0, 390.0)
 	equip_frame.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	equip_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inventory.add_child(equip_frame)
 
-	var equip_image := TextureRect.new()
+	var equip_image: TextureRect = TextureRect.new()
 	equip_image.texture = EQUIP_TEXTURE
 	equip_image.set_anchors_preset(Control.PRESET_FULL_RECT)
 	equip_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -1447,7 +1472,42 @@ func _make_inventory_view() -> Control:
 	equip_image.modulate = Color(1.0, 0.92, 0.82, 0.96)
 	equip_frame.add_child(equip_image)
 
-	var details := VBoxContainer.new()
+	_inventory_socket_nodes.clear()
+	_inventory_socket_labels.clear()
+	for socket_data in [
+		{"index": 0, "position": Vector2(124.0, 112.0)},
+		{"index": 1, "position": Vector2(232.0, 112.0)},
+		{"index": 2, "position": Vector2(124.0, 224.0)},
+		{"index": 3, "position": Vector2(232.0, 224.0)}
+	]:
+		var socket: Panel = Panel.new()
+		socket.custom_minimum_size = Vector2(52.0, 52.0)
+		socket.size = socket.custom_minimum_size
+		socket.position = socket_data["position"]
+		socket.mouse_filter = Control.MOUSE_FILTER_STOP
+		socket.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var socket_style: StyleBoxFlat = StyleBoxFlat.new()
+		socket_style.bg_color = Color(0.04, 0.032, 0.04, 0.92)
+		socket_style.border_color = Color(0.86, 0.34, 0.2, 0.96)
+		socket_style.set_border_width_all(2)
+		socket_style.set_corner_radius_all(26)
+		socket.add_theme_stylebox_override("panel", socket_style)
+		socket.mouse_entered.connect(_on_inventory_socket_mouse_entered.bind(int(socket_data["index"])))
+		socket.mouse_exited.connect(_on_inventory_socket_mouse_exited.bind(int(socket_data["index"])))
+		socket.gui_input.connect(_on_inventory_socket_gui_input.bind(int(socket_data["index"])))
+		equip_frame.add_child(socket)
+		_inventory_socket_nodes.append(socket)
+
+		var socket_label := _label("+", 18)
+		socket_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		socket_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		socket_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		socket_label.add_theme_font_override("font", MISSION_FONT)
+		socket_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		socket.add_child(socket_label)
+		_inventory_socket_labels.append(socket_label)
+
+	var details: VBoxContainer = VBoxContainer.new()
 	details.add_theme_constant_override("separation", 6)
 	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	details.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1460,8 +1520,39 @@ func _make_inventory_view() -> Control:
 	_inventory_status_label = _label("", 16)
 	_inventory_status_label.add_theme_color_override("font_color", Color(0.92, 0.82, 0.68))
 	_inventory_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_inventory_status_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	details.add_child(_inventory_status_label)
+
+	var list_title := _label("Faded Diamonds", 17)
+	list_title.add_theme_font_override("font", MISSION_FONT)
+	list_title.add_theme_color_override("font_color", Color(0.88, 0.83, 1.0))
+	details.add_child(list_title)
+
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(0.0, 200.0)
+	details.add_child(scroll)
+
+	_inventory_diamond_list = VBoxContainer.new()
+	_inventory_diamond_list.add_theme_constant_override("separation", 6)
+	_inventory_diamond_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_inventory_diamond_list)
+
+	_inventory_drag_preview = PanelContainer.new()
+	_inventory_drag_preview.visible = false
+	_inventory_drag_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_inventory_drag_preview.custom_minimum_size = Vector2(210.0, 38.0)
+	_inventory_drag_preview.add_theme_stylebox_override("panel", _panel_style(Color(0.06, 0.04, 0.07, 0.96)))
+	inventory.add_child(_inventory_drag_preview)
+
+	_inventory_drag_preview_label = _label("", 15)
+	_inventory_drag_preview_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_inventory_drag_preview_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_inventory_drag_preview_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_inventory_drag_preview_label.add_theme_color_override("font_color", Color(0.95, 0.9, 1.0))
+	_inventory_drag_preview.add_child(_inventory_drag_preview_label)
+	_inventory_drag_preview.move_to_front()
+
+	_inventory_status_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 	return inventory
 
@@ -1469,10 +1560,167 @@ func _sync_inventory_view() -> void:
 	var gold: int = int(_latest_stats.get("gold", 0))
 	var diamonds: int = int(_latest_stats.get("diamonds", 0))
 	var learned_spells: Array = _latest_stats.get("learned_spells", [])
+	_inventory_catalog_by_id.clear()
+	var catalog: Array = _latest_stats.get("faded_catalog", [])
+	for entry_variant in catalog:
+		if entry_variant is Dictionary:
+			var entry := entry_variant as Dictionary
+			_inventory_catalog_by_id[String(entry.get("id", ""))] = entry
+	var socket_values: Array = _latest_stats.get("faded_sockets", [])
+	_inventory_socket_ids.clear()
+	for socket_value in socket_values:
+		_inventory_socket_ids.append(String(socket_value))
+	while _inventory_socket_ids.size() < 4:
+		_inventory_socket_ids.append("")
+	if _inventory_socket_ids.size() > 4:
+		_inventory_socket_ids.resize(4)
+	_refresh_inventory_socket_display()
+	_refresh_inventory_diamond_list(_latest_stats.get("faded_owned", {}), catalog)
 	if _inventory_gold_label != null:
 		_inventory_gold_label.text = "Gold: %s    Diamonds: %s" % [gold, diamonds]
 	if _inventory_status_label != null:
-		_inventory_status_label.text = "Rings: empty sockets\nRelics: none equipped\nScrolls: opened from castle drops\nSpells purchased: %s\nOfferings: granted by The Whisper" % learned_spells.size()
+		_inventory_status_label.text = "Gloves: 4 sockets available\nDrag a faded diamond into a socket to gain its bonus\nLeft-click drag to socket/swap, Right-click to unsocket.\nSpells purchased: %s" % learned_spells.size()
+
+func _refresh_inventory_socket_display() -> void:
+	for index in range(_inventory_socket_nodes.size()):
+		var socket: Panel = _inventory_socket_nodes[index]
+		var label: Label = _inventory_socket_labels[index]
+		if socket == null or label == null:
+			continue
+		var diamond_id := ""
+		if index < _inventory_socket_ids.size():
+			diamond_id = _inventory_socket_ids[index]
+		if diamond_id.is_empty():
+			label.text = "+"
+			label.add_theme_color_override("font_color", Color(0.88, 0.44, 0.34))
+			socket.tooltip_text = "Empty glove socket\nLeft-click drag to socket/swap, Right-click to unsocket."
+			continue
+		var entry: Dictionary = _inventory_catalog_by_id.get(diamond_id, {}) as Dictionary
+		var icon := String(entry.get("icon", "◆"))
+		var name := String(entry.get("name", "Faded Diamond"))
+		var bonus := String(entry.get("bonus", ""))
+		var color: Color = entry.get("color", Color(0.9, 0.78, 0.58))
+		label.text = icon
+		if color is Color:
+			label.add_theme_color_override("font_color", color)
+		else:
+			label.add_theme_color_override("font_color", Color(0.92, 0.82, 0.68))
+		socket.tooltip_text = "%s\n%s\nLeft-click drag to socket/swap, Right-click to unsocket." % [name, bonus]
+
+func _refresh_inventory_diamond_list(owned_data: Variant, catalog: Array) -> void:
+	if _inventory_diamond_list == null:
+		return
+	for child in _inventory_diamond_list.get_children():
+		_inventory_diamond_list.remove_child(child)
+		child.queue_free()
+	var owned := {}
+	if owned_data is Dictionary:
+		owned = owned_data as Dictionary
+	var has_any := false
+	for entry_variant in catalog:
+		if not (entry_variant is Dictionary):
+			continue
+		var entry := entry_variant as Dictionary
+		var diamond_id := String(entry.get("id", ""))
+		if diamond_id.is_empty():
+			continue
+		var owned_count := int(owned.get(diamond_id, 0))
+		if owned_count <= 0:
+			continue
+		has_any = true
+		var socketed_count := 0
+		for socket_id in _inventory_socket_ids:
+			if socket_id == diamond_id:
+				socketed_count += 1
+		var available_count := maxi(0, owned_count - socketed_count)
+		var row := Button.new()
+		row.text = "%s %s  x%s" % [String(entry.get("icon", "◆")), String(entry.get("name", "Diamond")), available_count]
+		row.custom_minimum_size = Vector2(0.0, 42.0)
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.focus_mode = Control.FOCUS_NONE
+		row.disabled = available_count <= 0
+		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		row.add_theme_font_size_override("font_size", 14)
+		var color: Color = entry.get("color", Color(0.92, 0.82, 0.68))
+		if color is Color:
+			row.add_theme_color_override("font_color", color)
+		else:
+			row.add_theme_color_override("font_color", Color(0.92, 0.82, 0.68))
+		row.add_theme_stylebox_override("normal", _button_style(Color(0.055, 0.052, 0.058, 0.96)))
+		row.add_theme_stylebox_override("hover", _button_style(Color(0.16, 0.08, 0.07, 0.98)))
+		row.add_theme_stylebox_override("pressed", _button_style(Color(0.04, 0.032, 0.038, 1.0)))
+		row.tooltip_text = "%s\n%s\nOwned: %s  Socketed: %s" % [String(entry.get("name", "Diamond")), String(entry.get("bonus", "")), owned_count, socketed_count]
+		row.gui_input.connect(_on_inventory_diamond_gui_input.bind(diamond_id, available_count))
+		_inventory_diamond_list.add_child(row)
+	if not has_any:
+		var empty := _label("No faded diamonds owned yet.", 14)
+		empty.add_theme_color_override("font_color", Color(0.64, 0.58, 0.54))
+		_inventory_diamond_list.add_child(empty)
+
+func _on_inventory_diamond_gui_input(event: InputEvent, diamond_id: String, available_count: int) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if mouse_event.pressed:
+		if available_count <= 0:
+			return
+		_start_inventory_drag(diamond_id, -1)
+	else:
+		_finish_inventory_drag()
+
+func _on_inventory_socket_gui_input(event: InputEvent, slot_index: int) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+	if mouse_event.button_index == MOUSE_BUTTON_RIGHT and mouse_event.pressed:
+		if slot_index >= 0 and slot_index < _inventory_socket_ids.size():
+			if not _inventory_socket_ids[slot_index].is_empty():
+				inventory_socket_clear_requested.emit(slot_index)
+		return
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if mouse_event.pressed:
+		if slot_index >= 0 and slot_index < _inventory_socket_ids.size():
+			var diamond_id: String = _inventory_socket_ids[slot_index]
+			if not diamond_id.is_empty():
+				_start_inventory_drag(diamond_id, slot_index)
+	else:
+		_finish_inventory_drag()
+
+func _on_inventory_socket_mouse_entered(slot_index: int) -> void:
+	_inventory_hovered_socket = slot_index
+
+func _on_inventory_socket_mouse_exited(slot_index: int) -> void:
+	if _inventory_hovered_socket == slot_index:
+		_inventory_hovered_socket = -1
+
+func _start_inventory_drag(diamond_id: String, source_slot_index: int) -> void:
+	_inventory_dragging_diamond_id = diamond_id
+	_inventory_dragging_source_slot = source_slot_index
+	if _inventory_drag_preview == null or _inventory_drag_preview_label == null:
+		return
+	var entry: Dictionary = _inventory_catalog_by_id.get(diamond_id, {}) as Dictionary
+	_inventory_drag_preview_label.text = "%s %s" % [String(entry.get("icon", "◆")), String(entry.get("name", "Diamond"))]
+	_inventory_drag_preview.visible = true
+	_inventory_drag_preview.move_to_front()
+
+func _finish_inventory_drag() -> void:
+	if _inventory_dragging_diamond_id.is_empty():
+		return
+	if _inventory_hovered_socket >= 0:
+		inventory_socket_drop_requested.emit(_inventory_hovered_socket, _inventory_dragging_diamond_id, _inventory_dragging_source_slot)
+	_inventory_dragging_diamond_id = ""
+	_inventory_dragging_source_slot = -1
+	if _inventory_drag_preview != null:
+		_inventory_drag_preview.visible = false
+
+func _update_inventory_drag_preview() -> void:
+	if _inventory_drag_preview == null or not _inventory_drag_preview.visible:
+		return
+	var mouse: Vector2 = get_viewport().get_mouse_position()
+	_inventory_drag_preview.global_position = mouse + Vector2(12.0, 14.0)
 
 func _character_stats_text() -> String:
 	var life: int = int(_latest_stats.get("life", 100))
@@ -1481,7 +1729,7 @@ func _character_stats_text() -> String:
 	var xp: int = int(_latest_stats.get("xp", 0))
 	var xp_to_next: int = int(_latest_stats.get("xp_to_next", 100))
 	var shield: int = int(_latest_stats.get("shield", 0))
-	var active_attack_spell := String(_latest_stats.get("active_attack_spell", "Firestorm"))
+	var active_attack_spell: String = String(_latest_stats.get("active_attack_spell", "Firestorm"))
 	var active_attack_damage_min: int = int(_latest_stats.get("active_attack_damage_min", 0))
 	var active_attack_damage_max: int = int(_latest_stats.get("active_attack_damage_max", active_attack_damage_min))
 	var active_attack_cooldown: float = float(_latest_stats.get("active_attack_cooldown_duration", 4.5))
@@ -1728,14 +1976,14 @@ func _update_passive_whispers(delta: float) -> void:
 	_passive_whisper_timer = _rng.randf_range(8.0, 15.0) - _corruption_ratio * 4.0
 
 func _label(text: String, size: int) -> Label:
-	var label := Label.new()
+	var label: Label = Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78))
 	return label
 
 func _make_minimap_dot(color: Color, dot_size: float) -> Panel:
-	var dot := Panel.new()
+	var dot: Panel = Panel.new()
 	dot.size = Vector2.ONE * dot_size
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()

@@ -82,6 +82,10 @@ var _flame_glow_sprites: Array[Dictionary] = []
 var _flame_light: OmniLight3D
 var _flame_time: float = 0.0
 var _possession_flash_timer := 0.0
+var _socket_damage_multiplier := 1.0
+var _socket_move_speed_multiplier := 1.0
+var _socket_cooldown_reduction := 0.0
+var _socket_gold_multiplier := 1.0
 
 func _ready() -> void:
 	name = "Player"
@@ -122,7 +126,11 @@ func get_stats() -> Dictionary:
 		"active_attack_spell": get_active_attack_spell_name(),
 		"active_attack_damage_min": get_active_attack_spell_damage(),
 		"active_attack_damage_max": get_active_attack_spell_damage(),
-		"active_attack_cooldown_duration": get_active_attack_spell_cooldown_duration()
+		"active_attack_cooldown_duration": get_active_attack_spell_cooldown_duration(),
+		"socket_damage_multiplier": _socket_damage_multiplier,
+		"socket_move_speed_multiplier": _socket_move_speed_multiplier,
+		"socket_cooldown_reduction": _socket_cooldown_reduction,
+		"socket_gold_multiplier": _socket_gold_multiplier
 	}
 
 func take_damage(amount: int) -> void:
@@ -256,6 +264,16 @@ func apply_lifesteal(ratio: float, duration: float) -> void:
 	_lifesteal_ratio = ratio
 	_lifesteal_timer = maxf(_lifesteal_timer, duration)
 
+func set_faded_diamond_bonuses(bonuses: Dictionary) -> void:
+	_socket_damage_multiplier = 1.0 + maxf(0.0, float(bonuses.get("damage_bonus", 0.0)))
+	_socket_move_speed_multiplier = 1.0 + maxf(0.0, float(bonuses.get("move_speed_bonus", 0.0)))
+	_socket_cooldown_reduction = maxf(0.0, float(bonuses.get("cooldown_reduction", 0.0)))
+	_socket_gold_multiplier = 1.0 + maxf(0.0, float(bonuses.get("gold_gain_bonus", 0.0)))
+	stats_changed.emit(get_stats())
+
+func get_gold_gain_multiplier() -> float:
+	return _socket_gold_multiplier
+
 func enable_hunger_unbound() -> void:
 	_hunger_unbound = true
 	_hunger_timer = 0.0
@@ -303,6 +321,7 @@ func get_active_attack_spell_name() -> String:
 func get_active_attack_spell_damage() -> int:
 	var total_damage := 28 + level * 7
 	total_damage = int(round(float(total_damage) * _damage_multiplier))
+	total_damage = int(round(float(total_damage) * _socket_damage_multiplier))
 	if has_spell("searing_fire"):
 		total_damage = int(round(float(total_damage) * 1.25))
 	total_damage = int(round(float(total_damage) * get_skill_damage_multiplier()))
@@ -452,7 +471,7 @@ func _effective_move_speed() -> float:
 	var spell_speed_bonus := 1.0
 	if has_spell("ember_stride"):
 		spell_speed_bonus = 1.12
-	return MOVE_SPEED * _move_speed_multiplier * spell_speed_bonus
+	return MOVE_SPEED * _move_speed_multiplier * spell_speed_bonus * _socket_move_speed_multiplier
 
 func _is_mouse_blocked_by_ui() -> bool:
 	if not _mouse_block_check.is_valid():
@@ -466,7 +485,7 @@ func _firestorm_cooldown_duration() -> float:
 	var cooldown := 4.5
 	if has_spell("quickened_ritual"):
 		cooldown = 3.2
-	cooldown = maxf(0.8, cooldown - get_skill_cooldown_reduction())
+	cooldown = maxf(0.8, cooldown - get_skill_cooldown_reduction() - _socket_cooldown_reduction)
 	return cooldown
 
 func _mouse_ground_position() -> Variant:

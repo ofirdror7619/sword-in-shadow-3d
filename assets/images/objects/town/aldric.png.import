@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://q56wobdhlb8t"
-path="res://.godot/imported/man-1.png-b4c1186b4f7861d193e46eb23c822ebf.ctex"
+path="res://.godot/imported/aldric.png-a9839af1e9c9ee86f960a23b75cc4b0f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/images/objects/town/man-1.png"
-dest_files=["res://.godot/imported/man-1.png-b4c1186b4f7861d193e46eb23c822ebf.ctex"]
+source_file="res://assets/images/objects/town/aldric.png"
+dest_files=["res://.godot/imported/aldric.png-a9839af1e9c9ee86f960a23b75cc4b0f.ctex"]
 
 [params]
 

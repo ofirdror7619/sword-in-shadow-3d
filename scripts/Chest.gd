@@ -39,8 +39,8 @@ func _open() -> void:
 		_front_sprite.modulate = Color(1.18, 1.02, 0.75, 1.0)
 
 func _make_collision() -> void:
-	var collider := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = Vector3(1.6, 1.1, 1.2)
 	collider.shape = shape
 	collider.position.y = 0.55
@@ -66,7 +66,7 @@ func _make_chest_sprite() -> Sprite3D:
 	return sprite
 
 func _material(albedo: Color, emission: Color, emission_energy: float) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = albedo
 	if emission_energy > 0.0:
 		material.emission_enabled = true

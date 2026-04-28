@@ -1,7 +1,6 @@
 extends Node3D
 
 const PlayerScript := preload("res://scripts/Player.gd")
-const EnemyScript := preload("res://scripts/Enemy.gd")
 const ChestScript := preload("res://scripts/Chest.gd")
 const GoldScript := preload("res://scripts/DroppedGold.gd")
 const ScrollScript := preload("res://scripts/Scroll.gd")
@@ -21,14 +20,16 @@ const FIRE_STORM_SOUND: AudioStream = preload("res://assets/audio/sounds/fire-st
 const FIRE_STORM_BOOM_SOUND: AudioStream = preload("res://assets/audio/sounds/fire-storm-boom.mp3")
 const TREASURE_CHEST_SOUND: AudioStream = preload("res://assets/audio/sounds/treasure-chest.mp3")
 const PORTAL_FRAME_TEXTURE_PATH := "res://assets/images/objects/PortalFrame.png"
+const DIAMOND_ITEM_TEXTURE_PATH := "res://assets/images/objects/diamond.png"
 const VENDOR_FRONT_TEXTURE_PATH := "res://assets/images/NPC/vendor-1/vendor-front.png"
 const VENDOR_SIDE_TEXTURE_PATH := "res://assets/images/NPC/vendor-1/vendor-side.png"
 const VENDOR_BACK_TEXTURE_PATH := "res://assets/images/NPC/vendor-1/vendor-back.png"
 const SPELL_SHOP_MODEL_PATH := "res://assets/images/NPC/spell-shop/spell-shop.glb"
 const SPELL_SHOP_TEXTURE_PATH := "res://assets/images/NPC/spell-shop/spell-shop.png"
 const TOWN_BARREL_TEXTURE_PATH := "res://assets/images/objects/town/barrel.png"
-const TOWN_VENDOR_MAN_TEXTURE_PATH := "res://assets/images/objects/town/man-1.png"
-const TOWN_VENDOR_WOMAN_TEXTURE_PATH := "res://assets/images/objects/town/woman-1.png"
+const TOWN_VENDOR_MAN_TEXTURE_PATH := "res://assets/images/objects/town/aldric.png"
+const TOWN_VENDOR_WOMAN_TEXTURE_PATH := "res://assets/images/objects/town/syra.png"
+const TOWN_VENDOR_WARLOCK_TEXTURE_PATH := "res://assets/images/objects/town/zethyr.png"
 const TOWN_TREE_TEXTURE_PATHS := [
 	"res://assets/images/objects/town/tree-1.png",
 	"res://assets/images/objects/town/tree-2.png",
@@ -69,9 +70,20 @@ const AREA_TOWN := "town"
 const TOWN_ORIGIN := Vector3(118.0, 0.0, 0.0)
 const TOWN_HALF_SIZE := 26.0
 const TOWN_SPAWN_POSITION := Vector3(118.0, 0.1, 18.0)
-const DIAMOND_PACKS := [
-	{"id": "diamonds_small", "name": "Diamond Pouch", "description": "Receive 3 diamonds for spell purchases.", "gold_cost": 90, "diamonds": 3},
-	{"id": "diamonds_large", "name": "Diamond Cache", "description": "Receive 8 diamonds at a better rate.", "gold_cost": 210, "diamonds": 8}
+const GLOVE_SOCKET_COUNT := 4
+const FADED_DIAMOND_CATALOG := [
+	{"id": "faded_rush", "icon": "🔴", "name": "Faded Diamond of Rush", "description": "-6% cooldown on abilities. Fast, aggressive playstyle.", "gold_cost": 120, "color": Color(0.93, 0.24, 0.24)},
+	{"id": "faded_focus", "icon": "🔵", "name": "Faded Diamond of Focus", "description": "+6% damage. Pure DPS.", "gold_cost": 120, "color": Color(0.25, 0.54, 1.0)},
+	{"id": "faded_vitality", "icon": "🟢", "name": "Faded Diamond of Vitality", "description": "+8% max HP and minor life steal. Survivability.", "gold_cost": 120, "color": Color(0.28, 0.88, 0.42)},
+	{"id": "faded_fortune", "icon": "🟡", "name": "Faded Diamond of Fortune", "description": "+8% gold and loot drop. Farming build.", "gold_cost": 120, "color": Color(1.0, 0.84, 0.24)},
+	{"id": "faded_corruption", "icon": "🟣", "name": "Faded Diamond of Corruption", "description": "Attacks apply shadow burn over time. Demon-theme perfect.", "gold_cost": 140, "color": Color(0.72, 0.32, 0.94)},
+	{"id": "faded_echo", "icon": "🔷", "name": "Faded Diamond of Echo", "description": "Chance to repeat attacks (double cast feel).", "gold_cost": 140, "color": Color(0.36, 0.9, 1.0)},
+	{"id": "faded_void", "icon": "⚫", "name": "Faded Diamond of Void", "description": "Attacks pierce enemies. Great crowd control.", "gold_cost": 140, "color": Color(0.37, 0.38, 0.44)},
+	{"id": "faded_fury", "icon": "🟠", "name": "Faded Diamond of Fury", "description": "Increases attack speed. Aggressive melee builds.", "gold_cost": 130, "color": Color(1.0, 0.54, 0.14)},
+	{"id": "faded_guardian", "icon": "⚪", "name": "Faded Diamond of Guardian", "description": "Temporary shield on hit or low HP. Defensive clutch.", "gold_cost": 130, "color": Color(0.92, 0.94, 1.0)},
+	{"id": "faded_flame_ring", "icon": "🔥", "name": "Faded Diamond of Flame Ring", "description": "Expands your fire aura and ring of flames.", "gold_cost": 150, "color": Color(1.0, 0.39, 0.08)},
+	{"id": "faded_frostbind", "icon": "❄️", "name": "Faded Diamond of Frostbind", "description": "Chance to slow or freeze enemies. Control playstyle.", "gold_cost": 150, "color": Color(0.72, 0.93, 1.0)},
+	{"id": "faded_storm", "icon": "⚡", "name": "Faded Diamond of Storm", "description": "Chain lightning between enemies. Strong and satisfying.", "gold_cost": 150, "color": Color(1.0, 0.94, 0.44)}
 ]
 const SPELL_CATALOG := [
 	{"id": "searing_fire", "name": "Searing Fire", "description": "Fire Storm deals 25% more damage.", "diamond_cost": 4},
@@ -127,13 +139,17 @@ var active_vendor_id := ""
 var vendor_front_texture: Texture2D
 var vendor_side_texture: Texture2D
 var vendor_back_texture: Texture2D
+var diamond_item_texture: Texture2D
 var town_barrel_texture: Texture2D
 var town_vendor_man_texture: Texture2D
 var town_vendor_woman_texture: Texture2D
+var town_vendor_warlock_texture: Texture2D
 var town_tree_textures: Array[Texture2D] = []
 var spell_shop_texture: Texture2D
 var spell_shop_scene: PackedScene
 var vendor_sprites: Array[Dictionary] = []
+var owned_faded_diamonds: Dictionary = {}
+var socketed_faded_diamonds: Array[String] = []
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -243,7 +259,9 @@ func _make_hud() -> void:
 	hud.shop_purchase_requested.connect(_on_shop_purchase_requested)
 	hud.shop_closed.connect(_on_shop_closed)
 	hud.skill_tree_point_requested.connect(_on_skill_tree_point_requested)
-	hud.update_stats(player.get_stats())
+	hud.inventory_socket_drop_requested.connect(_on_inventory_socket_drop_requested)
+	hud.inventory_socket_clear_requested.connect(_on_inventory_socket_clear_requested)
+	hud.update_stats(_stats_for_hud(player.get_stats()))
 	_update_possession()
 
 func _make_whisper_system() -> void:
@@ -300,7 +318,7 @@ func _make_opening_aura_player() -> void:
 func _play_sound(stream: AudioStream, volume_db: float = 0.0) -> void:
 	if DisplayServer.get_name() == "headless":
 		return
-	var player := AudioStreamPlayer.new()
+	var player: AudioStreamPlayer = AudioStreamPlayer.new()
 	player.stream = stream
 	player.volume_db = volume_db
 	add_child(player)
@@ -444,13 +462,13 @@ func _make_opening_screen() -> void:
 	opening_layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(opening_layer)
 
-	var shade := ColorRect.new()
+	var shade: ColorRect = ColorRect.new()
 	shade.color = Color.BLACK
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	shade.mouse_filter = Control.MOUSE_FILTER_STOP
 	opening_layer.add_child(shade)
 
-	var logo := TextureRect.new()
+	var logo: TextureRect = TextureRect.new()
 	logo.texture = OPENING_LOGO_TEXTURE
 	logo.anchor_left = 0.5
 	logo.anchor_top = 0.08
@@ -471,7 +489,7 @@ func _make_opening_screen() -> void:
 	opening_layer.add_child(opening_enter_label)
 
 func _make_opening_label(text: String, font_size: int, color: Color) -> Label:
-	var label := Label.new()
+	var label: Label = Label.new()
 	label.text = text
 	label.anchor_left = 0.0
 	label.anchor_right = 1.0
@@ -527,8 +545,8 @@ func _enter_game() -> void:
 		opening_layer = null
 
 func _make_lighting() -> void:
-	var world := WorldEnvironment.new()
-	var environment := Environment.new()
+	var world: WorldEnvironment = WorldEnvironment.new()
+	var environment: Environment = Environment.new()
 	environment.background_mode = Environment.BG_COLOR
 	environment.background_color = Color(0.025, 0.022, 0.032)
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -539,7 +557,7 @@ func _make_lighting() -> void:
 	world.environment = environment
 	add_child(world)
 
-	var moon := DirectionalLight3D.new()
+	var moon: DirectionalLight3D = DirectionalLight3D.new()
 	moon.rotation_degrees = Vector3(-55.0, -35.0, 0.0)
 	moon.light_color = Color(0.65, 0.72, 1.0)
 	moon.light_energy = 1.2
@@ -547,7 +565,7 @@ func _make_lighting() -> void:
 	add_child(moon)
 
 func _make_castle() -> void:
-	var floor_body := StaticBody3D.new()
+	var floor_body: StaticBody3D = StaticBody3D.new()
 	floor_body.name = "CastleFloor"
 	add_child(floor_body)
 
@@ -605,12 +623,12 @@ func _make_room_dividers() -> void:
 		_make_wall(Vector3(x, wall_y, 25.0), Vector3(0.9, wall_height, 18.0))
 
 func _make_wall(position: Vector3, size: Vector3) -> void:
-	var body := StaticBody3D.new()
+	var body: StaticBody3D = StaticBody3D.new()
 	body.position = position
 	add_child(body)
 
-	var collider := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = size
 	collider.shape = shape
 	body.add_child(collider)
@@ -643,16 +661,16 @@ func _make_wall_dressing() -> void:
 	_make_bone_pile(Vector3(20.0, 0.12, 12.0), -8.0)
 
 func _make_wall_web(position: Vector3, yaw_degrees: float, web_scale: float) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = "WallSpiderWeb"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
 	root.scale = Vector3.ONE * web_scale
 	add_child(root)
 
-	var web_material := _decoration_material(Color(0.72, 0.7, 0.66, 0.62), Color(0.03, 0.028, 0.026), 0.05)
+	var web_material: StandardMaterial3D = _decoration_material(Color(0.72, 0.7, 0.66, 0.62), Color(0.03, 0.028, 0.026), 0.05)
 	for angle in [0.0, 32.0, 62.0, 90.0, 122.0, 153.0]:
-		var strand := _make_decoration_bar(1.18, 0.018, web_material)
+		var strand: MeshInstance3D = _make_decoration_bar(1.18, 0.018, web_material)
 		strand.rotation_degrees.z = angle
 		root.add_child(strand)
 
@@ -660,7 +678,7 @@ func _make_wall_web(position: Vector3, yaw_degrees: float, web_scale: float) -> 
 		var radius: float = 0.26 + float(ring_index) * 0.18
 		for segment_index in range(6):
 			var angle: float = float(segment_index) * TAU / 6.0 + float(ring_index) * 0.18
-			var strand := _make_decoration_bar(radius * 0.62, 0.014, web_material)
+			var strand: MeshInstance3D = _make_decoration_bar(radius * 0.62, 0.014, web_material)
 			strand.position = Vector3(cos(angle) * radius * 0.48, sin(angle) * radius * 0.48, 0.012)
 			strand.rotation.z = angle + PI * 0.5
 			root.add_child(strand)
@@ -670,36 +688,36 @@ func _make_wall_sword_and_shield(position: Vector3, yaw_degrees: float, shield_c
 	_make_wall_shield(position + Vector3(0.0, -0.06, 0.055), yaw_degrees, shield_color)
 
 func _make_wall_sword(position: Vector3, yaw_degrees: float, sword_scale: float) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = "WallSword"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
 	root.scale = Vector3.ONE * sword_scale
 	add_child(root)
 
-	var blade := _make_decoration_bar(0.9, 0.07, _decoration_material(Color(0.55, 0.56, 0.54), Color(0.08, 0.08, 0.075), 0.08))
+	var blade: MeshInstance3D = _make_decoration_bar(0.9, 0.07, _decoration_material(Color(0.55, 0.56, 0.54), Color(0.08, 0.08, 0.075), 0.08))
 	blade.rotation_degrees.z = 90.0
 	blade.position.y = 0.08
 	root.add_child(blade)
 
-	var guard := _make_decoration_bar(0.45, 0.06, _decoration_material(Color(0.46, 0.31, 0.1), Color.BLACK, 0.0))
+	var guard: MeshInstance3D = _make_decoration_bar(0.45, 0.06, _decoration_material(Color(0.46, 0.31, 0.1), Color.BLACK, 0.0))
 	guard.position.y = -0.42
 	root.add_child(guard)
 
-	var grip := _make_decoration_bar(0.32, 0.07, _decoration_material(Color(0.09, 0.055, 0.035), Color.BLACK, 0.0))
+	var grip: MeshInstance3D = _make_decoration_bar(0.32, 0.07, _decoration_material(Color(0.09, 0.055, 0.035), Color.BLACK, 0.0))
 	grip.rotation_degrees.z = 90.0
 	grip.position.y = -0.62
 	root.add_child(grip)
 
 func _make_wall_shield(position: Vector3, yaw_degrees: float, shield_color: Color) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = "WallShield"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
 	add_child(root)
 
-	var shield := MeshInstance3D.new()
-	var shield_mesh := CylinderMesh.new()
+	var shield: MeshInstance3D = MeshInstance3D.new()
+	var shield_mesh: CylinderMesh = CylinderMesh.new()
 	shield_mesh.top_radius = 0.34
 	shield_mesh.bottom_radius = 0.39
 	shield_mesh.height = 0.08
@@ -710,8 +728,8 @@ func _make_wall_shield(position: Vector3, yaw_degrees: float, shield_color: Colo
 	shield.material_override = _decoration_material(shield_color, Color.BLACK, 0.0)
 	root.add_child(shield)
 
-	var boss := MeshInstance3D.new()
-	var boss_mesh := SphereMesh.new()
+	var boss: MeshInstance3D = MeshInstance3D.new()
+	var boss_mesh: SphereMesh = SphereMesh.new()
 	boss_mesh.radius = 0.12
 	boss_mesh.height = 0.16
 	boss_mesh.radial_segments = 14
@@ -722,16 +740,16 @@ func _make_wall_shield(position: Vector3, yaw_degrees: float, shield_color: Colo
 	root.add_child(boss)
 
 func _make_bone_pile(position: Vector3, yaw_degrees: float) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = "BonePile"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
 	add_child(root)
 
-	var bone_material := _decoration_material(Color(0.68, 0.62, 0.48), Color(0.06, 0.05, 0.035), 0.04)
+	var bone_material: StandardMaterial3D = _decoration_material(Color(0.68, 0.62, 0.48), Color(0.06, 0.05, 0.035), 0.04)
 	for i in range(4):
-		var bone := MeshInstance3D.new()
-		var bone_mesh := CylinderMesh.new()
+		var bone: MeshInstance3D = MeshInstance3D.new()
+		var bone_mesh: CylinderMesh = CylinderMesh.new()
 		bone_mesh.top_radius = 0.035
 		bone_mesh.bottom_radius = 0.04
 		bone_mesh.height = 0.62 + float(i % 2) * 0.16
@@ -742,8 +760,8 @@ func _make_bone_pile(position: Vector3, yaw_degrees: float) -> void:
 		bone.material_override = bone_material
 		root.add_child(bone)
 
-	var skull := MeshInstance3D.new()
-	var skull_mesh := SphereMesh.new()
+	var skull: MeshInstance3D = MeshInstance3D.new()
+	var skull_mesh: SphereMesh = SphereMesh.new()
 	skull_mesh.radius = 0.2
 	skull_mesh.height = 0.26
 	skull_mesh.radial_segments = 16
@@ -754,10 +772,10 @@ func _make_bone_pile(position: Vector3, yaw_degrees: float) -> void:
 	skull.material_override = bone_material
 	root.add_child(skull)
 
-	var eye_material := _decoration_material(Color(0.02, 0.015, 0.01), Color.BLACK, 0.0)
+	var eye_material: StandardMaterial3D = _decoration_material(Color(0.02, 0.015, 0.01), Color.BLACK, 0.0)
 	for x in [-0.07, 0.07]:
-		var eye := MeshInstance3D.new()
-		var eye_mesh := SphereMesh.new()
+		var eye: MeshInstance3D = MeshInstance3D.new()
+		var eye_mesh: SphereMesh = SphereMesh.new()
 		eye_mesh.radius = 0.035
 		eye_mesh.height = 0.04
 		eye.mesh = eye_mesh
@@ -766,27 +784,27 @@ func _make_bone_pile(position: Vector3, yaw_degrees: float) -> void:
 		root.add_child(eye)
 
 func _make_decoration_bar(length: float, thickness: float, material: Material) -> MeshInstance3D:
-	var bar := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
+	var bar: MeshInstance3D = MeshInstance3D.new()
+	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = Vector3(length, thickness, thickness)
 	bar.mesh = mesh
 	bar.material_override = material
 	return bar
 
 func _make_column(position: Vector3) -> void:
-	var body := StaticBody3D.new()
+	var body: StaticBody3D = StaticBody3D.new()
 	body.position = position + Vector3(0.0, 1.3, 0.0)
 	add_child(body)
 
-	var collider := CollisionShape3D.new()
-	var shape := CylinderShape3D.new()
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var shape: CylinderShape3D = CylinderShape3D.new()
 	shape.radius = 0.75
 	shape.height = 2.6
 	collider.shape = shape
 	body.add_child(collider)
 
-	var mesh_instance := MeshInstance3D.new()
-	var mesh := CylinderMesh.new()
+	var mesh_instance: MeshInstance3D = MeshInstance3D.new()
+	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = 0.75
 	mesh.bottom_radius = 0.85
 	mesh.height = 2.6
@@ -795,15 +813,15 @@ func _make_column(position: Vector3) -> void:
 	body.add_child(mesh_instance)
 
 func _make_torch(position: Vector3) -> void:
-	var light := OmniLight3D.new()
+	var light: OmniLight3D = OmniLight3D.new()
 	light.position = position + Vector3(0.0, 2.0, 0.0)
 	light.light_color = Color(1.0, 0.36, 0.13)
 	light.light_energy = 1.9
 	light.omni_range = 8.0
 	add_child(light)
 
-	var flame := MeshInstance3D.new()
-	var mesh := SphereMesh.new()
+	var flame: MeshInstance3D = MeshInstance3D.new()
+	var mesh: SphereMesh = SphereMesh.new()
 	mesh.radius = 0.18
 	mesh.height = 0.35
 	flame.mesh = mesh
@@ -824,9 +842,9 @@ func _make_town() -> void:
 	_make_town_walls()
 	_make_town_backdrop()
 	_make_town_portal_marker(Vector3(0.0, 0.0, 20.0))
-	_make_town_store("diamond_vendor", "Diamonds & Gems", Vector3(-14.0, 0.0, 2.5), Color(0.035, 0.09, 0.12), Color(0.1, 0.78, 1.0), 90.0)
+	_make_town_store("diamond_vendor", "Syra's Diamonds", Vector3(-14.0, 0.0, 2.5), Color(0.035, 0.09, 0.12), Color(0.1, 0.78, 1.0), 90.0)
 	_make_town_store("spell_vendor", "Spells & Rituals", Vector3(14.0, 0.0, 2.0), Color(0.13, 0.035, 0.16), Color(0.76, 0.18, 1.0), -90.0)
-	_make_town_store("relic_vendor", "Relic Stall", Vector3(0.0, 0.0, -13.5), Color(0.13, 0.09, 0.035), Color(0.95, 0.66, 0.18), 0.0)
+	_make_town_store("relic_vendor", "Aldric's Stall", Vector3(0.0, 0.0, -13.5), Color(0.13, 0.09, 0.035), Color(0.95, 0.66, 0.18), 0.0)
 	_make_town_street_dressing()
 
 func _load_vendor_textures() -> void:
@@ -836,12 +854,16 @@ func _load_vendor_textures() -> void:
 		vendor_side_texture = load(VENDOR_SIDE_TEXTURE_PATH) as Texture2D
 	if vendor_back_texture == null and ResourceLoader.exists(VENDOR_BACK_TEXTURE_PATH):
 		vendor_back_texture = load(VENDOR_BACK_TEXTURE_PATH) as Texture2D
+	if diamond_item_texture == null and ResourceLoader.exists(DIAMOND_ITEM_TEXTURE_PATH):
+		diamond_item_texture = load(DIAMOND_ITEM_TEXTURE_PATH) as Texture2D
 	if town_barrel_texture == null and ResourceLoader.exists(TOWN_BARREL_TEXTURE_PATH):
 		town_barrel_texture = load(TOWN_BARREL_TEXTURE_PATH) as Texture2D
 	if town_vendor_man_texture == null and ResourceLoader.exists(TOWN_VENDOR_MAN_TEXTURE_PATH):
 		town_vendor_man_texture = load(TOWN_VENDOR_MAN_TEXTURE_PATH) as Texture2D
 	if town_vendor_woman_texture == null and ResourceLoader.exists(TOWN_VENDOR_WOMAN_TEXTURE_PATH):
 		town_vendor_woman_texture = load(TOWN_VENDOR_WOMAN_TEXTURE_PATH) as Texture2D
+	if town_vendor_warlock_texture == null and ResourceLoader.exists(TOWN_VENDOR_WARLOCK_TEXTURE_PATH):
+		town_vendor_warlock_texture = load(TOWN_VENDOR_WARLOCK_TEXTURE_PATH) as Texture2D
 	if town_tree_textures.is_empty():
 		for tree_texture_path in TOWN_TREE_TEXTURE_PATHS:
 			if ResourceLoader.exists(tree_texture_path):
@@ -854,26 +876,26 @@ func _load_vendor_textures() -> void:
 		spell_shop_texture = load(SPELL_SHOP_TEXTURE_PATH) as Texture2D
 
 func _make_town_floor() -> void:
-	var floor_body := StaticBody3D.new()
+	var floor_body: StaticBody3D = StaticBody3D.new()
 	floor_body.name = "TownFloor"
 	town_root.add_child(floor_body)
 
-	var floor_collision := CollisionShape3D.new()
-	var floor_shape := BoxShape3D.new()
+	var floor_collision: CollisionShape3D = CollisionShape3D.new()
+	var floor_shape: BoxShape3D = BoxShape3D.new()
 	floor_shape.size = Vector3(TOWN_HALF_SIZE * 2.0, 0.35, TOWN_HALF_SIZE * 2.0)
 	floor_collision.shape = floor_shape
 	floor_collision.position.y = -0.2
 	floor_body.add_child(floor_collision)
 
-	var floor_mesh := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
+	var floor_mesh: MeshInstance3D = MeshInstance3D.new()
+	var plane: PlaneMesh = PlaneMesh.new()
 	plane.size = Vector2(TOWN_HALF_SIZE * 2.0, TOWN_HALF_SIZE * 2.0)
 	floor_mesh.mesh = plane
 	floor_mesh.material_override = _town_floor_material()
 	floor_body.add_child(floor_mesh)
 
-	var street := MeshInstance3D.new()
-	var street_plane := PlaneMesh.new()
+	var street: MeshInstance3D = MeshInstance3D.new()
+	var street_plane: PlaneMesh = PlaneMesh.new()
 	street_plane.size = Vector2(11.0, TOWN_HALF_SIZE * 2.0 - 4.0)
 	street.mesh = street_plane
 	street.position.y = 0.018
@@ -892,18 +914,18 @@ func _make_town_walls() -> void:
 		_make_town_lamp(lamp_position)
 
 func _make_town_wall(position: Vector3, size: Vector3) -> void:
-	var body := StaticBody3D.new()
+	var body: StaticBody3D = StaticBody3D.new()
 	body.position = position
 	town_root.add_child(body)
 
-	var collider := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = size
 	collider.shape = shape
 	body.add_child(collider)
 
-	var mesh_instance := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
+	var mesh_instance: MeshInstance3D = MeshInstance3D.new()
+	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = size
 	mesh_instance.mesh = mesh
 	mesh_instance.material_override = _town_wall_material(size)
@@ -921,16 +943,16 @@ func _make_town_backdrop() -> void:
 	_make_town_banner_line(Vector3(-18.0, 4.3, 8.5), Vector3(18.0, 4.8, 8.5), Color(0.05, 0.12, 0.2), Color(0.12, 0.78, 1.0))
 
 func _make_town_tower(position: Vector3, height: float, width: float, accent: Color) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = "GothicBackdrop"
 	root.position = position
 	town_root.add_child(root)
 
 	_make_town_box(root, "TowerBody", Vector3(width, height, width * 0.72), Vector3(0.0, height * 0.5, 0.0), _town_wall_material(Vector3(width, height, width)))
-	var roof_material := _town_roof_material()
+	var roof_material: StandardMaterial3D = _town_roof_material()
 	_make_town_roof_pair(root, width * 0.78, width * 0.72, Vector3(0.0, height + 0.35, 0.0), roof_material)
-	var spire := MeshInstance3D.new()
-	var spire_mesh := CylinderMesh.new()
+	var spire: MeshInstance3D = MeshInstance3D.new()
+	var spire_mesh: CylinderMesh = CylinderMesh.new()
 	spire_mesh.top_radius = 0.0
 	spire_mesh.bottom_radius = width * 0.24
 	spire_mesh.height = 2.2
@@ -944,8 +966,8 @@ func _make_town_tower(position: Vector3, height: float, width: float, accent: Co
 	_make_town_window(root, Vector3(0.0, height * 0.72, width * 0.38), Vector2(0.46, 0.9), accent)
 
 func _make_town_lamp(position: Vector3) -> void:
-	var post := MeshInstance3D.new()
-	var post_mesh := CylinderMesh.new()
+	var post: MeshInstance3D = MeshInstance3D.new()
+	var post_mesh: CylinderMesh = CylinderMesh.new()
 	post_mesh.top_radius = 0.08
 	post_mesh.bottom_radius = 0.1
 	post_mesh.height = 2.5
@@ -954,20 +976,20 @@ func _make_town_lamp(position: Vector3) -> void:
 	post.material_override = _material(Color(0.07, 0.052, 0.042), Color.BLACK, 0.0)
 	town_root.add_child(post)
 
-	var hook := _make_decoration_bar(0.72, 0.045, _decoration_material(Color(0.12, 0.085, 0.055), Color.BLACK, 0.0))
+	var hook: MeshInstance3D = _make_decoration_bar(0.72, 0.045, _decoration_material(Color(0.12, 0.085, 0.055), Color.BLACK, 0.0))
 	hook.position = position + Vector3(0.0, 2.42, 0.24)
 	hook.rotation_degrees.y = 90.0
 	town_root.add_child(hook)
 
-	var light := OmniLight3D.new()
+	var light: OmniLight3D = OmniLight3D.new()
 	light.position = position + Vector3(0.0, 2.35, 0.58)
 	light.light_color = Color(0.96, 0.58, 0.24)
 	light.light_energy = 2.55
 	light.omni_range = 9.2
 	town_root.add_child(light)
 
-	var flame := MeshInstance3D.new()
-	var flame_mesh := SphereMesh.new()
+	var flame: MeshInstance3D = MeshInstance3D.new()
+	var flame_mesh: SphereMesh = SphereMesh.new()
 	flame_mesh.radius = 0.2
 	flame_mesh.height = 0.34
 	flame.mesh = flame_mesh
@@ -975,20 +997,20 @@ func _make_town_lamp(position: Vector3) -> void:
 	flame.material_override = _material(Color(1.0, 0.42, 0.08), Color(1.0, 0.26, 0.02), 2.1)
 	town_root.add_child(flame)
 
-	var cage_material := _decoration_material(Color(0.08, 0.055, 0.035), Color.BLACK, 0.0)
+	var cage_material: StandardMaterial3D = _decoration_material(Color(0.08, 0.055, 0.035), Color.BLACK, 0.0)
 	for x in [-0.16, 0.16]:
-		var cage := _make_decoration_bar(0.45, 0.025, cage_material)
+		var cage: MeshInstance3D = _make_decoration_bar(0.45, 0.025, cage_material)
 		cage.position = light.position + Vector3(x, 0.0, 0.0)
 		cage.rotation_degrees.z = 90.0
 		town_root.add_child(cage)
 
 func _make_town_portal_marker(position: Vector3) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = "TownArrivalPortal"
 	root.position = position
 	town_root.add_child(root)
-	var ring := MeshInstance3D.new()
-	var ring_mesh := TorusMesh.new()
+	var ring: MeshInstance3D = MeshInstance3D.new()
+	var ring_mesh: TorusMesh = TorusMesh.new()
 	ring_mesh.inner_radius = 1.25
 	ring_mesh.outer_radius = 1.48
 	ring_mesh.ring_segments = 48
@@ -998,7 +1020,7 @@ func _make_town_portal_marker(position: Vector3) -> void:
 	ring.rotation_degrees.x = 90.0
 	ring.material_override = _portal_material(Color(0.08, 0.6, 0.85, 0.62), Color(0.1, 0.85, 1.0), 1.8)
 	root.add_child(ring)
-	var light := OmniLight3D.new()
+	var light: OmniLight3D = OmniLight3D.new()
 	light.position.y = 1.8
 	light.light_color = Color(0.1, 0.8, 1.0)
 	light.light_energy = 2.8
@@ -1006,7 +1028,7 @@ func _make_town_portal_marker(position: Vector3) -> void:
 	root.add_child(light)
 
 func _make_town_store(vendor_id: String, vendor_name: String, position: Vector3, stall_color: Color, accent: Color, yaw_degrees: float) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = vendor_name.replace(" ", "")
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
@@ -1014,15 +1036,15 @@ func _make_town_store(vendor_id: String, vendor_name: String, position: Vector3,
 
 	_make_shopfront(root, vendor_id, vendor_name, stall_color, accent)
 
-	var area := Area3D.new()
+	var area: Area3D = Area3D.new()
 	area.name = "%sArea" % vendor_id
 	area.position = Vector3(0.0, 0.0, 2.05)
 	area.body_entered.connect(_on_vendor_entered.bind(vendor_id))
 	area.body_exited.connect(_on_vendor_exited.bind(vendor_id))
 	root.add_child(area)
 
-	var shape_node := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
+	var shape_node: CollisionShape3D = CollisionShape3D.new()
+	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = Vector3(7.2, 2.4, 4.6)
 	shape_node.shape = shape
 	shape_node.position.y = 1.0
@@ -1059,11 +1081,25 @@ func _make_shopfront(parent: Node3D, vendor_id: String, vendor_name: String, sta
 			pass
 
 	_make_vendor_figure(parent, Vector3(0.0, 0.0, 2.2), accent, vendor_id)
+	_make_town_label(parent, _vendor_npc_name(vendor_id), Vector3(0.0, 2.15, 2.2), accent, 18)
 
 func _make_diamond_shop_details(parent: Node3D, accent: Color) -> void:
-	_make_diamond_icon(parent, Vector3(0.0, 3.42, 1.1), 0.78, accent)
-	for x in [-1.9, -0.65, 0.65, 1.9]:
-		_make_diamond_icon(parent, Vector3(x, 1.42, 1.1), 0.32, accent)
+	if diamond_item_texture != null:
+		_make_colored_diamond_sprite(parent, Vector3(0.0, 3.42, 1.1), 0.0042, Vector3.ONE * 0.72, Color(0.72, 0.93, 1.0))
+		var showcase := [
+			{"x": -2.15, "color": Color(0.93, 0.24, 0.24)},
+			{"x": -1.29, "color": Color(0.25, 0.54, 1.0)},
+			{"x": -0.43, "color": Color(0.28, 0.88, 0.42)},
+			{"x": 0.43, "color": Color(0.72, 0.32, 0.94)},
+			{"x": 1.29, "color": Color(1.0, 0.39, 0.08)},
+			{"x": 2.15, "color": Color(1.0, 0.94, 0.44)}
+		]
+		for gem_data in showcase:
+			_make_colored_diamond_sprite(parent, Vector3(float(gem_data["x"]), 1.48, 1.1), 0.0032, Vector3.ONE * 0.34, gem_data["color"])
+	else:
+		_make_diamond_icon(parent, Vector3(0.0, 3.42, 1.1), 0.78, accent)
+		for x in [-1.9, -0.65, 0.65, 1.9]:
+			_make_diamond_icon(parent, Vector3(x, 1.42, 1.1), 0.32, accent)
 	_make_town_box(parent, "GemCloth", Vector3(4.8, 0.08, 1.0), Vector3(0.0, 1.28, 0.78), _material(Color(0.02, 0.05, 0.085), accent, 0.08))
 	var light := OmniLight3D.new()
 	light.position = Vector3(0.0, 2.05, 1.15)
@@ -1097,8 +1133,8 @@ func _make_spell_shop_details(parent: Node3D, accent: Color) -> void:
 func _make_relic_shop_details(parent: Node3D, accent: Color) -> void:
 	_make_town_box(parent, "RelicCloth", Vector3(4.9, 0.08, 1.0), Vector3(0.0, 1.28, 0.78), _material(Color(0.12, 0.075, 0.02), accent, 0.08))
 	for x in [-1.7, 0.0, 1.7]:
-		var relic := MeshInstance3D.new()
-		var mesh := CylinderMesh.new()
+		var relic: MeshInstance3D = MeshInstance3D.new()
+		var mesh: CylinderMesh = CylinderMesh.new()
 		mesh.top_radius = 0.24
 		mesh.bottom_radius = 0.3
 		mesh.height = 0.5
@@ -1110,8 +1146,8 @@ func _make_relic_shop_details(parent: Node3D, accent: Color) -> void:
 
 func _make_town_roof_pair(parent: Node3D, width: float, depth: float, position: Vector3, material: Material) -> void:
 	for x in [-width * 0.22, width * 0.22]:
-		var roof := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
+		var roof: MeshInstance3D = MeshInstance3D.new()
+		var mesh: BoxMesh = BoxMesh.new()
 		mesh.size = Vector3(width * 0.58, 0.28, depth)
 		roof.mesh = mesh
 		roof.position = position + Vector3(x, 0.0, 0.0)
@@ -1126,18 +1162,35 @@ func _make_town_window(parent: Node3D, position: Vector3, size: Vector2, accent:
 	_make_town_box(parent, "WindowMullionH", Vector3(size.x + 0.08, 0.055, 0.1), position + Vector3(0.0, 0.0, 0.03), _town_wood_material())
 
 func _make_diamond_icon(parent: Node3D, position: Vector3, scale_value: float, accent: Color) -> void:
-	var gem := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
+	var gem: MeshInstance3D = MeshInstance3D.new()
+	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = Vector3(scale_value, scale_value, 0.08)
 	gem.mesh = mesh
 	gem.position = position
 	gem.rotation_degrees.z = 45.0
 	gem.material_override = _material(accent.darkened(0.2), accent, 2.0)
 	parent.add_child(gem)
-	var glint := _make_decoration_bar(scale_value * 1.05, 0.035, _decoration_material(Color(0.76, 0.95, 1.0), accent, 1.8))
+	var glint: MeshInstance3D = _make_decoration_bar(scale_value * 1.05, 0.035, _decoration_material(Color(0.76, 0.95, 1.0), accent, 1.8))
 	glint.position = position + Vector3(0.0, 0.0, 0.055)
 	glint.rotation_degrees.z = -45.0
 	parent.add_child(glint)
+
+func _make_colored_diamond_sprite(parent: Node3D, position: Vector3, pixel_size: float, sprite_scale: Vector3, tint: Color) -> void:
+	if diamond_item_texture == null:
+		return
+	var sprite: Sprite3D = Sprite3D.new()
+	sprite.name = "DiamondSprite"
+	sprite.texture = diamond_item_texture
+	sprite.pixel_size = pixel_size
+	sprite.shaded = false
+	sprite.double_sided = true
+	sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+	sprite.position = position
+	sprite.scale = sprite_scale
+	sprite.modulate = tint
+	parent.add_child(sprite)
 
 func _make_town_street_dressing() -> void:
 	for crate_data in [
@@ -1157,7 +1210,7 @@ func _make_town_street_dressing() -> void:
 	_make_town_fences()
 
 func _make_town_crate(position: Vector3, yaw_degrees: float) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = "TownCrate"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
@@ -1172,9 +1225,9 @@ func _make_town_barrel(position: Vector3) -> void:
 		barrel_sprite.position = position + Vector3(0.0, 0.2, 0.0)
 		barrel_sprite.rotation_degrees.y = rng.randf_range(0.0, 360.0)
 		return
-	var barrel := MeshInstance3D.new()
+	var barrel: MeshInstance3D = MeshInstance3D.new()
 	barrel.name = "TownBarrel"
-	var mesh := CylinderMesh.new()
+	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = 0.36
 	mesh.bottom_radius = 0.42
 	mesh.height = 0.92
@@ -1185,7 +1238,7 @@ func _make_town_barrel(position: Vector3) -> void:
 	town_root.add_child(barrel)
 
 func _make_town_banner(position: Vector3, yaw_degrees: float, cloth: Color, accent: Color) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = "TownBanner"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
@@ -1198,15 +1251,15 @@ func _make_town_banner_line(start: Vector3, end: Vector3, cloth: Color, accent: 
 	var center := (start + end) * 0.5
 	var delta := end - start
 	var length := Vector2(delta.x, delta.z).length()
-	var line := _make_decoration_bar(length, 0.035, _decoration_material(Color(0.1, 0.07, 0.055), Color.BLACK, 0.0))
+	var line: MeshInstance3D = _make_decoration_bar(length, 0.035, _decoration_material(Color(0.1, 0.07, 0.055), Color.BLACK, 0.0))
 	line.position = center
 	line.rotation_degrees.y = rad_to_deg(atan2(delta.z, delta.x))
 	town_root.add_child(line)
 	for i in range(7):
 		var ratio := float(i) / 6.0
 		var flag_position := start.lerp(end, ratio) + Vector3(0.0, -0.28 - float(i % 2) * 0.14, 0.0)
-		var flag := MeshInstance3D.new()
-		var flag_mesh := BoxMesh.new()
+		var flag: MeshInstance3D = MeshInstance3D.new()
+		var flag_mesh: BoxMesh = BoxMesh.new()
 		flag_mesh.size = Vector3(0.62, 0.52, 0.035)
 		flag.mesh = flag_mesh
 		flag.position = flag_position
@@ -1215,7 +1268,7 @@ func _make_town_banner_line(start: Vector3, end: Vector3, cloth: Color, accent: 
 		town_root.add_child(flag)
 
 func _make_town_market_canopy(position: Vector3, yaw_degrees: float, cloth: Color, accent: Color) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	root.name = "MarketCanopy"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
@@ -1325,7 +1378,7 @@ func _random_town_decor_position(street_half_width: float = 3.6) -> Vector3:
 	return position
 
 func _make_town_billboard_sprite(texture: Texture2D, sprite_name: String, pixel_size: float, sprite_scale: Vector3, tint: Color) -> Sprite3D:
-	var sprite := Sprite3D.new()
+	var sprite: Sprite3D = Sprite3D.new()
 	sprite.name = sprite_name
 	sprite.texture = texture
 	sprite.pixel_size = pixel_size
@@ -1346,8 +1399,8 @@ func _make_town_tree(position: Vector3, scale_value: float) -> void:
 	root.scale = Vector3.ONE * scale_value
 	town_root.add_child(root)
 
-	var trunk := MeshInstance3D.new()
-	var trunk_mesh := CylinderMesh.new()
+	var trunk: MeshInstance3D = MeshInstance3D.new()
+	var trunk_mesh: CylinderMesh = CylinderMesh.new()
 	trunk_mesh.top_radius = 0.18
 	trunk_mesh.bottom_radius = 0.24
 	trunk_mesh.height = 2.4
@@ -1356,10 +1409,10 @@ func _make_town_tree(position: Vector3, scale_value: float) -> void:
 	trunk.material_override = _town_wood_material()
 	root.add_child(trunk)
 
-	var leaf_material := _material(Color(0.1, 0.28, 0.15), Color(0.04, 0.09, 0.05), 0.06)
+	var leaf_material: StandardMaterial3D = _material(Color(0.1, 0.28, 0.15), Color(0.04, 0.09, 0.05), 0.06)
 	for offset in [Vector3(0.0, 2.38, 0.0), Vector3(0.58, 2.22, 0.08), Vector3(-0.55, 2.16, -0.12), Vector3(0.0, 2.75, 0.35)]:
-		var leaves := MeshInstance3D.new()
-		var leaves_mesh := SphereMesh.new()
+		var leaves: MeshInstance3D = MeshInstance3D.new()
+		var leaves_mesh: SphereMesh = SphereMesh.new()
 		leaves_mesh.radius = 0.72
 		leaves_mesh.height = 1.1
 		leaves.mesh = leaves_mesh
@@ -1396,9 +1449,9 @@ func _make_town_fence_row(start: Vector3, end: Vector3, segments: int) -> void:
 			town_root.add_child(rail)
 
 func _make_town_puddle(parent: Node3D, position: Vector3) -> void:
-	var puddle := MeshInstance3D.new()
+	var puddle: MeshInstance3D = MeshInstance3D.new()
 	puddle.name = "TownPuddle"
-	var mesh := CylinderMesh.new()
+	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = 0.7
 	mesh.bottom_radius = 0.7
 	mesh.height = 0.01
@@ -1410,9 +1463,9 @@ func _make_town_puddle(parent: Node3D, position: Vector3) -> void:
 	parent.add_child(puddle)
 
 func _make_town_box(parent: Node3D, name: String, size: Vector3, position: Vector3, material: Material, rotation_degrees_value: Vector3 = Vector3.ZERO) -> MeshInstance3D:
-	var box := MeshInstance3D.new()
+	var box: MeshInstance3D = MeshInstance3D.new()
 	box.name = name
-	var mesh := BoxMesh.new()
+	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = size
 	box.mesh = mesh
 	box.position = position
@@ -1422,9 +1475,9 @@ func _make_town_box(parent: Node3D, name: String, size: Vector3, position: Vecto
 	return box
 
 func _make_spell_shop_model(parent: Node3D, accent: Color) -> void:
-	var shadow := MeshInstance3D.new()
+	var shadow: MeshInstance3D = MeshInstance3D.new()
 	shadow.name = "SpellShopModelShadow"
-	var shadow_mesh := CylinderMesh.new()
+	var shadow_mesh: CylinderMesh = CylinderMesh.new()
 	shadow_mesh.top_radius = 2.45
 	shadow_mesh.bottom_radius = 2.45
 	shadow_mesh.height = 0.012
@@ -1436,7 +1489,7 @@ func _make_spell_shop_model(parent: Node3D, accent: Color) -> void:
 	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(shadow)
 
-	var model := spell_shop_scene.instantiate() as Node3D
+	var model: Node3D = spell_shop_scene.instantiate() as Node3D
 	if model == null:
 		return
 	model.name = "SpellShopModel"
@@ -1446,7 +1499,7 @@ func _make_spell_shop_model(parent: Node3D, accent: Color) -> void:
 	parent.add_child(model)
 	_prepare_spell_shop_model_materials(model, accent)
 
-	var light := OmniLight3D.new()
+	var light: OmniLight3D = OmniLight3D.new()
 	light.name = "SpellShopModelLight"
 	light.position = Vector3(0.0, 2.0, 1.15)
 	light.light_color = accent
@@ -1455,7 +1508,7 @@ func _make_spell_shop_model(parent: Node3D, accent: Color) -> void:
 	parent.add_child(light)
 
 func _prepare_spell_shop_model_materials(node: Node, accent: Color) -> void:
-	var mesh_instance := node as MeshInstance3D
+	var mesh_instance: MeshInstance3D = node as MeshInstance3D
 	if mesh_instance != null and mesh_instance.mesh != null:
 		for surface_index in range(mesh_instance.mesh.get_surface_count()):
 			var source_material := mesh_instance.get_surface_override_material(surface_index)
@@ -1475,9 +1528,9 @@ func _prepare_spell_shop_model_materials(node: Node, accent: Color) -> void:
 		_prepare_spell_shop_model_materials(child, accent)
 
 func _make_spell_shop_image(parent: Node3D, accent: Color) -> void:
-	var shadow := MeshInstance3D.new()
+	var shadow: MeshInstance3D = MeshInstance3D.new()
 	shadow.name = "SpellShopShadow"
-	var shadow_mesh := CylinderMesh.new()
+	var shadow_mesh: CylinderMesh = CylinderMesh.new()
 	shadow_mesh.top_radius = 2.15
 	shadow_mesh.bottom_radius = 2.15
 	shadow_mesh.height = 0.012
@@ -1489,7 +1542,7 @@ func _make_spell_shop_image(parent: Node3D, accent: Color) -> void:
 	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(shadow)
 
-	var sprite := Sprite3D.new()
+	var sprite: Sprite3D = Sprite3D.new()
 	sprite.name = "SpellShopSprite"
 	sprite.texture = spell_shop_texture
 	sprite.pixel_size = 0.018
@@ -1504,11 +1557,11 @@ func _make_spell_shop_image(parent: Node3D, accent: Color) -> void:
 	parent.add_child(sprite)
 
 func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendor_id: String = "") -> void:
-	var vendor_texture := _town_vendor_texture_for(vendor_id)
+	var vendor_texture: Texture2D = _town_vendor_texture_for(vendor_id)
 	if vendor_texture != null:
-		var shadow := MeshInstance3D.new()
+		var shadow: MeshInstance3D = MeshInstance3D.new()
 		shadow.name = "VendorShadow"
-		var shadow_mesh := CylinderMesh.new()
+		var shadow_mesh: CylinderMesh = CylinderMesh.new()
 		shadow_mesh.top_radius = 0.58
 		shadow_mesh.bottom_radius = 0.58
 		shadow_mesh.height = 0.012
@@ -1520,7 +1573,7 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendo
 		shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		parent.add_child(shadow)
 
-		var sprite := Sprite3D.new()
+		var sprite: Sprite3D = Sprite3D.new()
 		sprite.name = "VendorSprite"
 		sprite.texture = vendor_texture
 		sprite.pixel_size = 0.003
@@ -1540,8 +1593,8 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendo
 			})
 		return
 
-	var body := MeshInstance3D.new()
-	var body_mesh := CylinderMesh.new()
+	var body: MeshInstance3D = MeshInstance3D.new()
+	var body_mesh: CylinderMesh = CylinderMesh.new()
 	body_mesh.top_radius = 0.34
 	body_mesh.bottom_radius = 0.44
 	body_mesh.height = 1.15
@@ -1550,8 +1603,8 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendo
 	body.material_override = _material(Color(0.12, 0.09, 0.08), accent, 0.16)
 	parent.add_child(body)
 
-	var head := MeshInstance3D.new()
-	var head_mesh := SphereMesh.new()
+	var head: MeshInstance3D = MeshInstance3D.new()
+	var head_mesh: SphereMesh = SphereMesh.new()
 	head_mesh.radius = 0.28
 	head_mesh.height = 0.36
 	head_mesh.radial_segments = 18
@@ -1564,14 +1617,14 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendo
 func _town_vendor_texture_for(vendor_id: String) -> Texture2D:
 	match vendor_id:
 		"diamond_vendor":
+			if town_vendor_woman_texture != null:
+				return town_vendor_woman_texture
+		"spell_vendor":
+			if town_vendor_warlock_texture != null:
+				return town_vendor_warlock_texture
+		"relic_vendor":
 			if town_vendor_man_texture != null:
 				return town_vendor_man_texture
-		"spell_vendor":
-			if town_vendor_woman_texture != null:
-				return town_vendor_woman_texture
-		"relic_vendor":
-			if town_vendor_woman_texture != null:
-				return town_vendor_woman_texture
 	if vendor_front_texture != null:
 		return vendor_front_texture
 	return null
@@ -1580,8 +1633,8 @@ func _update_vendor_sprites() -> void:
 	if camera == null or vendor_sprites.is_empty():
 		return
 	for vendor_data in vendor_sprites:
-		var sprite := vendor_data["sprite"] as Sprite3D
-		var parent := vendor_data["parent"] as Node3D
+		var sprite: Sprite3D = vendor_data["sprite"] as Sprite3D
+		var parent: Node3D = vendor_data["parent"] as Node3D
 		if sprite == null or parent == null or not is_instance_valid(sprite) or not is_instance_valid(parent):
 			continue
 		var local_camera := parent.to_local(camera.global_position)
@@ -1633,9 +1686,9 @@ func _make_exit_fx() -> void:
 		exit_swirl_root.add_child(soul)
 
 func _make_portal_smoke_wisp(index: int) -> MeshInstance3D:
-	var wisp := MeshInstance3D.new()
+	var wisp: MeshInstance3D = MeshInstance3D.new()
 	wisp.name = "PortalSmokeWisp"
-	var mesh := SphereMesh.new()
+	var mesh: SphereMesh = SphereMesh.new()
 	mesh.radius = 0.26
 	mesh.height = 0.36
 	mesh.radial_segments = 16
@@ -1648,9 +1701,9 @@ func _make_portal_smoke_wisp(index: int) -> MeshInstance3D:
 	return wisp
 
 func _make_portal_spark(index: int) -> MeshInstance3D:
-	var spark := MeshInstance3D.new()
+	var spark: MeshInstance3D = MeshInstance3D.new()
 	spark.name = "PortalSpark"
-	var mesh := SphereMesh.new()
+	var mesh: SphereMesh = SphereMesh.new()
 	mesh.radius = 0.08
 	mesh.height = 0.12
 	mesh.radial_segments = 8
@@ -1661,9 +1714,9 @@ func _make_portal_spark(index: int) -> MeshInstance3D:
 	return spark
 
 func _make_portal_soul(index: int) -> MeshInstance3D:
-	var soul := MeshInstance3D.new()
+	var soul: MeshInstance3D = MeshInstance3D.new()
 	soul.name = "PortalSoul"
-	var mesh := SphereMesh.new()
+	var mesh: SphereMesh = SphereMesh.new()
 	mesh.radius = 0.18
 	mesh.height = 0.28
 	mesh.radial_segments = 16
@@ -1773,7 +1826,7 @@ func _spawn_encounter() -> void:
 	_spawn_enemy_at(Vector3(4.2, 0.1, -27.5), false, SISEnemy.ENEMY_KIND_CLERIC)
 
 func _spawn_enemy_at(spawn_position: Vector3, elite: bool = false, enemy_kind: StringName = SISEnemy.ENEMY_KIND_ANGEL) -> void:
-	var enemy: SISEnemy = EnemyScript.new() as SISEnemy
+	var enemy: SISEnemy = SISEnemy.new()
 	enemy.position = spawn_position
 	enemy.enemy_kind = enemy_kind
 	add_child(enemy)
@@ -1962,13 +2015,144 @@ func _spawn_gold(position: Vector3, amount: int) -> void:
 
 func _on_gold_picked_up(amount: int) -> void:
 	_play_sound(TREASURE_CHEST_SOUND, -5.0)
-	player.add_gold(amount)
+	var multiplier := 1.0
+	if player != null:
+		multiplier = player.get_gold_gain_multiplier()
+	var payout := maxi(1, int(round(float(amount) * multiplier)))
+	player.add_gold(payout)
 
 func _on_player_stats_changed(stats: Dictionary) -> void:
 	if hud != null:
-		hud.update_stats(stats)
+		hud.update_stats(_stats_for_hud(stats))
 		if whisper_system != null:
 			hud.set_corruption_ui(float(whisper_system.corruption), _current_hp_percent())
+
+func _stats_for_hud(base_stats: Dictionary) -> Dictionary:
+	var payload := base_stats.duplicate(true)
+	_ensure_faded_socket_size()
+	payload["faded_owned"] = owned_faded_diamonds.duplicate(true)
+	payload["faded_sockets"] = socketed_faded_diamonds.duplicate()
+	payload["faded_catalog"] = _faded_catalog_for_hud()
+	return payload
+
+func _faded_catalog_for_hud() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for diamond in FADED_DIAMOND_CATALOG:
+		list.append({
+			"id": String(diamond["id"]),
+			"icon": String(diamond["icon"]),
+			"name": String(diamond["name"]),
+			"bonus": String(diamond["description"]),
+			"color": diamond["color"]
+		})
+	return list
+
+func _ensure_faded_socket_size() -> void:
+	while socketed_faded_diamonds.size() < GLOVE_SOCKET_COUNT:
+		socketed_faded_diamonds.append("")
+	if socketed_faded_diamonds.size() > GLOVE_SOCKET_COUNT:
+		socketed_faded_diamonds.resize(GLOVE_SOCKET_COUNT)
+
+func _socketed_count(diamond_id: String) -> int:
+	var count := 0
+	for socket_id in socketed_faded_diamonds:
+		if socket_id == diamond_id:
+			count += 1
+	return count
+
+func _available_faded_diamond_count(diamond_id: String) -> int:
+	var owned := int(owned_faded_diamonds.get(diamond_id, 0))
+	return maxi(0, owned - _socketed_count(diamond_id))
+
+func _diamond_catalog_entry(diamond_id: String) -> Dictionary:
+	for diamond in FADED_DIAMOND_CATALOG:
+		if String(diamond["id"]) == diamond_id:
+			return diamond
+	return {}
+
+func _diamond_socket_bonus(diamond_id: String) -> Dictionary:
+	match diamond_id:
+		"faded_rush":
+			return {"damage": 0.0, "move_speed": 0.0, "cooldown": 0.25, "gold": 0.0}
+		"faded_focus":
+			return {"damage": 0.06, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+		"faded_vitality":
+			return {"damage": 0.03, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+		"faded_fortune":
+			return {"damage": 0.0, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.12}
+		"faded_corruption":
+			return {"damage": 0.07, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+		"faded_echo":
+			return {"damage": 0.05, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+		"faded_void":
+			return {"damage": 0.05, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+		"faded_fury":
+			return {"damage": 0.0, "move_speed": 0.1, "cooldown": 0.0, "gold": 0.0}
+		"faded_guardian":
+			return {"damage": 0.02, "move_speed": 0.0, "cooldown": 0.1, "gold": 0.0}
+		"faded_flame_ring":
+			return {"damage": 0.08, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+		"faded_frostbind":
+			return {"damage": 0.02, "move_speed": 0.0, "cooldown": 0.1, "gold": 0.0}
+		"faded_storm":
+			return {"damage": 0.08, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+		_:
+			return {"damage": 0.0, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+
+func _apply_socketed_diamond_bonuses() -> void:
+	_ensure_faded_socket_size()
+	var total_damage_bonus := 0.0
+	var total_move_speed_bonus := 0.0
+	var total_cooldown_reduction := 0.0
+	var total_gold_bonus := 0.0
+	for diamond_id in socketed_faded_diamonds:
+		if diamond_id.is_empty():
+			continue
+		var bonus := _diamond_socket_bonus(diamond_id)
+		total_damage_bonus += float(bonus.get("damage", 0.0))
+		total_move_speed_bonus += float(bonus.get("move_speed", 0.0))
+		total_cooldown_reduction += float(bonus.get("cooldown", 0.0))
+		total_gold_bonus += float(bonus.get("gold", 0.0))
+	if player != null:
+		player.set_faded_diamond_bonuses({
+			"damage_bonus": total_damage_bonus,
+			"move_speed_bonus": total_move_speed_bonus,
+			"cooldown_reduction": total_cooldown_reduction,
+			"gold_gain_bonus": total_gold_bonus
+		})
+
+func _on_inventory_socket_drop_requested(slot_index: int, diamond_id: String, source_slot_index: int) -> void:
+	if player == null:
+		return
+	_ensure_faded_socket_size()
+	if slot_index < 0 or slot_index >= GLOVE_SOCKET_COUNT:
+		return
+	if _diamond_catalog_entry(diamond_id).is_empty():
+		return
+	if source_slot_index >= 0 and source_slot_index < GLOVE_SOCKET_COUNT:
+		if socketed_faded_diamonds[source_slot_index] != diamond_id:
+			return
+		if source_slot_index == slot_index:
+			return
+		var target_id := socketed_faded_diamonds[slot_index]
+		socketed_faded_diamonds[slot_index] = diamond_id
+		socketed_faded_diamonds[source_slot_index] = target_id
+	else:
+		if _available_faded_diamond_count(diamond_id) <= 0:
+			return
+		socketed_faded_diamonds[slot_index] = diamond_id
+	_apply_socketed_diamond_bonuses()
+
+func _on_inventory_socket_clear_requested(slot_index: int) -> void:
+	if player == null:
+		return
+	_ensure_faded_socket_size()
+	if slot_index < 0 or slot_index >= GLOVE_SOCKET_COUNT:
+		return
+	if socketed_faded_diamonds[slot_index].is_empty():
+		return
+	socketed_faded_diamonds[slot_index] = ""
+	_apply_socketed_diamond_bonuses()
 
 func _on_player_damaged(amount: int) -> void:
 	if whisper_system != null:
@@ -2036,25 +2220,38 @@ func _show_vendor_shop(vendor_id: String, status_text: String) -> void:
 		return
 	hud.show_shop(_vendor_title(vendor_id), _shop_items_for_vendor(vendor_id), status_text, _wallet_text())
 
+func _vendor_npc_name(vendor_id: String) -> String:
+	match vendor_id:
+		"diamond_vendor":
+			return "Syra"
+		"spell_vendor":
+			return "Zethyr"
+		"relic_vendor":
+			return "Aldric"
+		_:
+			return ""
+
 func _vendor_title(vendor_id: String) -> String:
 	match vendor_id:
 		"diamond_vendor":
-			return "Diamond Broker"
+			return "Syra — Diamond Broker"
 		"spell_vendor":
-			return "Spell Vendor"
+			return "Zethyr — Spells & Rituals"
 		"relic_vendor":
-			return "Relic Stall"
+			return "Aldric — Curiosities"
 		_:
 			return "Vendor"
 
 func _vendor_greeting(vendor_id: String) -> String:
 	match vendor_id:
 		"diamond_vendor":
-			return "Trade castle gold for diamonds. Spell vendors prefer cleaner currency."
+			if game_level <= 1:
+				return "Syra smiles. Faded diamonds unlock after level 1. Return with more blood on your hands."
+			return "Syra opens a case of faded diamonds. Each color bends your build in a different direction."
 		"spell_vendor":
-			return "Spend diamonds to bind permanent spell upgrades."
+			return "Zethyr watches you carefully. Spend diamonds to bind permanent spell upgrades."
 		"relic_vendor":
-			return "This stall is still being stocked. The vendor gestures apologetically."
+			return "Aldric leans on the counter. More stock is on its way. Come back soon."
 		_:
 			return "The vendor waits."
 
@@ -2062,13 +2259,29 @@ func _shop_items_for_vendor(vendor_id: String) -> Array[Dictionary]:
 	var items: Array[Dictionary] = []
 	match vendor_id:
 		"diamond_vendor":
-			for pack in DIAMOND_PACKS:
+			if game_level <= 1:
 				items.append({
-					"id": String(pack["id"]),
-					"name": String(pack["name"]),
-					"description": String(pack["description"]),
-					"price": "%s gold" % int(pack["gold_cost"])
+					"id": "faded_locked",
+					"name": "Faded Diamonds (Locked)",
+					"description": "Reach level 2 to unlock Syra's full faded catalog.",
+					"price": "-"
 				})
+			else:
+				for diamond in FADED_DIAMOND_CATALOG:
+					var item_id := String(diamond["id"])
+					var owned_count := int(owned_faded_diamonds.get(item_id, 0))
+					var socketed_count := _socketed_count(item_id)
+					var available_count := _available_faded_diamond_count(item_id)
+					var description := String(diamond["description"])
+					if owned_count > 0:
+						description += " Owned: %s (Socketed: %s, Available: %s)" % [owned_count, socketed_count, available_count]
+					items.append({
+						"id": item_id,
+						"name": "%s %s" % [String(diamond["icon"]), String(diamond["name"])],
+						"description": description,
+						"price": "%s gold" % int(diamond["gold_cost"]),
+						"color": diamond["color"]
+					})
 		"spell_vendor":
 			for spell in SPELL_CATALOG:
 				var description := String(spell["description"])
@@ -2097,23 +2310,26 @@ func _on_shop_purchase_requested(item_id: String) -> void:
 		return
 	var status_text := "Nothing happens."
 	if active_vendor_id == "diamond_vendor":
-		status_text = _buy_diamond_pack(item_id)
+		status_text = _buy_faded_diamond(item_id)
 	elif active_vendor_id == "spell_vendor":
 		status_text = _buy_spell(item_id)
 	else:
 		status_text = "The stall has nothing for sale yet."
 	_show_vendor_shop(active_vendor_id, status_text)
 
-func _buy_diamond_pack(item_id: String) -> String:
-	for pack in DIAMOND_PACKS:
-		if String(pack["id"]) != item_id:
+func _buy_faded_diamond(item_id: String) -> String:
+	if game_level <= 1:
+		return "Syra will only sell faded diamonds after level 1."
+	for diamond in FADED_DIAMOND_CATALOG:
+		if String(diamond["id"]) != item_id:
 			continue
-		var cost := int(pack["gold_cost"])
+		var cost := int(diamond["gold_cost"])
 		if not player.spend_gold(cost):
 			return "Not enough gold."
-		player.add_diamonds(int(pack["diamonds"]))
-		return "Purchased %s diamonds." % int(pack["diamonds"])
-	return "The broker does not recognize that bundle."
+		owned_faded_diamonds[item_id] = int(owned_faded_diamonds.get(item_id, 0)) + 1
+		_apply_socketed_diamond_bonuses()
+		return "Purchased %s." % String(diamond["name"])
+	return "Syra does not offer that diamond."
 
 func _buy_spell(item_id: String) -> String:
 	for spell in SPELL_CATALOG:
@@ -2272,7 +2488,7 @@ func _town_floor_material() -> StandardMaterial3D:
 func _town_street_material() -> StandardMaterial3D:
 	if town_cobble_texture == null:
 		town_cobble_texture = _make_town_cobble_texture()
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_texture = town_cobble_texture
 	material.albedo_color = Color(0.34, 0.32, 0.3)
 	material.emission_enabled = true
@@ -2288,7 +2504,7 @@ func _town_wall_material(size: Vector3) -> StandardMaterial3D:
 		wall_texture = _make_brick_texture()
 	var horizontal_repeats: float = max(size.x, size.z) * 0.42
 	var vertical_repeats: float = max(size.y * 0.8, 2.6)
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_texture = wall_texture
 	material.albedo_color = Color(0.43, 0.37, 0.34)
 	material.emission_enabled = true
@@ -2303,7 +2519,7 @@ func _town_wall_material(size: Vector3) -> StandardMaterial3D:
 func _town_roof_material() -> StandardMaterial3D:
 	if town_roof_texture == null:
 		town_roof_texture = _make_town_roof_texture()
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_texture = town_roof_texture
 	material.albedo_color = Color(0.26, 0.24, 0.31)
 	material.emission_enabled = true
@@ -2317,7 +2533,7 @@ func _town_roof_material() -> StandardMaterial3D:
 func _town_wood_material() -> StandardMaterial3D:
 	if town_wood_texture == null:
 		town_wood_texture = _make_town_wood_texture()
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_texture = town_wood_texture
 	material.albedo_color = Color(0.33, 0.21, 0.13)
 	material.emission_enabled = true

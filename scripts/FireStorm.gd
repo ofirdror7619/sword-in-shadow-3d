@@ -8,7 +8,7 @@ var duration := 2.9
 var strikes := 18
 var damage := 32
 
-var _rng := RandomNumberGenerator.new()
+var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _elapsed := 0.0
 var _strike_timer := 0.0
 var _strikes_done := 0
@@ -94,13 +94,13 @@ func _make_flash(impact: Vector3) -> void:
 	tween.tween_callback(Callable(flash, "queue_free"))
 
 func _make_impact_smoke(impact: Vector3) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	get_tree().current_scene.add_child(root)
 	root.global_position = impact
 
 	for i in range(12):
-		var puff := MeshInstance3D.new()
-		var mesh := SphereMesh.new()
+		var puff: MeshInstance3D = MeshInstance3D.new()
+		var mesh: SphereMesh = SphereMesh.new()
 		mesh.radius = _rng.randf_range(0.36, 0.74)
 		mesh.height = mesh.radius * 1.45
 		puff.mesh = mesh
@@ -122,13 +122,13 @@ func _make_impact_smoke(impact: Vector3) -> void:
 	cleanup.tween_callback(Callable(root, "queue_free"))
 
 func _make_ash_splash(impact: Vector3) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	get_tree().current_scene.add_child(root)
 	root.global_position = impact
 
 	for i in range(28):
-		var ash := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
+		var ash: MeshInstance3D = MeshInstance3D.new()
+		var mesh: BoxMesh = BoxMesh.new()
 		var chip_size := _rng.randf_range(0.07, 0.16)
 		mesh.size = Vector3(chip_size, chip_size * 0.55, chip_size)
 		ash.mesh = mesh
@@ -158,13 +158,13 @@ func _make_ash_splash(impact: Vector3) -> void:
 	cleanup.tween_callback(Callable(root, "queue_free"))
 
 func _make_scorch_splatter(impact: Vector3) -> void:
-	var root := Node3D.new()
+	var root: Node3D = Node3D.new()
 	get_tree().current_scene.add_child(root)
 	root.global_position = impact
 
 	for i in range(10):
-		var mark := MeshInstance3D.new()
-		var mesh := CylinderMesh.new()
+		var mark: MeshInstance3D = MeshInstance3D.new()
+		var mesh: CylinderMesh = CylinderMesh.new()
 		mesh.top_radius = _rng.randf_range(0.08, 0.18)
 		mesh.bottom_radius = mesh.top_radius
 		mesh.height = 0.018
@@ -261,7 +261,7 @@ func _ember_material(albedo: Color, emission: Color, emission_energy: float) -> 
 	return material
 
 func _material(albedo: Color, emission: Color, emission_energy: float) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = albedo
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.emission_enabled = true

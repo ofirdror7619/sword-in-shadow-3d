@@ -48,8 +48,8 @@ func _try_pickup(body: Node3D) -> bool:
 	return false
 
 func _make_collision() -> void:
-	var collider := CollisionShape3D.new()
-	var shape := SphereShape3D.new()
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var shape: SphereShape3D = SphereShape3D.new()
 	shape.radius = 0.8
 	collider.shape = shape
 	add_child(collider)
@@ -68,12 +68,12 @@ func _make_visuals() -> void:
 	_face_visuals_to_camera()
 
 func _load_coin_model() -> Node3D:
-	var coin_scene := ResourceLoader.load(COIN_MODEL_PATH) as PackedScene
+	var coin_scene: PackedScene = ResourceLoader.load(COIN_MODEL_PATH) as PackedScene
 	if coin_scene != null:
 		return coin_scene.instantiate() as Node3D
 
-	var gltf := GLTFDocument.new()
-	var state := GLTFState.new()
+	var gltf: GLTFDocument = GLTFDocument.new()
+	var state: GLTFState = GLTFState.new()
 	var error := gltf.append_from_file(COIN_MODEL_PATH, state)
 	if error != OK:
 		push_warning("Could not load coin model: %s" % COIN_MODEL_PATH)
@@ -81,8 +81,8 @@ func _load_coin_model() -> Node3D:
 	return gltf.generate_scene(state)
 
 func _make_fallback_coin() -> void:
-	var coin := MeshInstance3D.new()
-	var mesh := CylinderMesh.new()
+	var coin: MeshInstance3D = MeshInstance3D.new()
+	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = COIN_DIAMETER * 0.5
 	mesh.bottom_radius = COIN_DIAMETER * 0.5
 	mesh.height = COIN_THICKNESS
@@ -125,7 +125,7 @@ func _brighten_coin_materials(coin: Node3D) -> void:
 			mesh_instance.set_surface_override_material(surface_index, visible_material)
 
 func _coin_material() -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = Color(1.0, 0.72, 0.18, 1.0)
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

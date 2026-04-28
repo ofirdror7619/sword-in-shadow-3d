@@ -86,3 +86,6 @@ Use 4 core elements:
 ❄️ Ice → control / freeze
 ⚡ Lightning → speed / chain
 🟣 Void → manipulation / spread
+
+there are 5 levels for diamonds:
+Faded → Whispering → Corrupted → Abyssal → Divine

@@ -263,8 +263,8 @@ func _lightning_start_position() -> Vector3:
 	return global_position + Vector3(0.0, 1.72, 0.0)
 
 func _make_collision() -> void:
-	var collider := CollisionShape3D.new()
-	var capsule := CapsuleShape3D.new()
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var capsule: CapsuleShape3D = CapsuleShape3D.new()
 	capsule.radius = 0.42
 	capsule.height = 1.15
 	collider.shape = capsule
@@ -314,7 +314,7 @@ func _make_visuals() -> void:
 	_face_angel_visuals_to_camera()
 
 	_life_bar = MeshInstance3D.new()
-	var bar_mesh := BoxMesh.new()
+	var bar_mesh: BoxMesh = BoxMesh.new()
 	bar_mesh.size = Vector3(0.9, 0.08, 0.06)
 	_life_bar.mesh = bar_mesh
 	_life_bar.position = Vector3(0.0, 1.8 + ANGEL_HOVER_HEIGHT, 0.0)
@@ -342,7 +342,7 @@ func _make_knight_visuals() -> void:
 		_visual_root.scale = Vector3.ONE * (KNIGHT_VISUAL_HEIGHT / KNIGHT_PROXY_BASE_HEIGHT)
 
 	_life_bar = MeshInstance3D.new()
-	var bar_mesh := BoxMesh.new()
+	var bar_mesh: BoxMesh = BoxMesh.new()
 	bar_mesh.size = Vector3(0.9, 0.08, 0.06)
 	_life_bar.mesh = bar_mesh
 	_life_bar.position = Vector3(0.0, KNIGHT_LIFE_BAR_HEIGHT, 0.0)
@@ -370,7 +370,7 @@ func _make_cleric_visuals() -> void:
 		_visual_root.scale = Vector3.ONE * (CLERIC_VISUAL_HEIGHT / CLERIC_PROXY_BASE_HEIGHT)
 
 	_life_bar = MeshInstance3D.new()
-	var bar_mesh := BoxMesh.new()
+	var bar_mesh: BoxMesh = BoxMesh.new()
 	bar_mesh.size = Vector3(0.9, 0.08, 0.06)
 	_life_bar.mesh = bar_mesh
 	_life_bar.position = Vector3(0.0, CLERIC_LIFE_BAR_HEIGHT, 0.0)
@@ -378,9 +378,9 @@ func _make_cleric_visuals() -> void:
 	add_child(_life_bar)
 
 func _make_cleric_shadow() -> MeshInstance3D:
-	var shadow := MeshInstance3D.new()
-	shadow.name = "ClericGroundShadow"
-	var mesh := CylinderMesh.new()
+	var shadow: MeshInstance3D = MeshInstance3D.new()
+	shadow.name = "ClericModelShadow"
+	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = 0.48
 	mesh.bottom_radius = 0.48
 	mesh.height = 0.01
@@ -402,9 +402,9 @@ func _make_cleric_proxy_visuals() -> void:
 	_visual_root.add_child(_make_bone_box(Vector3(0.08, 0.9, 0.08), Vector3(0.36, 1.0, 0.0), trim))
 
 func _make_knight_shadow() -> MeshInstance3D:
-	var shadow := MeshInstance3D.new()
-	shadow.name = "KnightGroundShadow"
-	var mesh := CylinderMesh.new()
+	var shadow: MeshInstance3D = MeshInstance3D.new()
+	shadow.name = "KnightModelShadow"
+	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = 0.48
 	mesh.bottom_radius = 0.48
 	mesh.height = 0.01
@@ -486,9 +486,9 @@ func _play_first_model_animation(model: Node3D) -> void:
 		animation_player.play(animation_name)
 
 func _make_angel_shadow() -> MeshInstance3D:
-	var shadow := MeshInstance3D.new()
+	var shadow: MeshInstance3D = MeshInstance3D.new()
 	shadow.name = "AngelAirShadow"
-	var mesh := CylinderMesh.new()
+	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = 0.55
 	mesh.bottom_radius = 0.55
 	mesh.height = 0.01
@@ -508,8 +508,8 @@ func _make_skeleton_visuals() -> void:
 	_visual_root.add_child(_make_bone_box(Vector3(0.12, 0.56, 0.12), Vector3(0.0, 1.1, 0.0), bone_material))
 	_visual_root.add_child(_make_bone_box(Vector3(0.58, 0.1, 0.12), Vector3(0.0, 1.32, 0.0), bone_material))
 
-	var skull := MeshInstance3D.new()
-	var skull_mesh := SphereMesh.new()
+	var skull: MeshInstance3D = MeshInstance3D.new()
+	var skull_mesh: SphereMesh = SphereMesh.new()
 	skull_mesh.radius = 0.23
 	skull_mesh.height = 0.34
 	skull.mesh = skull_mesh
@@ -530,7 +530,7 @@ func _make_skeleton_visuals() -> void:
 	_visual_root.add_child(_right_leg_pivot)
 
 	_life_bar = MeshInstance3D.new()
-	var bar_mesh := BoxMesh.new()
+	var bar_mesh: BoxMesh = BoxMesh.new()
 	bar_mesh.size = Vector3(0.9, 0.08, 0.06)
 	_life_bar.mesh = bar_mesh
 	_life_bar.position = Vector3(0.0, 1.95, 0.0)
@@ -562,9 +562,9 @@ func _make_angel_wing_pivot(side: int, texture: Texture2D) -> Node3D:
 	return pivot
 
 func _make_angel_wing_socket(side: int) -> MeshInstance3D:
-	var socket := MeshInstance3D.new()
+	var socket: MeshInstance3D = MeshInstance3D.new()
 	socket.name = "AngelWingSocket"
-	var mesh := SphereMesh.new()
+	var mesh: SphereMesh = SphereMesh.new()
 	mesh.radius = 0.1
 	mesh.height = 0.15
 	mesh.radial_segments = 12
@@ -666,14 +666,14 @@ func _apply_angel_visual_facing(next_facing: int) -> void:
 			_right_wing_base_rotation = Vector3(-6.0, 23.0, 9.0)
 
 func _make_limb_pivot(pivot_position: Vector3, bone_size: Vector3, bone_offset_y: float, material: Material) -> Node3D:
-	var pivot := Node3D.new()
+	var pivot: Node3D = Node3D.new()
 	pivot.position = pivot_position
 	pivot.add_child(_make_bone_box(bone_size, Vector3(0.0, bone_offset_y, 0.0), material))
 	return pivot
 
 func _make_bone_box(size: Vector3, position: Vector3, material: Material) -> MeshInstance3D:
-	var bone := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
+	var bone: MeshInstance3D = MeshInstance3D.new()
+	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = size
 	bone.mesh = mesh
 	bone.position = position
@@ -741,7 +741,7 @@ func _make_lightning_bolt(start: Vector3, end: Vector3) -> void:
 	var parent := get_parent() as Node3D
 	if parent == null:
 		return
-	var bolt_root := Node3D.new()
+	var bolt_root: Node3D = Node3D.new()
 	bolt_root.name = "ClericLightningBolt"
 	parent.add_child(bolt_root)
 
@@ -754,7 +754,7 @@ func _make_lightning_bolt(start: Vector3, end: Vector3) -> void:
 		var branch_end := branch_start + Vector3(randf_range(-0.55, 0.55), randf_range(-0.28, 0.32), randf_range(-0.55, 0.55))
 		_add_lightning_segment(bolt_root, branch_start, branch_end, 0.018, material)
 
-	var flash := OmniLight3D.new()
+	var flash: OmniLight3D = OmniLight3D.new()
 	flash.name = "LightningFlash"
 	flash.light_color = Color(0.55, 0.84, 1.0)
 	flash.light_energy = 4.2
@@ -776,8 +776,8 @@ func _add_lightning_segment(parent: Node3D, start: Vector3, end: Vector3, radius
 	if length <= 0.01:
 		return
 	direction /= length
-	var segment := MeshInstance3D.new()
-	var mesh := CylinderMesh.new()
+	var segment: MeshInstance3D = MeshInstance3D.new()
+	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = radius
 	mesh.bottom_radius = radius
 	mesh.height = length
@@ -823,7 +823,7 @@ func _clear_lightning_bolts() -> void:
 	_lightning_bolts.clear()
 
 func _lightning_material(albedo: Color, emission: Color, emission_energy: float) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = albedo
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
@@ -834,7 +834,7 @@ func _lightning_material(albedo: Color, emission: Color, emission_energy: float)
 	return material
 
 func _material(albedo: Color, emission: Color = Color.BLACK, emission_energy: float = 0.0) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = albedo
 	if emission_energy > 0.0:
 		material.emission_enabled = true
@@ -843,7 +843,7 @@ func _material(albedo: Color, emission: Color = Color.BLACK, emission_energy: fl
 	return material
 
 func _transparent_material(albedo: Color) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = albedo
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

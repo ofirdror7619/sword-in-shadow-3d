@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bbbh5ssvsn57m"
-path="res://.godot/imported/woman-1.png-492b50b18f3e62eb3d847848688c8f52.ctex"
+uid="uid://bewe4sgnnk3x"
+path="res://.godot/imported/diamond.png-781e9ba610e8282262fa4984865e64c4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/images/objects/town/woman-1.png"
-dest_files=["res://.godot/imported/woman-1.png-492b50b18f3e62eb3d847848688c8f52.ctex"]
+source_file="res://assets/images/objects/diamond.png"
+dest_files=["res://.godot/imported/diamond.png-781e9ba610e8282262fa4984865e64c4.ctex"]
 
 [params]
 
