@@ -7,6 +7,7 @@ const ScrollScript := preload("res://scripts/Scroll.gd")
 const FireStormScript := preload("res://scripts/FireStorm.gd")
 const HudScript := preload("res://scripts/HUD.gd")
 const WhisperSystemScript := preload("res://scripts/WhisperSystem.gd")
+const MissionSystemScript := preload("res://scripts/MissionSystem.gd")
 const EXIT_TEXTURE: Texture2D = preload("res://assets/images/objects/portal.png")
 const FLOOR_TEXTURE: Texture2D = preload("res://assets/images/floor/castle-stone-floor.png")
 const OPENING_LOGO_TEXTURE: Texture2D = preload("res://assets/images/opening/logo.png")
@@ -30,9 +31,9 @@ const TOWN_BARREL_TEXTURE_PATH := "res://assets/images/objects/town/barrel.png"
 const TOWN_VENDOR_MAN_TEXTURE_PATH := "res://assets/images/objects/town/aldric.png"
 const TOWN_VENDOR_WOMAN_TEXTURE_PATH := "res://assets/images/objects/town/syra.png"
 const TOWN_VENDOR_WARLOCK_TEXTURE_PATH := "res://assets/images/objects/town/zethyr.png"
-const TOWN_VENDOR_MAN_FACE_PATH := "res://assets/images/objects/town/aldric-face.png"
-const TOWN_VENDOR_WOMAN_FACE_PATH := "res://assets/images/objects/town/syra-face.png"
-const TOWN_VENDOR_WARLOCK_FACE_PATH := "res://assets/images/objects/town/zethyr-face.png"
+const TOWN_VENDOR_MAN_FACE_TEXTURE: Texture2D = preload("res://assets/images/objects/town/aldric-face.png")
+const TOWN_VENDOR_WOMAN_FACE_TEXTURE: Texture2D = preload("res://assets/images/objects/town/syra-face.png")
+const TOWN_VENDOR_WARLOCK_FACE_TEXTURE: Texture2D = preload("res://assets/images/objects/town/zethyr-face.png")
 const TOWN_TREE_TEXTURE_PATHS := [
 	"res://assets/images/objects/town/tree-1.png",
 	"res://assets/images/objects/town/tree-2.png",
@@ -44,6 +45,12 @@ const WHISPER_AFTER_KILLING_PATH := "res://theWhisper/after-killing.txt"
 const WHISPER_WAITING_PATH := "res://theWhisper/waiting.txt"
 const SCROLLS_PATH := "res://scrolls/scrolls.txt"
 const SCROLLS_FALLBACK_PATH := "res://scrolls/scrollls.txt"
+const ALDRIC_FIRST_DIALOGUE_PATH := "res://dialogues/town/aldric-first-encounter.txt"
+const SYRA_FIRST_DIALOGUE_PATH := "res://dialogues/town/syra-first-encounter.txt"
+const ZETHYR_FIRST_DIALOGUE_PATH := "res://dialogues/town/zethyr-first-encounter.txt"
+const DIALOGUE_ALDRIC_FIRST := "aldric_first_encounter"
+const DIALOGUE_SYRA_FIRST := "syra_first_encounter"
+const DIALOGUE_ZETHYR_FIRST := "zethyr_first_encounter"
 
 const ARENA_HALF_SIZE := 34.0
 const STAGE_ENEMY_COUNT := 15
@@ -74,6 +81,7 @@ const AREA_TOWN := "town"
 const TOWN_ORIGIN := Vector3(118.0, 0.0, 0.0)
 const TOWN_HALF_SIZE := 26.0
 const TOWN_SPAWN_POSITION := Vector3(118.0, 0.1, 18.0)
+const TOWN_TREE_SIGHT_CLEAR_RADIUS := 3.35
 const GLOVE_SOCKET_COUNT := 8
 const FADED_DIAMOND_CATALOG := [
 	{"id": "faded_rush", "icon": "🔴", "name": "Faded Diamond of Rush", "description": "-6% cooldown on abilities. Fast, aggressive playstyle.", "gold_cost": 120, "color": Color(0.93, 0.24, 0.24)},
@@ -88,6 +96,14 @@ const FADED_DIAMOND_CATALOG := [
 	{"id": "faded_flame_ring", "icon": "🔥", "name": "Faded Diamond of Flame Ring", "description": "Expands your fire aura and ring of flames.", "gold_cost": 150, "color": Color(1.0, 0.39, 0.08)},
 	{"id": "faded_frostbind", "icon": "❄️", "name": "Faded Diamond of Frostbind", "description": "Chance to slow or freeze enemies. Control playstyle.", "gold_cost": 150, "color": Color(0.72, 0.93, 1.0)},
 	{"id": "faded_storm", "icon": "⚡", "name": "Faded Diamond of Storm", "description": "Chain lightning between enemies. Strong and satisfying.", "gold_cost": 150, "color": Color(1.0, 0.94, 0.44)}
+]
+const RELIC_CATALOG := [
+	{
+		"id": "teleport_device",
+		"name": "Teleport Device",
+		"description": "A relic anchor that returns you from town to the castle.",
+		"image": "res://assets/images/objects/teleport-device/teleport-device-outer-ring.png"
+	}
 ]
 const SPELL_CATALOG := [
 	# --- Attack ---
@@ -115,11 +131,33 @@ const SPELL_CATALOG := [
 	{"id": "reincarnation",      "name": "Reincarnation",         "description": "Faster healing rate at all times.",                     "diamond_cost": 5,  "category": "healing", "image": "res://assets/images/spells/healing/Reincarnation.png"},
 	{"id": "soul_harvest",       "name": "Soul Harvest",          "description": "Heal on each enemy kill.",                              "diamond_cost": 4,  "category": "healing", "image": "res://assets/images/spells/healing/SoulHarvest.png"},
 ]
+const SPELL_THEME_CATEGORY_BY_ID := {
+	"fire_storm": "Flame",
+	"absolute_zero": "Ice",
+	"abyssal_blade": "Beyond",
+	"call_from_beyond": "Beyond",
+	"electricity_vortex": "Electricity",
+	"icesmash": "Ice",
+	"soul_drain": "Beyond",
+	"demonic_frenzy": "Beyond",
+	"killing_radius": "Ice",
+	"power_of_underworld": "Beyond",
+	"void_infusion": "Beyond",
+	"curse_of_laziness": "Ice",
+	"mark_of_weakness": "Electricity",
+	"slowly_we_rot": "Beyond",
+	"armor_of_undead": "Beyond",
+	"eclipse_shield": "Flame",
+	"titanium": "Ice",
+	"reincarnation": "Electricity",
+	"soul_harvest": "Beyond"
+}
 
 var player: SISPlayer
 var camera: Camera3D
 var hud: SISHUD
 var whisper_system: Node
+var mission_system: SISMissionSystem
 var opening_layer: CanvasLayer
 var opening_enter_label: Label
 var opening_whisper_label: Label
@@ -134,6 +172,8 @@ var game_level := 2
 var kills := 0
 var exit_open := false
 var exit_directive_completed := false
+var castle_encounter_spawned := false
+var castle_chests_spawned := false
 var wall_texture: Texture2D
 var town_cobble_texture: Texture2D
 var town_roof_texture: Texture2D
@@ -177,10 +217,14 @@ var spell_shop_scene: PackedScene
 var vendor_sprites: Array[Dictionary] = []
 var owned_faded_diamonds: Dictionary = {}
 var socketed_faded_diamonds: Array[String] = []
+var owned_relics: Dictionary = {}
+var dialogue_flags: Dictionary = {}
+var active_dialogue_id := ""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	rng.randomize()
+	dialogue_flags.clear()
 	_load_whisper_texts()
 	_load_scroll_texts()
 	_make_music_player()
@@ -190,6 +234,7 @@ func _ready() -> void:
 	_make_player()
 	_make_exit()
 	_make_hud()
+	_make_mission_system()
 	_make_whisper_system()
 	if START_IN_TOWN_FOR_TESTING:
 		player.add_gold(TEST_TOWN_START_GOLD)
@@ -300,8 +345,17 @@ func _make_hud() -> void:
 	hud.skill_tree_point_requested.connect(_on_skill_tree_point_requested)
 	hud.inventory_socket_drop_requested.connect(_on_inventory_socket_drop_requested)
 	hud.inventory_socket_clear_requested.connect(_on_inventory_socket_clear_requested)
+	hud.dialogue_finished.connect(_on_dialogue_finished)
+	hud.teleport_device_requested.connect(_on_teleport_device_requested)
 	hud.update_stats(_stats_for_hud(player.get_stats()))
 	_update_possession()
+
+func _make_mission_system() -> void:
+	mission_system = MissionSystemScript.new() as SISMissionSystem
+	add_child(mission_system)
+	mission_system.missions_changed.connect(_on_missions_changed)
+	mission_system.mission_completed.connect(_on_mission_completed)
+	mission_system.mission_action_requested.connect(_on_mission_action_requested)
 
 func _make_whisper_system() -> void:
 	whisper_system = WhisperSystemScript.new()
@@ -409,6 +463,100 @@ func _append_scroll_entry(entries: Array[Dictionary], title: String, lines: Arra
 
 func _is_scroll_heading(line: String) -> bool:
 	return line.length() <= 32 and line.contains("Scroll ")
+
+func _has_played_dialogue(dialogue_id: String) -> bool:
+	return bool(dialogue_flags.get(dialogue_id, false))
+
+func _mark_dialogue_played(dialogue_id: String) -> void:
+	if dialogue_id.is_empty():
+		return
+	dialogue_flags[dialogue_id] = true
+
+func _load_dialogue_entries(path: String) -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
+	if not FileAccess.file_exists(path):
+		push_warning("Missing dialogue file: %s" % path)
+		return entries
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_warning("Could not open dialogue file: %s" % path)
+		return entries
+	var current_speaker := ""
+	var current_lines: Array[String] = []
+	for raw_line in file.get_as_text().split("\n", false):
+		var line := String(raw_line).replace("\r", "").strip_edges()
+		if line.is_empty():
+			continue
+		if line.ends_with(":"):
+			_append_dialogue_entry(entries, current_speaker, current_lines)
+			current_speaker = line.substr(0, line.length() - 1).strip_edges()
+			current_lines.clear()
+		else:
+			current_lines.append(line)
+	_append_dialogue_entry(entries, current_speaker, current_lines)
+	return entries
+
+func _append_dialogue_entry(entries: Array[Dictionary], speaker: String, lines: Array[String]) -> void:
+	if speaker.is_empty() or lines.is_empty():
+		return
+	entries.append({
+		"speaker": speaker,
+		"text": "\n".join(lines)
+	})
+
+func _on_missions_changed(area: String, missions: Array[Dictionary]) -> void:
+	if hud == null:
+		return
+	hud.set_missions(_mission_area_title(area), missions)
+	if area == current_area:
+		_update_objective()
+
+func _on_mission_completed(_area: String, mission: Dictionary) -> void:
+	var mission_text := String(mission.get("text", ""))
+	if mission_text.is_empty():
+		return
+	_say_whisper("Done. %s" % mission_text)
+
+func _on_mission_action_requested(_area: String, action: Dictionary, _mission: Dictionary) -> void:
+	var action_type := String(action.get("type", "")).to_lower()
+	var target := String(action.get("target", ""))
+	match action_type:
+		"add_relic":
+			if _add_relic(target):
+				_say_whisper("Relic gained. %s" % _relic_display_name(target))
+		_:
+			pass
+
+func _mission_area_title(area: String) -> String:
+	match area:
+		AREA_TOWN:
+			return "Town"
+		AREA_CASTLE:
+			return "Castle"
+		_:
+			return area.capitalize()
+
+func _set_mission_area(area: String) -> void:
+	if mission_system != null:
+		mission_system.set_area(area)
+	elif hud != null:
+		hud.set_missions(_mission_area_title(area), [])
+
+func _active_mission_count(area: String) -> int:
+	if mission_system == null:
+		return 0
+	return mission_system.get_active_missions(area).size()
+
+func _complete_vendor_talk_missions(vendor_id: String) -> void:
+	if mission_system == null:
+		return
+	var npc_name := _vendor_npc_name(vendor_id)
+	mission_system.complete_matching(current_area, "talk_to_npc", {
+		"vendor_id": vendor_id,
+		"npc_id": npc_name,
+		"npc_name": npc_name,
+		"target": npc_name
+	})
 
 func _load_whisper_file_as_text(path: String) -> String:
 	var lines := _load_whisper_file_lines(path)
@@ -903,12 +1051,12 @@ func _load_vendor_textures() -> void:
 		town_vendor_woman_texture = load(TOWN_VENDOR_WOMAN_TEXTURE_PATH) as Texture2D
 	if town_vendor_warlock_texture == null and ResourceLoader.exists(TOWN_VENDOR_WARLOCK_TEXTURE_PATH):
 		town_vendor_warlock_texture = load(TOWN_VENDOR_WARLOCK_TEXTURE_PATH) as Texture2D
-	if town_vendor_man_face_texture == null and ResourceLoader.exists(TOWN_VENDOR_MAN_FACE_PATH):
-		town_vendor_man_face_texture = load(TOWN_VENDOR_MAN_FACE_PATH) as Texture2D
-	if town_vendor_woman_face_texture == null and ResourceLoader.exists(TOWN_VENDOR_WOMAN_FACE_PATH):
-		town_vendor_woman_face_texture = load(TOWN_VENDOR_WOMAN_FACE_PATH) as Texture2D
-	if town_vendor_warlock_face_texture == null and ResourceLoader.exists(TOWN_VENDOR_WARLOCK_FACE_PATH):
-		town_vendor_warlock_face_texture = load(TOWN_VENDOR_WARLOCK_FACE_PATH) as Texture2D
+	if town_vendor_man_face_texture == null:
+		town_vendor_man_face_texture = TOWN_VENDOR_MAN_FACE_TEXTURE
+	if town_vendor_woman_face_texture == null:
+		town_vendor_woman_face_texture = TOWN_VENDOR_WOMAN_FACE_TEXTURE
+	if town_vendor_warlock_face_texture == null:
+		town_vendor_warlock_face_texture = TOWN_VENDOR_WARLOCK_FACE_TEXTURE
 	if town_tree_textures.is_empty():
 		for tree_texture_path in TOWN_TREE_TEXTURE_PATHS:
 			if ResourceLoader.exists(tree_texture_path):
@@ -1397,8 +1545,62 @@ func _make_town_greenery() -> void:
 		var tree_texture := town_tree_textures[rng.randi_range(0, town_tree_textures.size() - 1)]
 		var tree_scale := rng.randf_range(0.9, 1.45)
 		var tree_sprite := _make_town_billboard_sprite(tree_texture, "TownTree", 0.0068, Vector3.ONE * tree_scale, Color.WHITE)
-		tree_sprite.position = _random_town_decor_position(5.4) + Vector3(0.0, 1.95 * tree_scale, 0.0)
+		tree_sprite.position = _random_town_tree_position(tree_scale) + Vector3(0.0, 1.95 * tree_scale, 0.0)
 		tree_sprite.rotation_degrees.y = rng.randf_range(0.0, 360.0)
+
+func _random_town_tree_position(tree_scale: float) -> Vector3:
+	var position := Vector3.ZERO
+	for _attempt in range(140):
+		position = Vector3(
+			rng.randf_range(-TOWN_HALF_SIZE + 2.0, TOWN_HALF_SIZE - 2.0),
+			0.0,
+			rng.randf_range(-TOWN_HALF_SIZE + 2.0, TOWN_HALF_SIZE - 2.0)
+		)
+		if _is_town_tree_position_clear(position, tree_scale):
+			return position
+
+	for fallback_position in [
+		Vector3(-22.0, 0.0, 18.0),
+		Vector3(22.0, 0.0, 17.0),
+		Vector3(-22.0, 0.0, -18.5),
+		Vector3(22.0, 0.0, -20.0),
+		Vector3(-14.0, 0.0, 22.0),
+		Vector3(14.0, 0.0, 22.0),
+		Vector3(-22.0, 0.0, 0.0),
+		Vector3(22.0, 0.0, -1.0)
+	]:
+		if _is_town_tree_position_clear(fallback_position, tree_scale):
+			return fallback_position
+
+	return Vector3(-22.0, 0.0, 22.0)
+
+func _is_town_tree_position_clear(position: Vector3, tree_scale: float) -> bool:
+	if absf(position.x) < 5.4:
+		return false
+	if position.distance_to(Vector3(0.0, 0.0, 20.0)) < 4.8 + TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
+		return false
+	if position.distance_to(Vector3(-14.0, 0.0, 2.5)) < 8.5 + TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
+		return false
+	if position.distance_to(Vector3(14.0, 0.0, 2.0)) < 8.5 + TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
+		return false
+	if position.distance_to(Vector3(0.0, 0.0, -13.5)) < 8.5 + TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
+		return false
+	return not _town_tree_intrudes_on_shop_sight(position, tree_scale)
+
+func _town_tree_intrudes_on_shop_sight(position: Vector3, tree_scale: float) -> bool:
+	var tree_footprint := TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale
+	var tree_ground_position := Vector2(position.x, position.z)
+	for clear_zone in _town_shop_tree_clear_zones():
+		if clear_zone.grow(tree_footprint).has_point(tree_ground_position):
+			return true
+	return false
+
+func _town_shop_tree_clear_zones() -> Array[Rect2]:
+	return [
+		Rect2(Vector2(-18.6, -4.3), Vector2(15.0, 13.2)),
+		Rect2(Vector2(3.6, -4.3), Vector2(15.0, 13.2)),
+		Rect2(Vector2(-8.3, -18.8), Vector2(16.6, 14.6))
+	]
 
 func _random_town_decor_position(street_half_width: float = 3.6) -> Vector3:
 	var position := Vector3.ZERO
@@ -1856,11 +2058,15 @@ func _make_exit() -> void:
 
 func _spawn_encounter() -> void:
 	current_area = AREA_CASTLE
+	_set_mission_area(AREA_CASTLE)
 	_set_background_music(LEVEL_ONE_MUSIC)
 	if player != null:
 		player.set_attacks_enabled(true)
 	if hud != null:
 		hud.set_minimap_visible(true)
+	if castle_encounter_spawned:
+		return
+	castle_encounter_spawned = true
 	var spawn_points: Array[Vector3] = _enemy_spawn_points()
 	for i in range(spawn_points.size()):
 		var enemy_kind := SISEnemy.ENEMY_KIND_ANGEL
@@ -1880,6 +2086,9 @@ func _spawn_enemy_at(spawn_position: Vector3, elite: bool = false, enemy_kind: S
 	enemies.append(enemy)
 
 func _spawn_chests() -> void:
+	if castle_chests_spawned:
+		return
+	castle_chests_spawned = true
 	var chest_points: Array[Vector3] = [
 		Vector3(23.0, 0.1, 23.0),
 		Vector3(-23.0, 0.1, 0.0),
@@ -2078,6 +2287,8 @@ func _stats_for_hud(base_stats: Dictionary) -> Dictionary:
 	payload["faded_owned"] = owned_faded_diamonds.duplicate(true)
 	payload["faded_sockets"] = socketed_faded_diamonds.duplicate()
 	payload["faded_catalog"] = _faded_catalog_for_hud()
+	payload["relic_owned"] = owned_relics.duplicate(true)
+	payload["relic_catalog"] = _relic_catalog_for_hud()
 	return payload
 
 func _faded_catalog_for_hud() -> Array[Dictionary]:
@@ -2091,6 +2302,35 @@ func _faded_catalog_for_hud() -> Array[Dictionary]:
 			"color": diamond["color"]
 		})
 	return list
+
+func _relic_catalog_for_hud() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for relic in RELIC_CATALOG:
+		list.append({
+			"id": String(relic["id"]),
+			"name": String(relic["name"]),
+			"description": String(relic["description"]),
+			"image": String(relic["image"])
+		})
+	return list
+
+func _add_relic(relic_id: String) -> bool:
+	var clean_id := relic_id.strip_edges()
+	if clean_id.is_empty():
+		return false
+	owned_relics[clean_id] = int(owned_relics.get(clean_id, 0)) + 1
+	if hud != null and player != null:
+		hud.update_stats(_stats_for_hud(player.get_stats()))
+	return true
+
+func _has_relic(relic_id: String) -> bool:
+	return int(owned_relics.get(relic_id, 0)) > 0
+
+func _relic_display_name(relic_id: String) -> String:
+	for relic in RELIC_CATALOG:
+		if String(relic["id"]) == relic_id:
+			return String(relic["name"])
+	return relic_id.replace("_", " ").capitalize()
 
 func _ensure_faded_socket_size() -> void:
 	while socketed_faded_diamonds.size() < GLOVE_SOCKET_COUNT:
@@ -2231,9 +2471,45 @@ func _on_exit_entered(body: Node3D) -> void:
 	else:
 		_say_whisper("Locked. The castle wants blood before it opens.")
 
+func _on_teleport_device_requested() -> void:
+	if player == null:
+		return
+	if not _has_relic("teleport_device"):
+		_say_whisper("No relic answers from your pack yet.")
+		return
+	if current_area != AREA_TOWN:
+		_say_whisper("The anchor is already biting castle stone.")
+		return
+	if mission_system != null:
+		mission_system.complete_matching(current_area, "use_relic", {
+			"relic_id": "teleport_device",
+			"target": "teleport_device"
+		})
+	_enter_castle_from_town()
+
+func _enter_castle_from_town() -> void:
+	active_vendor_id = ""
+	active_dialogue_id = ""
+	if hud != null:
+		hud.hide_dialogue()
+		hud.hide_shop()
+		hud.hide_diamond_store()
+		hud.hide_spell_store()
+		hud.set_minimap_visible(true)
+	_spawn_encounter()
+	_spawn_chests()
+	_spawn_scroll_for_game_level(game_level)
+	player.teleport_to(PLAYER_START_POSITION)
+	camera.global_position = player.global_position + _camera_follow_offset()
+	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
+	_update_objective()
+	_update_minimap()
+	_say_whisper("Back to the stone and screaming.")
+
 func _enter_town() -> void:
 	_make_town()
 	current_area = AREA_TOWN
+	_set_mission_area(AREA_TOWN)
 	_set_background_music(TOWN_MUSIC)
 	active_vendor_id = ""
 	if hud != null:
@@ -2246,23 +2522,57 @@ func _enter_town() -> void:
 	player.teleport_to(TOWN_SPAWN_POSITION)
 	camera.global_position = player.global_position + _camera_follow_offset()
 	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
-	hud.set_objective("Town reached. Visit vendors to buy diamonds and spells.")
+	_update_objective()
 	_say_whisper("A door behind us. A market ahead. Spend wisely.")
 
 func _on_vendor_entered(body: Node3D, vendor_id: String) -> void:
 	if body.name != "Player" or current_area != AREA_TOWN:
 		return
 	active_vendor_id = vendor_id
+	if vendor_id == "relic_vendor" and not _has_played_dialogue(DIALOGUE_ALDRIC_FIRST):
+		_start_vendor_dialogue(DIALOGUE_ALDRIC_FIRST, ALDRIC_FIRST_DIALOGUE_PATH, town_vendor_man_face_texture)
+		return
+	if vendor_id == "diamond_vendor" and not _has_played_dialogue(DIALOGUE_SYRA_FIRST):
+		_start_vendor_dialogue(DIALOGUE_SYRA_FIRST, SYRA_FIRST_DIALOGUE_PATH, town_vendor_woman_face_texture)
+		return
+	if vendor_id == "spell_vendor" and not _has_played_dialogue(DIALOGUE_ZETHYR_FIRST):
+		_start_vendor_dialogue(DIALOGUE_ZETHYR_FIRST, ZETHYR_FIRST_DIALOGUE_PATH, town_vendor_warlock_face_texture)
+		return
+	_complete_vendor_talk_missions(vendor_id)
 	_show_vendor_shop(vendor_id, _vendor_greeting(vendor_id))
 
 func _on_vendor_exited(body: Node3D, vendor_id: String) -> void:
 	if body.name != "Player" or active_vendor_id != vendor_id:
 		return
 	active_vendor_id = ""
+	active_dialogue_id = ""
 	if hud != null:
+		hud.hide_dialogue()
 		hud.hide_shop()
 		hud.hide_diamond_store()
 		hud.hide_spell_store()
+
+func _start_vendor_dialogue(dialogue_id: String, path: String, npc_face_texture: Texture2D) -> void:
+	if hud == null:
+		return
+	var entries := _load_dialogue_entries(path)
+	if entries.is_empty():
+		_mark_dialogue_played(dialogue_id)
+		_show_vendor_shop(active_vendor_id, _vendor_greeting(active_vendor_id))
+		return
+	active_dialogue_id = dialogue_id
+	hud.show_dialogue(entries, npc_face_texture)
+
+func _on_dialogue_finished() -> void:
+	var completed_dialogue_id := active_dialogue_id
+	active_dialogue_id = ""
+	_mark_dialogue_played(completed_dialogue_id)
+	if not active_vendor_id.is_empty():
+		_complete_vendor_talk_missions(active_vendor_id)
+		_show_vendor_shop(active_vendor_id, _vendor_greeting(active_vendor_id))
+	if completed_dialogue_id == DIALOGUE_ALDRIC_FIRST and not _has_relic("teleport_device"):
+		_add_relic("teleport_device")
+		_say_whisper("Relic gained. %s" % _relic_display_name("teleport_device"))
 
 func _show_vendor_shop(vendor_id: String, status_text: String) -> void:
 	if hud == null:
@@ -2399,11 +2709,17 @@ func _spell_store_items() -> Array[Dictionary]:
 			"name": String(spell["name"]),
 			"description": String(spell["description"]),
 			"category": String(spell.get("category", "attack")),
+			"spell_category": _spell_theme_category_for_id(spell_id),
 			"image": String(spell.get("image", "")),
 			"diamond_cost": int(spell["diamond_cost"]),
 			"learned": player.has_spell(spell_id)
 		})
 	return items
+
+func _spell_theme_category_for_id(spell_id: String) -> String:
+	if SPELL_THEME_CATEGORY_BY_ID.has(spell_id):
+		return String(SPELL_THEME_CATEGORY_BY_ID[spell_id])
+	return "Beyond"
 
 func _on_shop_purchase_requested(item_id: String) -> void:
 	if active_vendor_id.is_empty() or player == null:
@@ -2454,7 +2770,11 @@ func _on_skill_tree_point_requested(node_key: String) -> void:
 
 func _update_objective() -> void:
 	if current_area == AREA_TOWN:
-		hud.set_objective("Town reached. Visit vendors to buy diamonds and spells.")
+		var open_missions := _active_mission_count(AREA_TOWN)
+		if open_missions > 0:
+			hud.set_objective("Town missions: %s open." % open_missions)
+		else:
+			hud.set_objective("Town reached. Visit vendors to buy diamonds and spells.")
 		return
 	if exit_open:
 		hud.set_objective("Enter the portal. Leave the dead behind.")

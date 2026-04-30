@@ -1,0 +1,18 @@
+MISSION talk_with_aldric
+TITLE Talk with Aldric
+OBJECTIVE talk_to_npc:aldric
+ON_COMPLETE add_relic:teleport_device
+ON_COMPLETE unlock_mission:use_teleport_device
+
+MISSION talk_with_Syra
+TITLE Talk with Syra
+OBJECTIVE talk_to_npc:Syra
+
+MISSION talk_with_Zethyr
+TITLE Talk with Zethyr
+OBJECTIVE talk_to_npc:Zethyr
+
+MISSION use_teleport_device
+TITLE Use the Teleport Device located in Soul Ledger, under Map Tab to return to the castle
+OBJECTIVE use_relic:teleport_device
+LOCKED true

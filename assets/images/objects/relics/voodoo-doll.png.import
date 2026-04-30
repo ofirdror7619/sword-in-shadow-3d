@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://i6ruv43e0sh0"
-path="res://.godot/imported/vendor-side.png-8e87e346fbb7c7bfb9244c005670ec9a.ctex"
+uid="uid://dtpy1pqcxakpf"
+path="res://.godot/imported/voodoo-doll.png-1768d02e1ec5b21e93574bd27e9c800c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/images/NPC/vendor-1/vendor-side.png"
-dest_files=["res://.godot/imported/vendor-side.png-8e87e346fbb7c7bfb9244c005670ec9a.ctex"]
+source_file="res://assets/images/objects/relics/voodoo-doll.png"
+dest_files=["res://.godot/imported/voodoo-doll.png-1768d02e1ec5b21e93574bd27e9c800c.ctex"]
 
 [params]
 

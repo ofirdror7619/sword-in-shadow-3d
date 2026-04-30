@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dm2384ob0b21e"
-path="res://.godot/imported/vendor-front.png-610522b668df1af705c6b20bbd24150f.ctex"
+uid="uid://6114b2ihnntw"
+path="res://.godot/imported/teleport-device-stone-ring.png-fc43d6a38c5de4d4649c81124a6a3270.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/images/NPC/vendor-1/vendor-front.png"
-dest_files=["res://.godot/imported/vendor-front.png-610522b668df1af705c6b20bbd24150f.ctex"]
+source_file="res://assets/images/objects/teleport-device/teleport-device-stone-ring.png"
+dest_files=["res://.godot/imported/teleport-device-stone-ring.png-fc43d6a38c5de4d4649c81124a6a3270.ctex"]
 
 [params]
 

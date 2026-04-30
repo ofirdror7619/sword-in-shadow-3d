@@ -9,6 +9,8 @@ signal shop_closed
 signal skill_tree_point_requested(node_key: String)
 signal inventory_socket_drop_requested(slot_index: int, diamond_id: String, source_slot_index: int)
 signal inventory_socket_clear_requested(slot_index: int)
+signal dialogue_finished
+signal teleport_device_requested
 
 const FIRESTORM_TEXTURE: Texture2D = preload("res://assets/images/spells/attack/firestorm.png")
 const LIFE_BAR_TEXTURE: Texture2D = preload("res://assets/images/hud/health-bar.png")
@@ -21,10 +23,17 @@ const EXP_FILL_TEXTURE: Texture2D = preload("res://assets/images/hud/exp-actual-
 const MINIMAP_TEXTURE: Texture2D = preload("res://assets/images/hud/minimap.png")
 const DEMON_MENU_TEXTURE: Texture2D = preload("res://assets/images/hud/demon.png")
 const EQUIP_TEXTURE: Texture2D = preload("res://assets/images/hud/equip/equip.png")
+const RELIC_EQUIP_TEXTURE: Texture2D = preload("res://assets/images/hud/equip/gloves-for-relics.png")
 const DIAMOND_TEXTURE: Texture2D = preload("res://assets/images/objects/diamond.png")
+const DIAMOND_UP_TEXTURE: Texture2D = preload("res://assets/images/objects/diamond-up.png")
 const SCROLL_OPEN_TEXTURE: Texture2D = preload("res://assets/images/objects/scroll-open.png")
 const WHISPER_FONT: FontFile = preload("res://assets/fonts/Simbiot.ttf")
-const MISSION_FONT: FontFile = preload("res://assets/fonts/PICKYSIDE.otf")
+const DIALOGUE_PLAYER_FACE_TEXTURE: Texture2D = preload("res://assets/images/demon/demon-face.png")
+const DIALOGUE_BOX_TEXTURE_PATH := "res://assets/images/dialogue/dialogue-box.png"
+const DIALOGUE_FACE_FRAME_TEXTURE_PATH := "res://assets/images/dialogue/dialogue-face.png"
+const TELEPORT_DEVICE_OUTER_RING_PATH := "res://assets/images/objects/teleport-device/teleport-device-outer-ring.png"
+const TELEPORT_DEVICE_INNER_VORTEX_PATH := "res://assets/images/objects/teleport-device/teleport-device-inner-vortex.png"
+const TELEPORT_DEVICE_STONE_RING_PATH := "res://assets/images/objects/teleport-device/teleport-device-stone-ring.png"
 const HUD_BOTTOM_MARGIN := 4.0
 const HUD_CLUSTER_SIZE := Vector2(770.0, 205.0)
 const LIFE_BAR_SIZE := Vector2(404.0, 134.0)
@@ -60,8 +69,69 @@ const SPELL_SLOT_HOVER_LABELS := {
 	"buff": "Buff",
 	"debuff": "Debuff"
 }
+const SPELL_GROUP_CATEGORY_BY_ID := {
+	"fire_storm": "attack",
+	"absolute_zero": "attack",
+	"abyssal_blade": "attack",
+	"call_from_beyond": "attack",
+	"electricity_vortex": "attack",
+	"icesmash": "attack",
+	"soul_drain": "attack",
+	"demonic_frenzy": "buff",
+	"killing_radius": "buff",
+	"power_of_underworld": "buff",
+	"void_infusion": "buff",
+	"curse_of_laziness": "debuff",
+	"mark_of_weakness": "debuff",
+	"slowly_we_rot": "debuff",
+	"armor_of_undead": "defense",
+	"eclipse_shield": "defense",
+	"titanium": "defense",
+	"reincarnation": "healing",
+	"soul_harvest": "healing"
+}
+const SPELL_THEME_CATEGORY_BY_ID := {
+	"fire_storm": "Flame",
+	"wide_flame": "Flame",
+	"absolute_zero": "Ice",
+	"abyssal_blade": "Beyond",
+	"call_from_beyond": "Beyond",
+	"electricity_vortex": "Electricity",
+	"icesmash": "Ice",
+	"soul_drain": "Beyond",
+	"demonic_frenzy": "Beyond",
+	"killing_radius": "Ice",
+	"power_of_underworld": "Beyond",
+	"void_infusion": "Beyond",
+	"curse_of_laziness": "Ice",
+	"mark_of_weakness": "Electricity",
+	"slowly_we_rot": "Beyond",
+	"armor_of_undead": "Beyond",
+	"eclipse_shield": "Flame",
+	"titanium": "Ice",
+	"reincarnation": "Electricity",
+	"soul_harvest": "Beyond"
+}
 const SPELL_ID_TO_DISPLAY_NAME := {
 	"fire_storm": "Firestorm",
+	"absolute_zero": "Absolute Zero",
+	"abyssal_blade": "Abyssal Blade",
+	"call_from_beyond": "Call From The Beyond",
+	"electricity_vortex": "Electricity Vortex",
+	"icesmash": "Ice Smash",
+	"soul_drain": "Soul Drain",
+	"demonic_frenzy": "Demonic Frenzy",
+	"killing_radius": "Killing Radius",
+	"power_of_underworld": "Power of the Underworld",
+	"void_infusion": "Void Infusion",
+	"curse_of_laziness": "Curse of Laziness",
+	"mark_of_weakness": "Mark of Weakness",
+	"slowly_we_rot": "Slowly We Rot",
+	"armor_of_undead": "Armor of the Undead",
+	"eclipse_shield": "Eclipse Shield",
+	"titanium": "Titanium",
+	"reincarnation": "Reincarnation",
+	"soul_harvest": "Soul Harvest",
 	"wide_flame": "Widened Flame",
 	"quickened_ritual": "Quickened Ritual",
 	"ember_stride": "Ember Stride"
@@ -76,7 +146,13 @@ const WHISPER_TOP_OFFSET := -260.0
 const WHISPER_BOTTOM_OFFSET := -212.0
 const WHISPER_VISIBLE_SECONDS := 6.4
 const WHISPER_FADE_SECONDS := 1.6
-const MISSION_FONT_SIZE := 30
+const OBJECTIVE_FONT_SIZE := 22
+const MISSION_TITLE_FONT_SIZE := 16
+const MISSION_LIST_FONT_SIZE := 15
+const MISSION_PANEL_SIZE := Vector2(390.0, 148.0)
+const MISSION_PANEL_ANCHOR := Vector2(0.02, 0.025)
+const MISSION_TEXT_POSITION := Vector2(14.0, 12.0)
+const DEMON_MENU_TOP_OFFSET := MISSION_PANEL_SIZE.y + 14.0
 const MINIMAP_SIZE := Vector2(210.0, 140.0)
 const MINIMAP_DOT_SIZE := 6.0
 const MINIMAP_PLAYER_DOT_SIZE := 8.0
@@ -85,34 +161,71 @@ const WHISPER_PANEL_SIZE := Vector2(430.0, 205.0)
 const DIRECTIVE_PANEL_SIZE := Vector2(360.0, 92.0)
 const SHOP_PANEL_SIZE := Vector2(520.0, 410.0)
 const DIAMOND_STORE_PANEL_SIZE := Vector2(700.0, 540.0)
+const DIAMOND_STORE_BODY_SIZE := Vector2(672.0, 516.0)
 const DIAMOND_STORE_NAME_BLOCK_HEIGHT := 26.0
 const DIAMOND_STORE_PRICE_BLOCK_HEIGHT := 16.0
 const SPELL_STORE_PANEL_SIZE := Vector2(860.0, 660.0)
-const SPELL_STORE_CELL_SIZE := Vector2(104.0, 104.0)
-const SPELL_STORE_NAME_BLOCK_HEIGHT := 24.0
-const SPELL_STORE_PRICE_BLOCK_HEIGHT := 12.0
-const INVENTORY_DIAMOND_ICON_SIZE := Vector2(28.0, 28.0)
-const INVENTORY_SOCKET_COUNT := 10
-const INVENTORY_SOCKET_HITBOX_SIZE := Vector2(56.0, 56.0)
-const INVENTORY_SOCKET_CORNER_RADIUS := 28
+const SPELL_STORE_CELL_SIZE := Vector2(112.0, 166.0)
+const SPELL_STORE_SIGIL_SLOT_HEIGHT := 96.0
+const SPELL_STORE_SIGIL_ICON_SIZE := Vector2(92.0, 92.0)
+const SPELL_STORE_NAME_BLOCK_HEIGHT := 30.0
+const SPELL_STORE_PRICE_BLOCK_HEIGHT := 16.0
+const INVENTORY_DIAMOND_ICON_SIZE := Vector2(42.0, 42.0)
+const INVENTORY_DIAMOND_CELL_SIZE := Vector2(72.0, 78.0)
+const INVENTORY_DIAMOND_GRID_COLUMNS := 5
+const INVENTORY_DIAMOND_GRID_H_SEPARATION := 8
+const INVENTORY_DIAMOND_GRID_V_SEPARATION := 8
+const INVENTORY_DIAMOND_SCROLL_HEIGHT := 336.0
+const INVENTORY_DIAMOND_EMPTY_SLOT_COUNT := 20
+const INVENTORY_DRAG_ICON_SIZE := Vector2(30.0, 30.0)
+const INVENTORY_GLOVE_FRAME_SIZE := Vector2(520.0, 520.0)
+const RELIC_GRID_ICON_SIZE := Vector2(42.0, 42.0)
+const RELIC_GRID_CELL_SIZE := Vector2(72.0, 78.0)
+const RELIC_GRID_EMPTY_SLOT_COUNT := 20
+const INVENTORY_SOCKET_COUNT := 8
+const INVENTORY_SOCKET_HITBOX_SIZE := Vector2(34.0, 34.0)
+const INVENTORY_SOCKET_ICON_SIZE := Vector2(24.0, 24.0)
+const INVENTORY_SOCKET_CORNER_RADIUS := 17
 const INVENTORY_SOCKET_POSITIONS := [
-	Vector2(83.0, 110.0),
-	Vector2(115.0, 102.0),
-	Vector2(148.0, 88.0),
-	Vector2(181.0, 84.0),
-	Vector2(214.0, 95.0),
-	Vector2(248.0, 91.0),
-	Vector2(281.0, 81.0),
-	Vector2(317.0, 86.0),
-	Vector2(352.0, 102.0),
-	Vector2(386.0, 110.0)
+	Vector2(80.0, 164.0),
+	Vector2(96.0, 122.0),
+	Vector2(128.0, 114.0),
+	Vector2(160.0, 114.0),
+	Vector2(321.0, 111.0),
+	Vector2(355.0, 112.0),
+	Vector2(385.0, 121.0),
+	Vector2(410.0, 160.0)
 ]
+const INVENTORY_SOCKET_DIAMOND_OFFSETS := {
+	"faded_rush": Vector2.ZERO,
+	"faded_focus": Vector2.ZERO,
+	"faded_vitality": Vector2.ZERO,
+	"faded_fortune": Vector2.ZERO,
+	"faded_corruption": Vector2.ZERO,
+	"faded_fury": Vector2.ZERO,
+	"faded_guardian": Vector2.ZERO,
+	"faded_flame_ring": Vector2.ZERO,
+	"faded_frostbind": Vector2.ZERO
+}
+const HUD_CANVAS_LAYER := 50
 const DEMON_MENU_BUTTON_SIZE := Vector2(92.0, 92.0)
-const CHARACTER_PANEL_SIZE := Vector2(980.0, 700.0)
+const DEMON_MENU_Z_INDEX := 1000
+const CHARACTER_PANEL_SIZE := Vector2(1000.0, 700.0)
+const CHARACTER_PANEL_BODY_SIZE := Vector2(972.0, 676.0)
 const CHARACTER_PANEL_TAB_STATS := "stats"
 const CHARACTER_PANEL_TAB_SPELLS := "spells"
 const CHARACTER_PANEL_TAB_INVENTORY := "inventory"
+const CHARACTER_PANEL_TAB_RELICS := "relics"
+const CHARACTER_PANEL_TAB_MAP := "map"
 const CHARACTER_PANEL_TAB_SKILL_TREE := "skill_tree"
+const MAP_DEVICE_CARD_SIZE := Vector2(340.0, 462.0)
+const MAP_DEVICE_STAGE_SIZE := Vector2(260.0, 318.0)
+const MAP_DEVICE_INNER_CENTER := Vector2(132.0, 130.0)
+const MAP_DEVICE_OUTER_SIZE := Vector2(190.0, 318.0)
+const MAP_DEVICE_VORTEX_SIZE := Vector2(116.0, 116.0)
+const MAP_DEVICE_STONE_RING_SIZE := Vector2(178.0, 125.0)
+const MAP_DEVICE_VORTEX_ROTATION_SPEED := -0.14
+const MAP_DEVICE_STONE_RING_ROTATION_SPEED := 0.11
 const LEVEL_UP_BLINK_SPEED := 0.35
 const CORRUPTION_STAGE_LINES := [
 	"I am only near you.",
@@ -124,6 +237,16 @@ const CORRUPTION_STAGE_LINES := [
 const POSSESSION_FULL_FX_SECONDS := 3.0
 const HEARTBEAT_MIX_RATE := 22050
 const HEARTBEAT_SECONDS := 0.26
+const DIALOGUE_OVERLAY_SIZE := Vector2(860.0, 370.0)
+const DIALOGUE_FACE_SIZE := Vector2(132.0, 148.0)
+const DIALOGUE_PORTRAIT_INSET := Vector2(22.0, 24.0)
+const DIALOGUE_PORTRAIT_OFFSET := Vector2(0.0, 7.0)
+const DIALOGUE_BOX_SIZE := Vector2(600.0, 142.0)
+const DIALOGUE_TEXT_MARGIN := Vector2(34.0, 24.0)
+const DIALOGUE_TEXT_SPEED := 18.0
+const DIALOGUE_BOTTOM_CLEARANCE := 170.0
+const DIALOGUE_SKIP_BUTTON_SIZE := Vector2(82.0, 30.0)
+const DIALOGUE_SKIP_BUTTON_GAP := 10.0
 
 var _root_control: Control
 var _hud_cluster: Control
@@ -140,6 +263,9 @@ var _possession_cluster: Control
 var _skill_icon: TextureRect
 var _skill_cooldown_label: Label
 var _objective_label: Label
+var _mission_panel: VBoxContainer
+var _mission_title_label: Label
+var _mission_list_label: Label
 var _whisper_label: Label
 var _minimap_cluster: Control
 var _minimap_frame: TextureRect
@@ -191,14 +317,23 @@ var _inventory_status_label: Label
 var _inventory_diamond_list: VBoxContainer
 var _inventory_diamond_grid: GridContainer
 var _inventory_socket_nodes: Array[Panel] = []
-var _inventory_socket_labels: Array[Label] = []
+var _inventory_socket_icons: Array[TextureRect] = []
 var _inventory_socket_ids: Array[String] = []
 var _inventory_catalog_by_id := {}
-var _inventory_drag_preview: PanelContainer
-var _inventory_drag_preview_label: Label
+var _inventory_drag_preview: TextureRect
 var _inventory_dragging_diamond_id := ""
 var _inventory_dragging_source_slot := -1
 var _inventory_hovered_socket := -1
+var _relics_view: Control
+var _relics_gold_label: Label
+var _relics_status_label: Label
+var _relics_grid: GridContainer
+var _teleport_device_button: Button
+var _map_view: Control
+var _map_status_label: Label
+var _map_teleport_device_button: Button
+var _map_device_inner_vortex: TextureRect
+var _map_device_stone_ring: TextureRect
 var _skill_tree_view: SkillTreeView
 var _character_tab_buttons := {}
 var _spell_category_rows := {}
@@ -238,8 +373,23 @@ var _spell_slot_hover_regions: Array[Control] = []
 var _spell_slot_hover_tooltip: PanelContainer
 var _spell_slot_hover_tooltip_label: Label
 var _spell_slot_hovered_index := -1
+var _dialogue_overlay: Control
+var _dialogue_rows: VBoxContainer
+var _dialogue_player_row: HBoxContainer
+var _dialogue_npc_row: HBoxContainer
+var _dialogue_player_label: Label
+var _dialogue_npc_label: Label
+var _dialogue_npc_face: TextureRect
+var _dialogue_entries: Array[Dictionary] = []
+var _dialogue_entry_index := -1
+var _dialogue_active_label: Label
+var _dialogue_active_full_text := ""
+var _dialogue_visible_characters := 0.0
+var _dialogue_line_complete := true
+var _dialogue_auto_advance_pending := false
 
 func _ready() -> void:
+	layer = HUD_CANVAS_LAYER
 	_rng.randomize()
 	_make_ui()
 
@@ -247,9 +397,22 @@ func _process(delta: float) -> void:
 	_update_corruption_fx(delta)
 	_update_level_up_feedback(delta)
 	_update_inventory_socket_glow()
+	if not _inventory_dragging_diamond_id.is_empty() and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_finish_inventory_drag()
 	_update_inventory_drag_preview()
+	_update_map_tab_animation(delta)
+	_update_dialogue_typewriter(delta)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_dialogue_visible():
+		if event is InputEventKey:
+			var key_event := event as InputEventKey
+			if key_event.pressed and not key_event.echo and (key_event.keycode == KEY_ENTER or key_event.keycode == KEY_KP_ENTER or key_event.is_action_pressed("ui_accept")):
+				_advance_dialogue_click()
+				var viewport := get_viewport()
+				if viewport != null:
+					viewport.set_input_as_handled()
+				return
 	if _inventory_dragging_diamond_id.is_empty():
 		return
 	if event is InputEventMouseButton:
@@ -296,7 +459,23 @@ func update_stats(stats: Dictionary) -> void:
 		_refresh_spell_slot_tooltip()
 
 func set_objective(text: String) -> void:
-	_objective_label.text = _mission_title_case(text)
+	if _objective_label != null:
+		_objective_label.text = _mission_title_case(text)
+
+func set_missions(area_title: String, missions: Array[Dictionary]) -> void:
+	if _mission_panel == null or _mission_title_label == null or _mission_list_label == null:
+		return
+	if missions.is_empty():
+		_mission_panel.visible = false
+		_mission_list_label.text = ""
+		return
+	_mission_title_label.text = "%s Missions" % area_title
+	var lines: Array[String] = []
+	for mission in missions:
+		var text := _mission_title_case(String(mission.get("title", mission.get("text", ""))))
+		lines.append("- %s" % text)
+	_mission_list_label.text = "\n".join(lines)
+	_mission_panel.visible = true
 
 func set_possession_ratio(ratio: float) -> void:
 	_possession_ratio = clampf(ratio, 0.0, 1.0)
@@ -407,6 +586,122 @@ func hide_offer() -> void:
 	if _offer_panel != null:
 		_offer_panel.visible = false
 
+func show_dialogue(entries: Array[Dictionary], npc_face_texture: Texture2D = null) -> void:
+	if _dialogue_overlay == null or entries.is_empty():
+		return
+	hide_shop()
+	hide_diamond_store()
+	hide_spell_store()
+	_dialogue_entries = entries.duplicate(true)
+	_dialogue_entry_index = -1
+	_dialogue_active_label = null
+	_dialogue_active_full_text = ""
+	_dialogue_visible_characters = 0.0
+	_dialogue_line_complete = true
+	_dialogue_auto_advance_pending = false
+	_dialogue_player_label.text = ""
+	_dialogue_npc_label.text = ""
+	if _dialogue_npc_face != null:
+		_dialogue_npc_face.texture = npc_face_texture
+	_arrange_dialogue_rows_for_entries(_dialogue_entries)
+	_dialogue_overlay.visible = true
+	_dialogue_overlay.move_to_front()
+	_advance_dialogue_line()
+
+func hide_dialogue() -> void:
+	if _dialogue_overlay != null:
+		_dialogue_overlay.visible = false
+	_dialogue_entries.clear()
+	_dialogue_entry_index = -1
+	_dialogue_active_label = null
+	_dialogue_active_full_text = ""
+	_dialogue_line_complete = true
+	_dialogue_auto_advance_pending = false
+
+func _update_dialogue_typewriter(delta: float) -> void:
+	if _dialogue_overlay == null or not _dialogue_overlay.visible:
+		return
+	if _dialogue_line_complete:
+		if _dialogue_auto_advance_pending:
+			_dialogue_auto_advance_pending = false
+			_advance_dialogue_line()
+		return
+	if _dialogue_active_label == null:
+		return
+	_dialogue_visible_characters += DIALOGUE_TEXT_SPEED * delta
+	var next_count := mini(_dialogue_active_full_text.length(), int(_dialogue_visible_characters))
+	_dialogue_active_label.visible_characters = next_count
+	if next_count >= _dialogue_active_full_text.length():
+		_complete_dialogue_line()
+
+func _on_dialogue_box_gui_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT or not mouse_event.pressed:
+		return
+	_advance_dialogue_click()
+	var viewport := get_viewport()
+	if viewport != null:
+		viewport.set_input_as_handled()
+
+func _advance_dialogue_click() -> void:
+	if _dialogue_overlay == null or not _dialogue_overlay.visible:
+		return
+	if not _dialogue_line_complete:
+		_complete_dialogue_line()
+
+func _skip_dialogue() -> void:
+	if not _is_dialogue_visible():
+		return
+	hide_dialogue()
+	dialogue_finished.emit()
+
+func _is_dialogue_visible() -> bool:
+	return _dialogue_overlay != null and _dialogue_overlay.visible
+
+func _advance_dialogue_line() -> void:
+	_dialogue_entry_index += 1
+	if _dialogue_entry_index >= _dialogue_entries.size():
+		hide_dialogue()
+		dialogue_finished.emit()
+		return
+	var entry: Dictionary = _dialogue_entries[_dialogue_entry_index]
+	var speaker := String(entry.get("speaker", "")).strip_edges().to_lower()
+	var text := String(entry.get("text", ""))
+	if speaker.begins_with("player"):
+		_dialogue_active_label = _dialogue_player_label
+	else:
+		_dialogue_active_label = _dialogue_npc_label
+	if _dialogue_active_label == null:
+		return
+	_dialogue_active_full_text = text
+	_dialogue_visible_characters = 0.0
+	_dialogue_line_complete = false
+	_dialogue_auto_advance_pending = false
+	_dialogue_active_label.text = text
+	_dialogue_active_label.visible_characters = 0
+
+func _complete_dialogue_line() -> void:
+	if _dialogue_active_label == null:
+		return
+	_dialogue_active_label.visible_characters = -1
+	_dialogue_line_complete = true
+	_dialogue_auto_advance_pending = true
+
+func _arrange_dialogue_rows_for_entries(entries: Array[Dictionary]) -> void:
+	if _dialogue_rows == null or _dialogue_player_row == null or _dialogue_npc_row == null:
+		return
+	if entries.is_empty():
+		return
+	var first_speaker := String(entries[0].get("speaker", "")).strip_edges().to_lower()
+	if first_speaker.begins_with("player"):
+		_dialogue_rows.move_child(_dialogue_player_row, 0)
+		_dialogue_rows.move_child(_dialogue_npc_row, 1)
+	else:
+		_dialogue_rows.move_child(_dialogue_npc_row, 0)
+		_dialogue_rows.move_child(_dialogue_player_row, 1)
+
 func show_shop(title: String, items: Array[Dictionary], status_text: String, wallet_text: String, face_texture: Texture2D = null) -> void:
 	if _shop_panel == null:
 		return
@@ -463,6 +758,8 @@ func is_mouse_over_blocking_ui() -> bool:
 		return true
 	if _directive_panel != null and _directive_panel.visible and _directive_panel.get_global_rect().has_point(mouse_position):
 		return true
+	if _dialogue_overlay != null and _dialogue_overlay.visible and _dialogue_overlay.get_global_rect().has_point(mouse_position):
+		return true
 	return false
 
 func handle_spell_store_mouse_wheel(event: InputEvent) -> bool:
@@ -512,6 +809,8 @@ func is_blocking_ui_visible() -> bool:
 	if _death_panel != null and _death_panel.visible:
 		return true
 	if _directive_panel != null and _directive_panel.visible:
+		return true
+	if _dialogue_overlay != null and _dialogue_overlay.visible:
 		return true
 	return false
 
@@ -673,22 +972,7 @@ func _make_ui() -> void:
 	_skill_cooldown_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.62))
 	skill_slot.add_child(_skill_cooldown_label)
 
-	_objective_label = _label(_mission_title_case("Slay everyone in the castle."), MISSION_FONT_SIZE)
-	_objective_label.add_theme_font_override("font", MISSION_FONT)
-	_objective_label.add_theme_color_override("font_color", Color(1.0, 0.91, 0.68))
-	_objective_label.add_theme_color_override("font_outline_color", Color(0.02, 0.01, 0.006, 0.96))
-	_objective_label.add_theme_constant_override("outline_size", 4)
-	_objective_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.86))
-	_objective_label.add_theme_constant_override("shadow_offset_x", 2)
-	_objective_label.add_theme_constant_override("shadow_offset_y", 2)
-	_objective_label.anchor_left = 0.02
-	_objective_label.anchor_top = 0.025
-	_objective_label.anchor_right = 0.58
-	_objective_label.anchor_bottom = 0.18
-	_objective_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_objective_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	_objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	root.add_child(_objective_label)
+	_make_mission_panel(root)
 
 	_make_character_menu(root)
 
@@ -762,6 +1046,7 @@ void fragment() {
 	_make_shop_panel(root)
 	_make_diamond_store_panel(root)
 	_make_spell_store_panel(root)
+	_make_dialogue_overlay(root)
 
 	var possession_cluster: Control = Control.new()
 	possession_cluster.anchor_left = 1.0
@@ -829,7 +1114,7 @@ void fragment() {
 	resurrect_button.add_theme_font_size_override("font_size", 20)
 	resurrect_button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	resurrect_button.add_theme_stylebox_override("normal", _button_style(Color(0.27, 0.055, 0.04, 0.95)))
-	resurrect_button.add_theme_stylebox_override("hover", _button_style(Color(0.42, 0.09, 0.055, 0.98)))
+	resurrect_button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.42, 0.09, 0.055, 0.98)))
 	resurrect_button.add_theme_stylebox_override("pressed", _button_style(Color(0.18, 0.03, 0.025, 1.0)))
 	resurrect_button.pressed.connect(_on_resurrect_button_pressed)
 	death_content.add_child(resurrect_button)
@@ -848,7 +1133,6 @@ void fragment() {
 	_scroll_panel.add_child(scroll_content)
 
 	_scroll_title_label = _label("", 28)
-	_scroll_title_label.add_theme_font_override("font", MISSION_FONT)
 	_scroll_title_label.add_theme_color_override("font_color", Color(0.28, 0.08, 0.035))
 	_scroll_title_label.add_theme_color_override("font_shadow_color", Color(1.0, 0.82, 0.48, 0.42))
 	_scroll_title_label.add_theme_constant_override("shadow_offset_x", 1)
@@ -878,7 +1162,7 @@ void fragment() {
 	close_scroll_button.add_theme_font_size_override("font_size", 18)
 	close_scroll_button.add_theme_color_override("font_color", Color(0.2, 0.06, 0.025))
 	close_scroll_button.add_theme_stylebox_override("normal", _button_style(Color(0.78, 0.48, 0.22, 0.72)))
-	close_scroll_button.add_theme_stylebox_override("hover", _button_style(Color(0.92, 0.6, 0.28, 0.82)))
+	close_scroll_button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.92, 0.6, 0.28, 0.82)))
 	close_scroll_button.add_theme_stylebox_override("pressed", _button_style(Color(0.58, 0.32, 0.14, 0.9)))
 	close_scroll_button.pressed.connect(hide_scroll)
 	scroll_content.add_child(close_scroll_button)
@@ -1131,7 +1415,6 @@ func _make_shop_panel(root: Control) -> void:
 	content.add_child(header)
 
 	_shop_title_label = _label("Vendor", 26)
-	_shop_title_label.add_theme_font_override("font", MISSION_FONT)
 	_shop_title_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.35))
 	_shop_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_shop_title_label)
@@ -1150,7 +1433,7 @@ func _make_shop_panel(root: Control) -> void:
 	close_button.add_theme_font_size_override("font_size", 14)
 	close_button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	close_button.add_theme_stylebox_override("normal", _button_style(Color(0.12, 0.045, 0.04, 0.92)))
-	close_button.add_theme_stylebox_override("hover", _button_style(Color(0.25, 0.075, 0.055, 0.98)))
+	close_button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.25, 0.075, 0.055, 0.98)))
 	close_button.add_theme_stylebox_override("pressed", _button_style(Color(0.075, 0.026, 0.026, 1.0)))
 	close_button.pressed.connect(hide_shop)
 	header.add_child(close_button)
@@ -1194,10 +1477,126 @@ func _make_shop_item_button(item: Dictionary) -> Button:
 	else:
 		button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	button.add_theme_stylebox_override("normal", _button_style(Color(0.055, 0.052, 0.058, 0.96)))
-	button.add_theme_stylebox_override("hover", _button_style(Color(0.16, 0.08, 0.07, 0.98)))
+	button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.16, 0.08, 0.07, 0.98)))
 	button.add_theme_stylebox_override("pressed", _button_style(Color(0.04, 0.032, 0.038, 1.0)))
 	button.pressed.connect(_on_shop_item_pressed.bind(String(item.get("id", ""))))
 	return button
+
+func _make_dialogue_overlay(root: Control) -> void:
+	_dialogue_overlay = Control.new()
+	_dialogue_overlay.visible = false
+	_dialogue_overlay.anchor_left = 0.5
+	_dialogue_overlay.anchor_top = 1.0
+	_dialogue_overlay.anchor_right = 0.5
+	_dialogue_overlay.anchor_bottom = 1.0
+	_dialogue_overlay.offset_left = -DIALOGUE_OVERLAY_SIZE.x * 0.5
+	_dialogue_overlay.offset_top = -DIALOGUE_OVERLAY_SIZE.y - DIALOGUE_BOTTOM_CLEARANCE
+	_dialogue_overlay.offset_right = DIALOGUE_OVERLAY_SIZE.x * 0.5
+	_dialogue_overlay.offset_bottom = -DIALOGUE_BOTTOM_CLEARANCE
+	_dialogue_overlay.custom_minimum_size = DIALOGUE_OVERLAY_SIZE
+	_dialogue_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dialogue_overlay.gui_input.connect(_on_dialogue_box_gui_input)
+	root.add_child(_dialogue_overlay)
+
+	var rows := VBoxContainer.new()
+	rows.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rows.offset_top = DIALOGUE_SKIP_BUTTON_SIZE.y + DIALOGUE_SKIP_BUTTON_GAP
+	rows.add_theme_constant_override("separation", 10)
+	rows.alignment = BoxContainer.ALIGNMENT_CENTER
+	_dialogue_overlay.add_child(rows)
+	_dialogue_rows = rows
+
+	var player_row := HBoxContainer.new()
+	player_row.add_theme_constant_override("separation", 12)
+	player_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	rows.add_child(player_row)
+	_dialogue_player_row = player_row
+	player_row.add_child(_make_dialogue_face(DIALOGUE_PLAYER_FACE_TEXTURE, false))
+	_dialogue_player_label = _make_dialogue_box(player_row)
+
+	var npc_row := HBoxContainer.new()
+	npc_row.add_theme_constant_override("separation", 12)
+	npc_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	rows.add_child(npc_row)
+	_dialogue_npc_row = npc_row
+	_dialogue_npc_label = _make_dialogue_box(npc_row)
+	var npc_face_slot := _make_dialogue_face(null, true)
+	npc_row.add_child(npc_face_slot)
+
+	var skip_button := Button.new()
+	skip_button.text = "Skip"
+	skip_button.anchor_left = 0.5
+	skip_button.anchor_top = 0.0
+	skip_button.anchor_right = 0.5
+	skip_button.anchor_bottom = 0.0
+	skip_button.offset_left = -DIALOGUE_SKIP_BUTTON_SIZE.x * 0.5
+	skip_button.offset_top = 0.0
+	skip_button.offset_right = DIALOGUE_SKIP_BUTTON_SIZE.x * 0.5
+	skip_button.offset_bottom = DIALOGUE_SKIP_BUTTON_SIZE.y
+	skip_button.custom_minimum_size = DIALOGUE_SKIP_BUTTON_SIZE
+	skip_button.focus_mode = Control.FOCUS_NONE
+	skip_button.add_theme_font_size_override("font_size", 14)
+	skip_button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
+	skip_button.add_theme_stylebox_override("normal", _button_style(Color(0.12, 0.045, 0.04, 0.92)))
+	skip_button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.25, 0.075, 0.055, 0.98)))
+	skip_button.add_theme_stylebox_override("pressed", _button_style(Color(0.075, 0.026, 0.026, 1.0)))
+	skip_button.pressed.connect(_skip_dialogue)
+	_dialogue_overlay.add_child(skip_button)
+
+func _make_dialogue_face(face_texture: Texture2D, remember_as_npc: bool) -> Control:
+	var frame := Control.new()
+	frame.custom_minimum_size = DIALOGUE_FACE_SIZE
+	frame.clip_contents = true
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var frame_texture := TextureRect.new()
+	frame_texture.texture = _texture_from_path(DIALOGUE_FACE_FRAME_TEXTURE_PATH)
+	frame_texture.set_anchors_preset(Control.PRESET_FULL_RECT)
+	frame_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	frame_texture.stretch_mode = TextureRect.STRETCH_SCALE
+	frame_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame_texture.z_index = 0
+	frame.add_child(frame_texture)
+
+	var portrait := TextureRect.new()
+	portrait.set_anchors_preset(Control.PRESET_FULL_RECT)
+	portrait.offset_left = DIALOGUE_PORTRAIT_INSET.x + DIALOGUE_PORTRAIT_OFFSET.x
+	portrait.offset_top = DIALOGUE_PORTRAIT_INSET.y + DIALOGUE_PORTRAIT_OFFSET.y
+	portrait.offset_right = -DIALOGUE_PORTRAIT_INSET.x + DIALOGUE_PORTRAIT_OFFSET.x
+	portrait.offset_bottom = -DIALOGUE_PORTRAIT_INSET.y + DIALOGUE_PORTRAIT_OFFSET.y
+	portrait.texture = face_texture
+	portrait.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait.z_index = 10
+	frame.add_child(portrait)
+	portrait.move_to_front()
+	if remember_as_npc:
+		_dialogue_npc_face = portrait
+	return frame
+
+func _make_dialogue_box(parent: Control) -> Label:
+	var box := TextureRect.new()
+	box.texture = _texture_from_path(DIALOGUE_BOX_TEXTURE_PATH)
+	box.custom_minimum_size = DIALOGUE_BOX_SIZE
+	box.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	box.stretch_mode = TextureRect.STRETCH_SCALE
+	box.mouse_filter = Control.MOUSE_FILTER_STOP
+	box.gui_input.connect(_on_dialogue_box_gui_input)
+	parent.add_child(box)
+
+	var label := _label("", 18)
+	label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	label.offset_left = DIALOGUE_TEXT_MARGIN.x
+	label.offset_top = DIALOGUE_TEXT_MARGIN.y
+	label.offset_right = -DIALOGUE_TEXT_MARGIN.x
+	label.offset_bottom = -DIALOGUE_TEXT_MARGIN.y
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", Color(0.95, 0.87, 0.72))
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(label)
+	return label
 
 # ─── Diamond Store ────────────────────────────────────────────────────────────
 
@@ -1212,15 +1611,25 @@ func _make_diamond_store_panel(root: Control) -> void:
 	_diamond_store_panel.offset_top = -DIAMOND_STORE_PANEL_SIZE.y * 0.5
 	_diamond_store_panel.offset_right = DIAMOND_STORE_PANEL_SIZE.x * 0.5
 	_diamond_store_panel.offset_bottom = DIAMOND_STORE_PANEL_SIZE.y * 0.5
+	_diamond_store_panel.custom_minimum_size = DIAMOND_STORE_PANEL_SIZE
+	_diamond_store_panel.clip_contents = true
 	_diamond_store_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.026, 0.018, 0.024, 0.97)))
 	root.add_child(_diamond_store_panel)
 
+	var fixed_body := Control.new()
+	fixed_body.custom_minimum_size = DIAMOND_STORE_BODY_SIZE
+	fixed_body.clip_contents = true
+	fixed_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fixed_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_diamond_store_panel.add_child(fixed_body)
+
 	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 18)
 	margin.add_theme_constant_override("margin_top", 14)
 	margin.add_theme_constant_override("margin_right", 18)
 	margin.add_theme_constant_override("margin_bottom", 16)
-	_diamond_store_panel.add_child(margin)
+	fixed_body.add_child(margin)
 
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 10)
@@ -1231,7 +1640,6 @@ func _make_diamond_store_panel(root: Control) -> void:
 	content.add_child(header)
 
 	_diamond_store_title_label = _label("Diamond Broker", 26)
-	_diamond_store_title_label.add_theme_font_override("font", MISSION_FONT)
 	_diamond_store_title_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.35))
 	_diamond_store_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_diamond_store_title_label)
@@ -1250,7 +1658,7 @@ func _make_diamond_store_panel(root: Control) -> void:
 	close_btn.add_theme_font_size_override("font_size", 14)
 	close_btn.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	close_btn.add_theme_stylebox_override("normal", _button_style(Color(0.12, 0.045, 0.04, 0.92)))
-	close_btn.add_theme_stylebox_override("hover", _button_style(Color(0.25, 0.075, 0.055, 0.98)))
+	close_btn.add_theme_stylebox_override("hover", _hover_button_style(Color(0.25, 0.075, 0.055, 0.98)))
 	close_btn.add_theme_stylebox_override("pressed", _button_style(Color(0.075, 0.026, 0.026, 1.0)))
 	close_btn.pressed.connect(hide_diamond_store)
 	header.add_child(close_btn)
@@ -1263,6 +1671,7 @@ func _make_diamond_store_panel(root: Control) -> void:
 	_diamond_store_status_label.add_theme_color_override("font_color", Color(0.94, 0.82, 0.66))
 	_diamond_store_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_diamond_store_status_label.custom_minimum_size = Vector2(0.0, 42.0)
+	_diamond_store_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(_diamond_store_status_label)
 
 	var divider := ColorRect.new()
@@ -1323,7 +1732,7 @@ func _make_diamond_cell(item: Dictionary) -> Control:
 	if not (item_color is Color):
 		item_color = Color.WHITE
 	btn.add_theme_stylebox_override("normal", _button_style(Color(0.05, 0.042, 0.055, 0.96)))
-	btn.add_theme_stylebox_override("hover", _button_style(item_color.darkened(0.55).lerp(Color(0.22, 0.1, 0.08), 0.5)))
+	btn.add_theme_stylebox_override("hover", _hover_button_style(item_color.darkened(0.55).lerp(Color(0.22, 0.1, 0.08), 0.5)))
 	btn.add_theme_stylebox_override("pressed", _button_style(Color(0.04, 0.032, 0.038, 1.0)))
 	var locked := String(item.get("id", "")) == "faded_locked"
 	if not locked:
@@ -1403,7 +1812,6 @@ func _make_spell_store_panel(root: Control) -> void:
 	content.add_child(header)
 
 	_spell_store_title_label = _label("Spells & Rituals", 26)
-	_spell_store_title_label.add_theme_font_override("font", MISSION_FONT)
 	_spell_store_title_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.35))
 	_spell_store_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_spell_store_title_label)
@@ -1422,7 +1830,7 @@ func _make_spell_store_panel(root: Control) -> void:
 	close_btn.add_theme_font_size_override("font_size", 14)
 	close_btn.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	close_btn.add_theme_stylebox_override("normal", _button_style(Color(0.12, 0.045, 0.04, 0.92)))
-	close_btn.add_theme_stylebox_override("hover", _button_style(Color(0.25, 0.075, 0.055, 0.98)))
+	close_btn.add_theme_stylebox_override("hover", _hover_button_style(Color(0.25, 0.075, 0.055, 0.98)))
 	close_btn.add_theme_stylebox_override("pressed", _button_style(Color(0.075, 0.026, 0.026, 1.0)))
 	close_btn.pressed.connect(hide_spell_store)
 	header.add_child(close_btn)
@@ -1504,7 +1912,6 @@ func show_spell_store(title: String, items: Array[Dictionary], wallet_text: Stri
 		_spell_store_content.add_child(section)
 
 		var cat_label := _label(CATEGORY_LABELS.get(cat, cat.capitalize()), 16)
-		cat_label.add_theme_font_override("font", MISSION_FONT)
 		cat_label.add_theme_color_override("font_color", cat_color)
 		section.add_child(cat_label)
 
@@ -1516,8 +1923,8 @@ func show_spell_store(title: String, items: Array[Dictionary], wallet_text: Stri
 
 		var grid := GridContainer.new()
 		grid.columns = 7
-		grid.add_theme_constant_override("h_separation", 6)
-		grid.add_theme_constant_override("v_separation", 4)
+		grid.add_theme_constant_override("h_separation", 5)
+		grid.add_theme_constant_override("v_separation", 8)
 		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		section.add_child(grid)
 
@@ -1544,10 +1951,12 @@ func _make_spell_cell(item: Dictionary) -> Control:
 	btn.custom_minimum_size = SPELL_STORE_CELL_SIZE
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	var spell_name := String(item.get("name", "Spell"))
+	var spell_name := _clean_spell_display_name(String(item.get("name", "Spell")))
 	var description := String(item.get("description", ""))
 	var cost := int(item.get("diamond_cost", 0))
+	var spell_category := String(item.get("spell_category", _spell_theme_category_for_id(String(item.get("id", "")))))
 	var tooltip := spell_name
+	tooltip += "\nCategory: %s" % _spell_theme_category_display_name(spell_category)
 	if not description.is_empty():
 		tooltip += "\n" + description
 	tooltip += "\nCost: %d diamonds" % cost
@@ -1556,20 +1965,30 @@ func _make_spell_cell(item: Dictionary) -> Control:
 	btn.tooltip_text = tooltip
 	if learned:
 		btn.add_theme_stylebox_override("normal", _spell_store_cell_style(Color(0.06, 0.08, 0.06, 0.96)))
-		btn.add_theme_stylebox_override("hover", _spell_store_cell_style(Color(0.1, 0.14, 0.1, 0.98)))
+		btn.add_theme_stylebox_override("hover", _hover_spell_store_cell_style(Color(0.1, 0.14, 0.1, 0.98)))
 	else:
 		btn.add_theme_stylebox_override("normal", _spell_store_cell_style(Color(0.055, 0.042, 0.065, 0.96)))
-		btn.add_theme_stylebox_override("hover", _spell_store_cell_style(Color(0.18, 0.08, 0.22, 0.98)))
+		btn.add_theme_stylebox_override("hover", _hover_spell_store_cell_style(Color(0.18, 0.08, 0.22, 0.98)))
 	btn.add_theme_stylebox_override("pressed", _spell_store_cell_style(Color(0.04, 0.032, 0.038, 1.0)))
 	if not learned:
 		btn.pressed.connect(_on_shop_item_pressed.bind(String(item.get("id", ""))))
 
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 6)
+	margin.add_theme_constant_override("margin_top", 7)
+	margin.add_theme_constant_override("margin_right", 6)
+	margin.add_theme_constant_override("margin_bottom", 7)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(margin)
+
 	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
-	vbox.add_theme_constant_override("separation", 1)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 3)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	btn.add_child(vbox)
+	margin.add_child(vbox)
 
 	# Spell sigil image
 	var img_path := String(item.get("image", ""))
@@ -1577,37 +1996,35 @@ func _make_spell_cell(item: Dictionary) -> Control:
 		var tex: Texture2D = load(img_path) as Texture2D
 		if tex != null:
 			var sigil_slot := CenterContainer.new()
-			sigil_slot.custom_minimum_size = Vector2(0.0, 34.0)
+			sigil_slot.custom_minimum_size = Vector2(0.0, SPELL_STORE_SIGIL_SLOT_HEIGHT)
 			sigil_slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			sigil_slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			sigil_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			vbox.add_child(sigil_slot)
 
-			var icon_frame := Control.new()
-			icon_frame.custom_minimum_size = Vector2(34.0, 34.0)
-			icon_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			sigil_slot.add_child(icon_frame)
-
 			var tex_rect := TextureRect.new()
 			tex_rect.texture = tex
-			tex_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tex_rect.custom_minimum_size = SPELL_STORE_SIGIL_ICON_SIZE
+			tex_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			tex_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			if learned:
 				tex_rect.modulate = Color(0.55, 0.88, 0.55, 0.85)
-			icon_frame.add_child(tex_rect)
+			sigil_slot.add_child(tex_rect)
 		else:
 			vbox.add_child(_make_spell_fallback_sigil(spell_name, learned))
 	else:
 		vbox.add_child(_make_spell_fallback_sigil(spell_name, learned))
 
-	var name_label := _label(spell_name, 10)
+	var name_label := _label(spell_name, 11)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	name_label.custom_minimum_size = Vector2(88.0, SPELL_STORE_NAME_BLOCK_HEIGHT - 2.0)
-	name_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	name_label.custom_minimum_size = Vector2(0.0, SPELL_STORE_NAME_BLOCK_HEIGHT)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.clip_text = true
 	if learned:
 		name_label.add_theme_color_override("font_color", Color(0.55, 0.88, 0.55))
@@ -1619,35 +2036,69 @@ func _make_spell_cell(item: Dictionary) -> Control:
 	if learned:
 		var learned_label := _label("✓", 10)
 		learned_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		learned_label.custom_minimum_size = Vector2(88.0, SPELL_STORE_PRICE_BLOCK_HEIGHT)
+		learned_label.custom_minimum_size = Vector2(0.0, SPELL_STORE_PRICE_BLOCK_HEIGHT)
+		learned_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		learned_label.add_theme_color_override("font_color", Color(0.45, 0.85, 0.45))
 		learned_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		vbox.add_child(learned_label)
 	else:
 		var cost_label := _label("%d💎" % cost, 10)
 		cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		cost_label.custom_minimum_size = Vector2(88.0, SPELL_STORE_PRICE_BLOCK_HEIGHT)
+		cost_label.custom_minimum_size = Vector2(0.0, SPELL_STORE_PRICE_BLOCK_HEIGHT)
+		cost_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cost_label.add_theme_color_override("font_color", Color(0.72, 0.88, 1.0))
 		cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		vbox.add_child(cost_label)
 
 	return btn
 
+func _make_mission_panel(root: Control) -> void:
+	_mission_panel = VBoxContainer.new()
+	_mission_panel.visible = false
+	_mission_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mission_panel.anchor_left = 0.0
+	_mission_panel.anchor_top = 0.0
+	_mission_panel.anchor_right = 0.0
+	_mission_panel.anchor_bottom = 0.0
+	_mission_panel.offset_left = MISSION_TEXT_POSITION.x
+	_mission_panel.offset_top = MISSION_TEXT_POSITION.y
+	_mission_panel.offset_right = MISSION_TEXT_POSITION.x + MISSION_PANEL_SIZE.x
+	_mission_panel.offset_bottom = MISSION_TEXT_POSITION.y + MISSION_PANEL_SIZE.y
+	_mission_panel.add_theme_constant_override("separation", 5)
+	root.add_child(_mission_panel)
+
+	_mission_title_label = _label("", MISSION_TITLE_FONT_SIZE)
+	_mission_title_label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.46))
+	_mission_title_label.add_theme_color_override("font_outline_color", Color(0.02, 0.01, 0.006, 0.96))
+	_mission_title_label.add_theme_constant_override("outline_size", 2)
+	_mission_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mission_panel.add_child(_mission_title_label)
+
+	_mission_list_label = _label("", MISSION_LIST_FONT_SIZE)
+	_mission_list_label.add_theme_color_override("font_color", Color(0.94, 0.86, 0.7))
+	_mission_list_label.add_theme_color_override("font_outline_color", Color(0.02, 0.01, 0.006, 0.96))
+	_mission_list_label.add_theme_constant_override("outline_size", 2)
+	_mission_list_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_mission_list_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mission_panel.add_child(_mission_list_label)
+
 func _make_character_menu(root: Control) -> void:
 	_demon_menu_button = Button.new()
 	_demon_menu_button.text = ""
-	_demon_menu_button.anchor_left = 0.02
-	_demon_menu_button.anchor_top = 0.08
-	_demon_menu_button.anchor_right = 0.02
-	_demon_menu_button.anchor_bottom = 0.08
+	_demon_menu_button.anchor_left = MISSION_PANEL_ANCHOR.x
+	_demon_menu_button.anchor_top = MISSION_PANEL_ANCHOR.y
+	_demon_menu_button.anchor_right = MISSION_PANEL_ANCHOR.x
+	_demon_menu_button.anchor_bottom = MISSION_PANEL_ANCHOR.y
 	_demon_menu_button.offset_left = 0.0
-	_demon_menu_button.offset_top = 8.0
+	_demon_menu_button.offset_top = DEMON_MENU_TOP_OFFSET
 	_demon_menu_button.offset_right = DEMON_MENU_BUTTON_SIZE.x
-	_demon_menu_button.offset_bottom = DEMON_MENU_BUTTON_SIZE.y + 8.0
+	_demon_menu_button.offset_bottom = DEMON_MENU_TOP_OFFSET + DEMON_MENU_BUTTON_SIZE.y
 	_demon_menu_button.focus_mode = Control.FOCUS_NONE
 	_demon_menu_button.tooltip_text = "Character"
 	_demon_menu_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_demon_menu_button.pivot_offset = DEMON_MENU_BUTTON_SIZE * 0.5
+	_demon_menu_button.z_as_relative = false
+	_demon_menu_button.z_index = DEMON_MENU_Z_INDEX
 	_demon_menu_button.add_theme_stylebox_override("normal", _icon_button_style(Color.TRANSPARENT, Color.TRANSPARENT))
 	_demon_menu_button.add_theme_stylebox_override("hover", _icon_button_style(Color.TRANSPARENT, Color.TRANSPARENT))
 	_demon_menu_button.add_theme_stylebox_override("pressed", _icon_button_style(Color.TRANSPARENT, Color.TRANSPARENT))
@@ -1667,43 +2118,54 @@ func _make_character_menu(root: Control) -> void:
 	_demon_menu_image = demon_image
 
 	_demon_level_label = _label("", 18)
-	_demon_level_label.anchor_left = 0.02
-	_demon_level_label.anchor_top = 0.08
-	_demon_level_label.anchor_right = 0.02
-	_demon_level_label.anchor_bottom = 0.08
+	_demon_level_label.anchor_left = MISSION_PANEL_ANCHOR.x
+	_demon_level_label.anchor_top = MISSION_PANEL_ANCHOR.y
+	_demon_level_label.anchor_right = MISSION_PANEL_ANCHOR.x
+	_demon_level_label.anchor_bottom = MISSION_PANEL_ANCHOR.y
 	_demon_level_label.offset_left = -16.0
-	_demon_level_label.offset_top = DEMON_MENU_BUTTON_SIZE.y + 16.0
+	_demon_level_label.offset_top = DEMON_MENU_TOP_OFFSET + DEMON_MENU_BUTTON_SIZE.y + 16.0
 	_demon_level_label.offset_right = DEMON_MENU_BUTTON_SIZE.x + 36.0
-	_demon_level_label.offset_bottom = DEMON_MENU_BUTTON_SIZE.y + 44.0
+	_demon_level_label.offset_bottom = DEMON_MENU_TOP_OFFSET + DEMON_MENU_BUTTON_SIZE.y + 44.0
 	_demon_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_demon_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_demon_level_label.add_theme_font_override("font", MISSION_FONT)
 	_demon_level_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.48))
 	_demon_level_label.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.01, 0.95))
 	_demon_level_label.add_theme_constant_override("outline_size", 2)
+	_demon_level_label.z_as_relative = false
+	_demon_level_label.z_index = DEMON_MENU_Z_INDEX + 1
 	_demon_level_label.visible = false
 	root.add_child(_demon_level_label)
 	_refresh_demon_menu_visuals()
 
 	_character_panel = PanelContainer.new()
 	_character_panel.visible = false
-	_character_panel.anchor_left = 0.02
-	_character_panel.anchor_top = 0.08
-	_character_panel.anchor_right = 0.02
-	_character_panel.anchor_bottom = 0.08
+	_character_panel.anchor_left = MISSION_PANEL_ANCHOR.x
+	_character_panel.anchor_top = MISSION_PANEL_ANCHOR.y
+	_character_panel.anchor_right = MISSION_PANEL_ANCHOR.x
+	_character_panel.anchor_bottom = MISSION_PANEL_ANCHOR.y
 	_character_panel.offset_left = DEMON_MENU_BUTTON_SIZE.x + 12.0
-	_character_panel.offset_top = 10.0
+	_character_panel.offset_top = DEMON_MENU_TOP_OFFSET
 	_character_panel.offset_right = DEMON_MENU_BUTTON_SIZE.x + 12.0 + CHARACTER_PANEL_SIZE.x
-	_character_panel.offset_bottom = 10.0 + CHARACTER_PANEL_SIZE.y
+	_character_panel.offset_bottom = DEMON_MENU_TOP_OFFSET + CHARACTER_PANEL_SIZE.y
+	_character_panel.custom_minimum_size = CHARACTER_PANEL_SIZE
+	_character_panel.clip_contents = true
 	_character_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.022, 0.012, 0.016, 0.98)))
 	root.add_child(_character_panel)
 
+	var fixed_body := Control.new()
+	fixed_body.custom_minimum_size = CHARACTER_PANEL_BODY_SIZE
+	fixed_body.clip_contents = true
+	fixed_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fixed_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_character_panel.add_child(fixed_body)
+
 	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 18)
 	margin.add_theme_constant_override("margin_top", 14)
 	margin.add_theme_constant_override("margin_right", 18)
 	margin.add_theme_constant_override("margin_bottom", 16)
-	_character_panel.add_child(margin)
+	fixed_body.add_child(margin)
 
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 10)
@@ -1714,7 +2176,6 @@ func _make_character_menu(root: Control) -> void:
 	content.add_child(header)
 
 	var title := _label("Soul Ledger", 26)
-	title.add_theme_font_override("font", MISSION_FONT)
 	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.35))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
@@ -1726,7 +2187,7 @@ func _make_character_menu(root: Control) -> void:
 	close_button.add_theme_font_size_override("font_size", 14)
 	close_button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	close_button.add_theme_stylebox_override("normal", _button_style(Color(0.12, 0.045, 0.04, 0.92)))
-	close_button.add_theme_stylebox_override("hover", _button_style(Color(0.25, 0.075, 0.055, 0.98)))
+	close_button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.25, 0.075, 0.055, 0.98)))
 	close_button.add_theme_stylebox_override("pressed", _button_style(Color(0.075, 0.026, 0.026, 1.0)))
 	close_button.pressed.connect(_hide_character_panel)
 	header.add_child(close_button)
@@ -1742,6 +2203,8 @@ func _make_character_menu(root: Control) -> void:
 	_add_character_tab_button(tabs, "Stats", CHARACTER_PANEL_TAB_STATS)
 	_add_character_tab_button(tabs, "Spells", CHARACTER_PANEL_TAB_SPELLS)
 	_add_character_tab_button(tabs, "Inventory", CHARACTER_PANEL_TAB_INVENTORY)
+	_add_character_tab_button(tabs, "Relics", CHARACTER_PANEL_TAB_RELICS)
+	_add_character_tab_button(tabs, "Map", CHARACTER_PANEL_TAB_MAP)
 	_add_character_tab_button(tabs, "Skill Tree", CHARACTER_PANEL_TAB_SKILL_TREE)
 
 	_character_content_label = _label("", 18)
@@ -1761,6 +2224,14 @@ func _make_character_menu(root: Control) -> void:
 	_inventory_view.visible = false
 	content.add_child(_inventory_view)
 
+	_relics_view = _make_relics_view()
+	_relics_view.visible = false
+	content.add_child(_relics_view)
+
+	_map_view = _make_map_view()
+	_map_view.visible = false
+	content.add_child(_map_view)
+
 	_skill_tree_view = SkillTreeView.new()
 	_skill_tree_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_skill_tree_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1775,7 +2246,6 @@ func _add_character_tab_button(tabs: HBoxContainer, text: String, tab: String) -
 	button.custom_minimum_size = Vector2(120.0, 34.0)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_override("font", MISSION_FONT)
 	button.add_theme_font_size_override("font_size", 16)
 	button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	button.pressed.connect(Callable(self, "_set_character_panel_tab").bind(tab))
@@ -1785,7 +2255,7 @@ func _add_character_tab_button(tabs: HBoxContainer, text: String, tab: String) -
 func _toggle_character_panel() -> void:
 	if _character_panel == null:
 		return
-	_character_panel.visible = not _character_panel.visible
+	_set_character_panel_visible(not _character_panel.visible)
 	if _character_panel.visible:
 		_acknowledge_level_up_feedback()
 		_sync_character_panel()
@@ -1793,8 +2263,18 @@ func _toggle_character_panel() -> void:
 		_demon_menu_button.move_to_front()
 
 func _hide_character_panel() -> void:
-	if _character_panel != null:
-		_character_panel.visible = false
+	_set_character_panel_visible(false)
+
+func _set_character_panel_visible(visible: bool) -> void:
+	if _character_panel == null:
+		return
+	_character_panel.visible = visible
+	if _spell_cluster != null:
+		_spell_cluster.visible = not visible
+	if visible:
+		if _spell_slot_hover_tooltip != null:
+			_spell_slot_hover_tooltip.visible = false
+		_spell_slot_hovered_index = -1
 
 func _set_character_panel_tab(tab: String) -> void:
 	_character_panel_tab = tab
@@ -1805,19 +2285,23 @@ func _set_character_panel_tab(tab: String) -> void:
 func _sync_character_panel() -> void:
 	if _character_content_label == null:
 		return
+	var has_teleport_device := _has_teleport_device_in_stats()
+	if not has_teleport_device and _character_panel_tab == CHARACTER_PANEL_TAB_MAP:
+		_character_panel_tab = CHARACTER_PANEL_TAB_STATS
 	for tab in _character_tab_buttons.keys():
 		var button := _character_tab_buttons[tab] as Button
 		if button == null:
 			continue
+		button.visible = tab != CHARACTER_PANEL_TAB_MAP or has_teleport_device
 		if tab == _character_panel_tab:
 			button.add_theme_color_override("font_color", Color(1.0, 0.9, 0.66))
 			button.add_theme_stylebox_override("normal", _button_style(Color(0.38, 0.04, 0.035, 0.96)))
-			button.add_theme_stylebox_override("hover", _button_style(Color(0.46, 0.065, 0.05, 0.98)))
+			button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.46, 0.065, 0.05, 0.98)))
 			button.add_theme_stylebox_override("pressed", _button_style(Color(0.2, 0.032, 0.026, 1.0)))
 		else:
 			button.add_theme_color_override("font_color", Color(0.9, 0.74, 0.55))
 			button.add_theme_stylebox_override("normal", _button_style(Color(0.06, 0.052, 0.058, 0.96)))
-			button.add_theme_stylebox_override("hover", _button_style(Color(0.16, 0.08, 0.07, 0.98)))
+			button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.16, 0.08, 0.07, 0.98)))
 			button.add_theme_stylebox_override("pressed", _button_style(Color(0.04, 0.032, 0.038, 1.0)))
 	if _spells_view != null:
 		_spells_view.visible = _character_panel_tab == CHARACTER_PANEL_TAB_SPELLS
@@ -1825,9 +2309,17 @@ func _sync_character_panel() -> void:
 		_skill_tree_view.visible = _character_panel_tab == CHARACTER_PANEL_TAB_SKILL_TREE
 	if _inventory_view != null:
 		_inventory_view.visible = _character_panel_tab == CHARACTER_PANEL_TAB_INVENTORY
+	if _relics_view != null:
+		_relics_view.visible = _character_panel_tab == CHARACTER_PANEL_TAB_RELICS
+	if _map_view != null:
+		_map_view.visible = _character_panel_tab == CHARACTER_PANEL_TAB_MAP and has_teleport_device
 	_character_content_label.visible = _character_panel_tab == CHARACTER_PANEL_TAB_STATS
 	if _character_panel_tab == CHARACTER_PANEL_TAB_INVENTORY:
 		_sync_inventory_view()
+	elif _character_panel_tab == CHARACTER_PANEL_TAB_RELICS:
+		_sync_relics_view()
+	elif _character_panel_tab == CHARACTER_PANEL_TAB_MAP:
+		_sync_map_view()
 	elif _character_panel_tab == CHARACTER_PANEL_TAB_SPELLS:
 		_sync_spells_view()
 	elif _character_panel_tab == CHARACTER_PANEL_TAB_SKILL_TREE:
@@ -1910,7 +2402,7 @@ func _spell_entries_for_category(category: String) -> Array[Dictionary]:
 	if category == "attack":
 		entries.append({
 			"name": "Firestorm",
-			"tooltip": "Firestorm",
+			"id": "fire_storm",
 			"icon": FIRESTORM_TEXTURE,
 			"category": category
 		})
@@ -1922,7 +2414,7 @@ func _spell_entries_for_category(category: String) -> Array[Dictionary]:
 		var display_name := _spell_display_name(spell_id)
 		entries.append({
 			"name": display_name,
-			"tooltip": display_name,
+			"id": spell_id,
 			"text": _spell_chip_abbreviation(display_name),
 			"category": category
 		})
@@ -1933,11 +2425,11 @@ func _make_spell_chip(entry: Dictionary) -> Control:
 	chip.text = ""
 	chip.custom_minimum_size = Vector2(54.0, 54.0)
 	chip.focus_mode = Control.FOCUS_NONE
-	chip.tooltip_text = String(entry.get("tooltip", entry.get("name", "Spell")))
+	chip.tooltip_text = _spell_tooltip_text(String(entry.get("name", "Spell")), String(entry.get("id", "")), String(entry.get("category", "")))
 	chip.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var chip_style := _spell_chip_style(String(entry.get("category", "attack")))
 	chip.add_theme_stylebox_override("normal", chip_style)
-	chip.add_theme_stylebox_override("hover", chip_style)
+	chip.add_theme_stylebox_override("hover", _hover_spell_chip_style(String(entry.get("category", "attack"))))
 	chip.add_theme_stylebox_override("pressed", chip_style)
 	chip.mouse_entered.connect(_on_spell_chip_mouse_entered.bind(String(entry.get("name", "Spell"))))
 	chip.mouse_exited.connect(_on_spell_chip_mouse_exited)
@@ -1958,7 +2450,6 @@ func _make_spell_chip(entry: Dictionary) -> Control:
 		center.add_child(icon_rect)
 	else:
 		var glyph := _label(String(entry.get("text", "?")), 16)
-		glyph.add_theme_font_override("font", MISSION_FONT)
 		glyph.add_theme_color_override("font_color", Color(1.0, 0.9, 0.78))
 		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -2028,7 +2519,7 @@ func _make_inventory_view() -> Control:
 
 	# --- Left: Gloves with invisible socket hit-areas ---
 	var equip_frame: Control = Control.new()
-	equip_frame.custom_minimum_size = Vector2(520.0, 580.0)
+	equip_frame.custom_minimum_size = INVENTORY_GLOVE_FRAME_SIZE
 	equip_frame.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	equip_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inventory.add_child(equip_frame)
@@ -2043,16 +2534,19 @@ func _make_inventory_view() -> Control:
 	equip_frame.add_child(equip_image)
 
 	_inventory_socket_nodes.clear()
-	_inventory_socket_labels.clear()
+	_inventory_socket_icons.clear()
 	for socket_index in range(INVENTORY_SOCKET_COUNT):
 		if socket_index >= INVENTORY_SOCKET_POSITIONS.size():
 			continue
+		var socket_position: Vector2 = INVENTORY_SOCKET_POSITIONS[socket_index]
 		var socket: Panel = Panel.new()
 		socket.custom_minimum_size = INVENTORY_SOCKET_HITBOX_SIZE
 		socket.size = socket.custom_minimum_size
-		socket.position = INVENTORY_SOCKET_POSITIONS[socket_index]
+		socket.position = socket_position
+		socket.clip_contents = true
 		socket.mouse_filter = Control.MOUSE_FILTER_STOP
 		socket.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		socket.z_index = 10
 		socket.add_theme_stylebox_override("panel", _inventory_socket_hitbox_style(Color(0.0, 0.0, 0.0, 0.0)))
 		socket.mouse_entered.connect(_on_inventory_socket_mouse_entered.bind(socket_index))
 		socket.mouse_exited.connect(_on_inventory_socket_mouse_exited.bind(socket_index))
@@ -2060,15 +2554,18 @@ func _make_inventory_view() -> Control:
 		equip_frame.add_child(socket)
 		_inventory_socket_nodes.append(socket)
 
-		var socket_label := _label("+", 20)
-		socket_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-		socket_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		socket_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		socket_label.add_theme_font_override("font", MISSION_FONT)
-		socket_label.add_theme_color_override("font_color", Color(0.88, 0.44, 0.34, 0.72))
-		socket_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		socket.add_child(socket_label)
-		_inventory_socket_labels.append(socket_label)
+		var socket_icon := TextureRect.new()
+		socket_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		socket_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		socket_icon.texture = DIAMOND_UP_TEXTURE
+		socket_icon.custom_minimum_size = INVENTORY_SOCKET_ICON_SIZE
+		socket_icon.size = INVENTORY_SOCKET_ICON_SIZE
+		socket_icon.position = socket_position + (INVENTORY_SOCKET_HITBOX_SIZE - INVENTORY_SOCKET_ICON_SIZE) * 0.5
+		socket_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		socket_icon.z_index = 20
+		socket_icon.visible = false
+		equip_frame.add_child(socket_icon)
+		_inventory_socket_icons.append(socket_icon)
 
 	# --- Right: Info + Diamond Grid ---
 	var details: VBoxContainer = VBoxContainer.new()
@@ -2088,32 +2585,38 @@ func _make_inventory_view() -> Control:
 	details.add_child(_inventory_status_label)
 
 	var list_title := _label("Diamonds", 17)
-	list_title.add_theme_font_override("font", MISSION_FONT)
 	list_title.add_theme_color_override("font_color", Color(0.88, 0.83, 1.0))
 	details.add_child(list_title)
 
+	var diamond_scroll := ScrollContainer.new()
+	diamond_scroll.custom_minimum_size = Vector2(0.0, INVENTORY_DIAMOND_SCROLL_HEIGHT)
+	diamond_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	diamond_scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	diamond_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	diamond_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	details.add_child(diamond_scroll)
+
 	var grid: GridContainer = GridContainer.new()
-	grid.columns = 10
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 6)
+	grid.columns = INVENTORY_DIAMOND_GRID_COLUMNS
+	grid.add_theme_constant_override("h_separation", INVENTORY_DIAMOND_GRID_H_SEPARATION)
+	grid.add_theme_constant_override("v_separation", INVENTORY_DIAMOND_GRID_V_SEPARATION)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	details.add_child(grid)
+	grid.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	diamond_scroll.add_child(grid)
 	_inventory_diamond_grid = grid
 
-	_inventory_drag_preview = PanelContainer.new()
+	_inventory_drag_preview = TextureRect.new()
 	_inventory_drag_preview.visible = false
 	_inventory_drag_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_inventory_drag_preview.custom_minimum_size = Vector2(210.0, 38.0)
-	_inventory_drag_preview.add_theme_stylebox_override("panel", _panel_style(Color(0.06, 0.04, 0.07, 0.96)))
-	inventory.add_child(_inventory_drag_preview)
-
-	_inventory_drag_preview_label = _label("", 15)
-	_inventory_drag_preview_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_inventory_drag_preview_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_inventory_drag_preview_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_inventory_drag_preview_label.add_theme_color_override("font_color", Color(0.95, 0.9, 1.0))
-	_inventory_drag_preview.add_child(_inventory_drag_preview_label)
+	_inventory_drag_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_inventory_drag_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_inventory_drag_preview.texture = DIAMOND_TEXTURE
+	_inventory_drag_preview.custom_minimum_size = INVENTORY_DRAG_ICON_SIZE
+	_inventory_drag_preview.size = INVENTORY_DRAG_ICON_SIZE
+	if _root_control != null:
+		_root_control.add_child(_inventory_drag_preview)
+	else:
+		inventory.add_child(_inventory_drag_preview)
 	_inventory_drag_preview.move_to_front()
 
 	return inventory
@@ -2145,16 +2648,17 @@ func _sync_inventory_view() -> void:
 
 func _refresh_inventory_socket_display() -> void:
 	for index in range(_inventory_socket_nodes.size()):
+		if index >= _inventory_socket_icons.size():
+			continue
 		var socket: Panel = _inventory_socket_nodes[index]
-		var label: Label = _inventory_socket_labels[index]
-		if socket == null or label == null:
+		var icon: TextureRect = _inventory_socket_icons[index]
+		if socket == null or icon == null:
 			continue
 		var diamond_id := ""
 		if index < _inventory_socket_ids.size():
 			diamond_id = _inventory_socket_ids[index]
 		if diamond_id.is_empty():
-			label.text = ""
-			label.visible = false
+			icon.visible = false
 			_apply_inventory_socket_style(socket, Color(0.88, 0.44, 0.34, 1.0), false, index == _inventory_hovered_socket and not _inventory_dragging_diamond_id.is_empty(), 0.0)
 			socket.tooltip_text = "Empty glove socket\nLeft-click drag to socket/swap, Right-click to unsocket."
 			continue
@@ -2163,25 +2667,25 @@ func _refresh_inventory_socket_display() -> void:
 		var bonus := String(entry.get("bonus", ""))
 		var color: Color = entry.get("color", Color(0.9, 0.78, 0.58)) if entry.get("color") is Color else Color(0.9, 0.78, 0.58)
 		var pulse := 0.5 + 0.5 * sin(_ui_time * 3.2 + float(index) * 0.9)
-		label.text = "✓"
-		label.visible = true
-		label.add_theme_color_override("font_color", color.lightened(0.08 + pulse * 0.1))
+		icon.visible = true
+		var socket_position: Vector2 = INVENTORY_SOCKET_POSITIONS[index] if index < INVENTORY_SOCKET_POSITIONS.size() else socket.position
+		var diamond_offset: Vector2 = INVENTORY_SOCKET_DIAMOND_OFFSETS.get(diamond_id, Vector2.ZERO)
+		icon.position = socket_position + (INVENTORY_SOCKET_HITBOX_SIZE - INVENTORY_SOCKET_ICON_SIZE) * 0.5 + diamond_offset
+		icon.modulate = color.lightened(0.08 + pulse * 0.1)
 		_apply_inventory_socket_style(socket, color, true, index == _inventory_hovered_socket and not _inventory_dragging_diamond_id.is_empty(), pulse)
 		socket.tooltip_text = "%s\n%s\nLeft-click drag to socket/swap, Right-click to unsocket." % [name, bonus]
 
-func _apply_inventory_socket_style(socket: Panel, color: Color, filled: bool, hovered_drop_target: bool, pulse: float = 0.0) -> void:
+func _apply_inventory_socket_style(socket: Panel, _color: Color, filled: bool, _hovered_drop_target: bool, _pulse: float = 0.0) -> void:
 	if socket == null:
 		return
 	var style := StyleBoxFlat.new()
 	if filled:
-		style.bg_color = Color(color.r, color.g, color.b, 0.12 + pulse * 0.08)
+		style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
 		style.border_color = Color(0.0, 0.0, 0.0, 0.0)
 	else:
 		style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
 		style.border_color = Color(0.0, 0.0, 0.0, 0.0)
 	style.set_border_width_all(0)
-	if hovered_drop_target:
-		style.bg_color = style.bg_color.lightened(0.16)
 	style.set_corner_radius_all(INVENTORY_SOCKET_CORNER_RADIUS)
 	socket.add_theme_stylebox_override("panel", style)
 
@@ -2235,13 +2739,13 @@ func _refresh_inventory_diamond_grid(owned_data: Variant, catalog: Array) -> voi
 
 		# Cell container
 		var cell := Panel.new()
-		cell.custom_minimum_size = Vector2(50.0, 60.0)
+		cell.custom_minimum_size = INVENTORY_DIAMOND_CELL_SIZE
 		cell.clip_contents = true
 		cell.mouse_filter = Control.MOUSE_FILTER_STOP
 		cell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		var cell_style := StyleBoxFlat.new()
-		cell_style.bg_color = Color(0.06, 0.04, 0.07, 0.92)
-		cell_style.border_color = gem_color.darkened(0.3)
+		cell_style.bg_color = Color(0.065, 0.04, 0.048, 0.94)
+		cell_style.border_color = Color(0.88, 0.46, 0.22, 0.92)
 		cell_style.set_border_width_all(1)
 		cell_style.set_corner_radius_all(6)
 		cell.add_theme_stylebox_override("panel", cell_style)
@@ -2250,10 +2754,10 @@ func _refresh_inventory_diamond_grid(owned_data: Variant, catalog: Array) -> voi
 
 		var cell_content := VBoxContainer.new()
 		cell_content.set_anchors_preset(Control.PRESET_FULL_RECT)
-		cell_content.offset_top = 3.0
-		cell_content.offset_bottom = -2.0
+		cell_content.offset_top = 5.0
+		cell_content.offset_bottom = -3.0
 		cell_content.alignment = BoxContainer.ALIGNMENT_CENTER
-		cell_content.add_theme_constant_override("separation", 2)
+		cell_content.add_theme_constant_override("separation", 3)
 		cell_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cell.add_child(cell_content)
 
@@ -2268,7 +2772,7 @@ func _refresh_inventory_diamond_grid(owned_data: Variant, catalog: Array) -> voi
 		cell_content.add_child(tex)
 
 		var count_lbl := _label("x%s" % available_count, 10)
-		count_lbl.custom_minimum_size = Vector2(50.0, 14.0)
+		count_lbl.custom_minimum_size = Vector2(INVENTORY_DIAMOND_CELL_SIZE.x, 14.0)
 		count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		count_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2278,9 +2782,20 @@ func _refresh_inventory_diamond_grid(owned_data: Variant, catalog: Array) -> voi
 
 		_inventory_diamond_grid.add_child(cell)
 	if not has_any:
-		var empty := _label("No diamonds owned yet.", 14)
-		empty.add_theme_color_override("font_color", Color(0.54, 0.5, 0.48))
-		_inventory_diamond_grid.add_child(empty)
+		for index in range(INVENTORY_DIAMOND_EMPTY_SLOT_COUNT):
+			_inventory_diamond_grid.add_child(_make_empty_inventory_diamond_slot())
+
+func _make_empty_inventory_diamond_slot() -> Control:
+	var slot := Panel.new()
+	slot.custom_minimum_size = INVENTORY_DIAMOND_CELL_SIZE
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.045, 0.036, 0.042, 0.68)
+	style.border_color = Color(0.28, 0.17, 0.13, 0.75)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	slot.add_theme_stylebox_override("panel", style)
+	return slot
 
 func _on_inventory_diamond_gui_input(event: InputEvent, diamond_id: String, available_count: int) -> void:
 	if not (event is InputEventMouseButton):
@@ -2327,12 +2842,14 @@ func _start_inventory_drag(diamond_id: String, source_slot_index: int) -> void:
 	_inventory_dragging_diamond_id = diamond_id
 	_inventory_dragging_source_slot = source_slot_index
 	_refresh_inventory_socket_display()
-	if _inventory_drag_preview == null or _inventory_drag_preview_label == null:
+	if _inventory_drag_preview == null:
 		return
 	var entry: Dictionary = _inventory_catalog_by_id.get(diamond_id, {}) as Dictionary
-	_inventory_drag_preview_label.text = "%s %s" % [String(entry.get("icon", "◆")), String(entry.get("name", "Diamond"))]
+	var gem_color: Color = entry.get("color", Color(0.9, 0.78, 0.58)) if entry.get("color") is Color else Color(0.9, 0.78, 0.58)
+	_inventory_drag_preview.modulate = gem_color.lightened(0.08)
 	_inventory_drag_preview.visible = true
 	_inventory_drag_preview.move_to_front()
+	_update_inventory_drag_preview()
 
 func _finish_inventory_drag() -> void:
 	if _inventory_dragging_diamond_id.is_empty():
@@ -2346,10 +2863,316 @@ func _finish_inventory_drag() -> void:
 		_inventory_drag_preview.visible = false
 
 func _update_inventory_drag_preview() -> void:
-	if _inventory_drag_preview == null or not _inventory_drag_preview.visible:
+	if _inventory_drag_preview == null:
+		return
+	if _inventory_dragging_diamond_id.is_empty():
+		_inventory_drag_preview.visible = false
+		return
+	if not _inventory_drag_preview.visible:
 		return
 	var mouse: Vector2 = get_viewport().get_mouse_position()
-	_inventory_drag_preview.global_position = mouse + Vector2(12.0, 14.0)
+	_inventory_drag_preview.size = INVENTORY_DRAG_ICON_SIZE
+	_inventory_drag_preview.global_position = mouse - (INVENTORY_DRAG_ICON_SIZE * 0.5)
+
+func _make_map_view() -> Control:
+	var map_root: CenterContainer = CenterContainer.new()
+	map_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	var card := PanelContainer.new()
+	card.custom_minimum_size = MAP_DEVICE_CARD_SIZE
+	card.add_theme_stylebox_override("panel", _map_card_style())
+	map_root.add_child(card)
+
+	var content := VBoxContainer.new()
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 10)
+	card.add_child(content)
+
+	var title := _label("Teleport Anchor", 21)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override("font_color", Color(1.0, 0.8, 0.52))
+	content.add_child(title)
+
+	var device_stage := Control.new()
+	device_stage.custom_minimum_size = MAP_DEVICE_STAGE_SIZE
+	device_stage.size = MAP_DEVICE_STAGE_SIZE
+	device_stage.clip_contents = false
+	device_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	device_stage.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	content.add_child(device_stage)
+
+	var outer_ring := _make_teleport_device_layer(
+		device_stage,
+		_texture_from_path(TELEPORT_DEVICE_OUTER_RING_PATH),
+		MAP_DEVICE_OUTER_SIZE,
+		MAP_DEVICE_STAGE_SIZE * 0.5
+	)
+	outer_ring.z_index = 0
+	_map_device_inner_vortex = _make_teleport_device_layer(
+		device_stage,
+		_texture_from_path(TELEPORT_DEVICE_INNER_VORTEX_PATH),
+		MAP_DEVICE_VORTEX_SIZE,
+		MAP_DEVICE_INNER_CENTER
+	)
+	_map_device_inner_vortex.z_index = 1
+	_map_device_stone_ring = _make_teleport_device_layer(
+		device_stage,
+		_texture_from_path(TELEPORT_DEVICE_STONE_RING_PATH),
+		MAP_DEVICE_STONE_RING_SIZE,
+		MAP_DEVICE_INNER_CENTER
+	)
+	_map_device_stone_ring.z_index = 2
+	_map_device_stone_ring.move_to_front()
+
+	_map_status_label = _label("", 14)
+	_map_status_label.custom_minimum_size = Vector2(280.0, 36.0)
+	_map_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_map_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_map_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_map_status_label.add_theme_color_override("font_color", Color(0.82, 0.74, 0.64))
+	content.add_child(_map_status_label)
+
+	var teleport_button := Button.new()
+	teleport_button.text = "Use Teleport Device"
+	teleport_button.custom_minimum_size = Vector2(220.0, 38.0)
+	teleport_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	teleport_button.focus_mode = Control.FOCUS_NONE
+	teleport_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	teleport_button.add_theme_font_size_override("font_size", 15)
+	teleport_button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
+	teleport_button.add_theme_stylebox_override("normal", _button_style(Color(0.12, 0.045, 0.04, 0.92)))
+	teleport_button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.25, 0.075, 0.055, 0.98)))
+	teleport_button.add_theme_stylebox_override("pressed", _button_style(Color(0.075, 0.026, 0.026, 1.0)))
+	teleport_button.pressed.connect(_on_teleport_device_pressed)
+	content.add_child(teleport_button)
+	_map_teleport_device_button = teleport_button
+
+	return map_root
+
+func _make_teleport_device_layer(parent: Control, texture: Texture2D, size: Vector2, center: Vector2) -> TextureRect:
+	var layer := TextureRect.new()
+	layer.texture = texture
+	layer.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	layer.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	layer.size = size
+	layer.custom_minimum_size = size
+	layer.position = center - size * 0.5
+	layer.pivot_offset = size * 0.5
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(layer)
+	return layer
+
+func _sync_map_view() -> void:
+	var has_teleport_device := _has_teleport_device_in_stats()
+	if _map_status_label != null:
+		_map_status_label.text = "Bound to the castle." if has_teleport_device else "No anchor bound."
+	if _map_teleport_device_button != null:
+		_map_teleport_device_button.visible = has_teleport_device
+		_map_teleport_device_button.disabled = not has_teleport_device
+
+func _update_map_tab_animation(delta: float) -> void:
+	if _map_view == null or not _map_view.visible:
+		return
+	if _map_device_inner_vortex != null:
+		_map_device_inner_vortex.rotation += MAP_DEVICE_VORTEX_ROTATION_SPEED * delta
+	if _map_device_stone_ring != null:
+		_map_device_stone_ring.rotation += MAP_DEVICE_STONE_RING_ROTATION_SPEED * delta
+
+func _has_teleport_device_in_stats() -> bool:
+	var relic_owned: Variant = _latest_stats.get("relic_owned", {})
+	return relic_owned is Dictionary and int((relic_owned as Dictionary).get("teleport_device", 0)) > 0
+
+func _make_relics_view() -> Control:
+	var relics: HBoxContainer = HBoxContainer.new()
+	relics.add_theme_constant_override("separation", 24)
+	relics.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	relics.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	var equip_frame: Control = Control.new()
+	equip_frame.custom_minimum_size = INVENTORY_GLOVE_FRAME_SIZE
+	equip_frame.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	equip_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	relics.add_child(equip_frame)
+
+	var equip_image: TextureRect = TextureRect.new()
+	equip_image.texture = RELIC_EQUIP_TEXTURE
+	equip_image.set_anchors_preset(Control.PRESET_FULL_RECT)
+	equip_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	equip_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	equip_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	equip_image.modulate = Color(1.0, 0.92, 0.82, 0.96)
+	equip_frame.add_child(equip_image)
+
+	var details: VBoxContainer = VBoxContainer.new()
+	details.add_theme_constant_override("separation", 10)
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	relics.add_child(details)
+
+	_relics_gold_label = _label("", 18)
+	_relics_gold_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.58))
+	details.add_child(_relics_gold_label)
+
+	_relics_status_label = _label("", 14)
+	_relics_status_label.add_theme_color_override("font_color", Color(0.72, 0.64, 0.58))
+	_relics_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_relics_status_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	details.add_child(_relics_status_label)
+
+	var teleport_button := Button.new()
+	teleport_button.text = "Use Teleport Device"
+	teleport_button.custom_minimum_size = Vector2(220.0, 36.0)
+	teleport_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	teleport_button.focus_mode = Control.FOCUS_NONE
+	teleport_button.add_theme_font_size_override("font_size", 15)
+	teleport_button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
+	teleport_button.add_theme_stylebox_override("normal", _button_style(Color(0.12, 0.045, 0.04, 0.92)))
+	teleport_button.add_theme_stylebox_override("hover", _hover_button_style(Color(0.25, 0.075, 0.055, 0.98)))
+	teleport_button.add_theme_stylebox_override("pressed", _button_style(Color(0.075, 0.026, 0.026, 1.0)))
+	teleport_button.pressed.connect(_on_teleport_device_pressed)
+	details.add_child(teleport_button)
+	_teleport_device_button = teleport_button
+
+	var list_title := _label("Relics", 17)
+	list_title.add_theme_color_override("font_color", Color(1.0, 0.82, 0.6))
+	details.add_child(list_title)
+
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	details.add_child(grid)
+	_relics_grid = grid
+
+	return relics
+
+func _sync_relics_view() -> void:
+	var gold: int = int(_latest_stats.get("gold", 0))
+	var diamonds: int = int(_latest_stats.get("diamonds", 0))
+	var relic_owned: Variant = _latest_stats.get("relic_owned", {})
+	if _relics_gold_label != null:
+		_relics_gold_label.text = "Gold: %s    Diamonds: %s" % [gold, diamonds]
+	if _teleport_device_button != null:
+		var has_teleport_device: bool = relic_owned is Dictionary and int((relic_owned as Dictionary).get("teleport_device", 0)) > 0
+		_teleport_device_button.visible = has_teleport_device
+		_teleport_device_button.disabled = not has_teleport_device
+	_refresh_relic_grid(relic_owned, _latest_stats.get("relic_catalog", []))
+
+func _refresh_relic_grid(owned_data: Variant, catalog: Variant) -> void:
+	if _relics_grid == null:
+		return
+	for child in _relics_grid.get_children():
+		_relics_grid.remove_child(child)
+		child.queue_free()
+	var owned := {}
+	if owned_data is Dictionary:
+		owned = owned_data as Dictionary
+	var entries: Array[Dictionary] = []
+	if catalog is Array:
+		for entry_variant in catalog:
+			if not (entry_variant is Dictionary):
+				continue
+			var entry := (entry_variant as Dictionary).duplicate(true)
+			var relic_id := String(entry.get("id", ""))
+			if relic_id.is_empty():
+				continue
+			var owned_count := int(entry.get("owned_count", owned.get(relic_id, 0)))
+			if owned_count <= 0:
+				continue
+			entry["owned_count"] = owned_count
+			entries.append(entry)
+	if entries.is_empty():
+		if _relics_status_label != null:
+			_relics_status_label.text = "No relics owned yet."
+		for index in range(RELIC_GRID_EMPTY_SLOT_COUNT):
+			_relics_grid.add_child(_make_empty_relic_slot())
+		return
+	if _relics_status_label != null:
+		_relics_status_label.text = "Relics carried: %s" % entries.size()
+	for entry in entries:
+		_relics_grid.add_child(_make_relic_cell(entry))
+
+func _make_empty_relic_slot() -> Control:
+	var slot := Panel.new()
+	slot.custom_minimum_size = RELIC_GRID_CELL_SIZE
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.045, 0.036, 0.042, 0.68)
+	style.border_color = Color(0.28, 0.17, 0.13, 0.75)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	slot.add_theme_stylebox_override("panel", style)
+	return slot
+
+func _make_relic_cell(entry: Dictionary) -> Control:
+	var cell := Panel.new()
+	cell.custom_minimum_size = RELIC_GRID_CELL_SIZE
+	cell.clip_contents = true
+	cell.mouse_filter = Control.MOUSE_FILTER_STOP
+	cell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var cell_style := StyleBoxFlat.new()
+	cell_style.bg_color = Color(0.065, 0.04, 0.048, 0.94)
+	cell_style.border_color = Color(0.88, 0.46, 0.22, 0.92)
+	cell_style.set_border_width_all(1)
+	cell_style.set_corner_radius_all(6)
+	cell.add_theme_stylebox_override("panel", cell_style)
+
+	var name := String(entry.get("name", "Relic"))
+	var description := String(entry.get("description", entry.get("bonus", "")))
+	var owned_count := int(entry.get("owned_count", 1))
+	cell.tooltip_text = "%s\n%s\nOwned: %s" % [name, description, owned_count]
+
+	var cell_content := VBoxContainer.new()
+	cell_content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cell_content.offset_top = 5.0
+	cell_content.offset_bottom = -3.0
+	cell_content.alignment = BoxContainer.ALIGNMENT_CENTER
+	cell_content.add_theme_constant_override("separation", 3)
+	cell_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(cell_content)
+
+	var texture := _texture_for_relic_entry(entry)
+	if texture != null:
+		var icon := TextureRect.new()
+		icon.texture = texture
+		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = RELIC_GRID_ICON_SIZE
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell_content.add_child(icon)
+	else:
+		var glyph := _label(_spell_chip_abbreviation(name), 15)
+		glyph.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
+		glyph.custom_minimum_size = RELIC_GRID_ICON_SIZE
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell_content.add_child(glyph)
+
+	var count_lbl := _label("x%s" % owned_count, 10)
+	count_lbl.custom_minimum_size = Vector2(RELIC_GRID_CELL_SIZE.x, 14.0)
+	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	count_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	count_lbl.add_theme_color_override("font_color", Color(1.0, 0.78, 0.48))
+	cell_content.add_child(count_lbl)
+
+	return cell
+
+func _texture_for_relic_entry(entry: Dictionary) -> Texture2D:
+	var texture := entry.get("texture", null) as Texture2D
+	if texture != null:
+		return texture
+	var image_path := String(entry.get("image", entry.get("icon_path", "")))
+	if image_path.is_empty():
+		return null
+	if not ResourceLoader.exists(image_path):
+		return null
+	return load(image_path) as Texture2D
 
 func _character_stats_text() -> String:
 	var life: int = int(_latest_stats.get("life", 100))
@@ -2399,8 +3222,8 @@ func _update_level_up_feedback(delta: float) -> void:
 		return
 	if _demon_level_label != null:
 		var rise := sin(_ui_time * (LEVEL_UP_BLINK_SPEED * 0.9)) * 2.5
-		_demon_level_label.offset_top = DEMON_MENU_BUTTON_SIZE.y + 16.0 - rise
-		_demon_level_label.offset_bottom = DEMON_MENU_BUTTON_SIZE.y + 44.0 - rise
+		_demon_level_label.offset_top = DEMON_MENU_TOP_OFFSET + DEMON_MENU_BUTTON_SIZE.y + 16.0 - rise
+		_demon_level_label.offset_bottom = DEMON_MENU_TOP_OFFSET + DEMON_MENU_BUTTON_SIZE.y + 44.0 - rise
 		var blink_on := int(_ui_time * (LEVEL_UP_BLINK_SPEED * 2.0)) % 2 == 0
 		_demon_level_label.modulate = Color(1.0, 0.84, 0.48, 1.0 if blink_on else 0.45)
 		_demon_level_label.visible = true
@@ -2439,8 +3262,8 @@ func _acknowledge_level_up_feedback() -> void:
 	_level_up_pending_ack = false
 	if _demon_level_label != null:
 		_demon_level_label.visible = false
-		_demon_level_label.offset_top = DEMON_MENU_BUTTON_SIZE.y + 16.0
-		_demon_level_label.offset_bottom = DEMON_MENU_BUTTON_SIZE.y + 44.0
+		_demon_level_label.offset_top = DEMON_MENU_TOP_OFFSET + DEMON_MENU_BUTTON_SIZE.y + 16.0
+		_demon_level_label.offset_bottom = DEMON_MENU_TOP_OFFSET + DEMON_MENU_BUTTON_SIZE.y + 44.0
 	_refresh_demon_menu_visuals()
 
 func _apply_corruption_stage() -> void:
@@ -2611,6 +3434,16 @@ func _label(text: String, size: int) -> Label:
 	label.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78))
 	return label
 
+func _texture_from_path(path: String) -> Texture2D:
+	if path.is_empty():
+		return null
+	if ResourceLoader.exists(path):
+		return load(path) as Texture2D
+	var image := Image.load_from_file(path)
+	if image == null:
+		return null
+	return ImageTexture.create_from_image(image)
+
 func _make_minimap_dot(color: Color, dot_size: float) -> Panel:
 	var dot: Panel = Panel.new()
 	dot.size = Vector2.ONE * dot_size
@@ -2699,8 +3532,8 @@ func _make_spell_slot_hover_ui(parent: Control) -> void:
 
 func _spell_slot_tooltip_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.03, 0.02, 0.94)
-	style.border_color = Color(0.96, 0.58, 0.18, 0.94)
+	style.bg_color = Color(0.05, 0.03, 0.02, 1.0)
+	style.border_color = Color(0.96, 0.58, 0.18, 1.0)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(6)
 	style.content_margin_left = 10
@@ -2751,6 +3584,8 @@ func _slot_spell_name_for_category(category: String) -> String:
 	return "None"
 
 func _spell_category_for_id(spell_id: String) -> String:
+	if SPELL_GROUP_CATEGORY_BY_ID.has(spell_id):
+		return String(SPELL_GROUP_CATEGORY_BY_ID[spell_id])
 	if spell_id in ["fire_storm", "wide_flame"]:
 		return "attack"
 	if spell_id in ["quickened_ritual", "ember_stride"]:
@@ -2769,6 +3604,60 @@ func _spell_display_name(spell_id: String) -> String:
 	if SPELL_ID_TO_DISPLAY_NAME.has(spell_id):
 		return String(SPELL_ID_TO_DISPLAY_NAME[spell_id])
 	return _mission_title_case(spell_id.replace("_", " "))
+
+func _spell_tooltip_text(spell_name: String, spell_id: String, _category: String = "") -> String:
+	var clean_name := _clean_spell_display_name(spell_name)
+	var spell_category := _spell_theme_category_from_name(spell_name)
+	if spell_category.is_empty():
+		spell_category = _spell_theme_category_for_id(spell_id)
+	if spell_category.is_empty():
+		return clean_name
+	return "%s\nCategory: %s" % [clean_name, _spell_theme_category_display_name(spell_category)]
+
+func _spell_category_display_name(category: String) -> String:
+	var clean_category := category.strip_edges().to_lower()
+	if clean_category.is_empty():
+		return "Unknown"
+	return String(SPELL_SLOT_HOVER_LABELS.get(clean_category, clean_category.capitalize()))
+
+func _spell_theme_category_for_id(spell_id: String) -> String:
+	if SPELL_THEME_CATEGORY_BY_ID.has(spell_id):
+		return String(SPELL_THEME_CATEGORY_BY_ID[spell_id])
+	if spell_id.contains("fire") or spell_id.contains("flame") or spell_id.contains("ember") or spell_id.contains("eclipse"):
+		return "Flame"
+	if spell_id.contains("ice") or spell_id.contains("frost") or spell_id.contains("zero") or spell_id.contains("titanium") or spell_id.contains("laziness"):
+		return "Ice"
+	if spell_id.contains("electric") or spell_id.contains("storm") or spell_id.contains("lightning") or spell_id.contains("mark"):
+		return "Electricity"
+	if not spell_id.is_empty():
+		return "Beyond"
+	return ""
+
+func _spell_theme_category_display_name(category: String) -> String:
+	var clean_category := category.strip_edges().to_lower()
+	match clean_category:
+		"flame":
+			return "Flame"
+		"ice":
+			return "Ice"
+		"electricity":
+			return "Electricity"
+		"beyond":
+			return "Beyond"
+	return category.strip_edges().capitalize()
+
+func _spell_theme_category_from_name(raw_name: String) -> String:
+	var category_marker_index := raw_name.findn(" - category:")
+	if category_marker_index < 0:
+		return ""
+	return raw_name.substr(category_marker_index + " - category:".length()).strip_edges()
+
+func _clean_spell_display_name(raw_name: String) -> String:
+	var spell_name := raw_name.strip_edges()
+	var category_marker_index := spell_name.findn(" - category:")
+	if category_marker_index >= 0:
+		return spell_name.substr(0, category_marker_index).strip_edges()
+	return spell_name
 
 func _set_possession_ratio(ratio: float) -> void:
 	ratio = clampf(ratio, 0.0, 1.0)
@@ -2847,6 +3736,18 @@ func _panel_style(color: Color) -> StyleBoxFlat:
 	style.content_margin_bottom = 12
 	return style
 
+func _map_card_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.045, 0.028, 0.036, 0.96)
+	style.border_color = Color(0.72, 0.22, 0.78, 0.82)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 14
+	style.content_margin_bottom = 16
+	return style
+
 func _scroll_panel_style() -> StyleBoxTexture:
 	var style := StyleBoxTexture.new()
 	style.texture = SCROLL_OPEN_TEXTURE
@@ -2875,6 +3776,16 @@ func _button_style(color: Color) -> StyleBoxFlat:
 	style.content_margin_bottom = 8
 	return style
 
+func _opaque_hover_color(color: Color) -> Color:
+	var hover_color := color
+	hover_color.a = 1.0
+	return hover_color
+
+func _hover_button_style(color: Color) -> StyleBoxFlat:
+	var style := _button_style(_opaque_hover_color(color))
+	style.border_color = _opaque_hover_color(style.border_color)
+	return style
+
 func _spell_store_cell_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = color
@@ -2887,15 +3798,27 @@ func _spell_store_cell_style(color: Color) -> StyleBoxFlat:
 	style.content_margin_bottom = 4
 	return style
 
+func _hover_spell_store_cell_style(color: Color) -> StyleBoxFlat:
+	var style := _spell_store_cell_style(_opaque_hover_color(color))
+	style.border_color = _opaque_hover_color(style.border_color)
+	return style
+
+func _hover_spell_chip_style(category: String) -> StyleBoxFlat:
+	var style := _spell_chip_style(category)
+	style.bg_color = _opaque_hover_color(style.bg_color)
+	style.border_color = _opaque_hover_color(style.border_color)
+	return style
+
 func _make_spell_fallback_sigil(spell_name: String, learned: bool) -> Control:
 	var badge := PanelContainer.new()
-	badge.custom_minimum_size = Vector2(34.0, 34.0)
+	badge.custom_minimum_size = SPELL_STORE_SIGIL_ICON_SIZE
 	badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.11, 0.08, 0.12, 0.95)
 	style.border_color = Color(0.74, 0.25, 0.12, 0.9)
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(17)
+	style.set_corner_radius_all(int(SPELL_STORE_SIGIL_ICON_SIZE.x * 0.5))
 	badge.add_theme_stylebox_override("panel", style)
 
 	var letters := ""
@@ -2908,7 +3831,7 @@ func _make_spell_fallback_sigil(spell_name: String, learned: bool) -> Control:
 	if letters.is_empty():
 		letters = "??"
 
-	var text := _label(letters, 10)
+	var text := _label(letters, 13)
 	text.set_anchors_preset(Control.PRESET_FULL_RECT)
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -2937,7 +3860,7 @@ func _whisper_button(text: String, color: Color) -> Button:
 	button.add_theme_font_size_override("font_size", 18)
 	button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.66))
 	button.add_theme_stylebox_override("normal", _button_style(color))
-	button.add_theme_stylebox_override("hover", _button_style(color.lightened(0.14)))
+	button.add_theme_stylebox_override("hover", _hover_button_style(color.lightened(0.14)))
 	button.add_theme_stylebox_override("pressed", _button_style(color.darkened(0.18)))
 	return button
 
@@ -2955,6 +3878,9 @@ func _on_shop_item_pressed(item_id: String) -> void:
 	if item_id.is_empty():
 		return
 	shop_purchase_requested.emit(item_id)
+
+func _on_teleport_device_pressed() -> void:
+	teleport_device_requested.emit()
 
 func _on_skill_tree_point_spend_requested(node_key: String) -> void:
 	if node_key.is_empty():

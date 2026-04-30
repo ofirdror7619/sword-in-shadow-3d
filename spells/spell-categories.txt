@@ -1,0 +1,33 @@
+There are four categories for spells:
+1. Flame
+2. Ice
+3. Electricity
+4. Beyond
+
+Attack Spells:
+Firestorm - Category: Flame
+Icesmash - Category: Ice
+Absolute Zero - Category: Ice
+Electricity Vortex - Category: Electricity
+Call From the Beyond - Category: Beyond
+Soul Drain - Category: Beyond
+Abyssal Blade - Category: Beyond
+
+Defense Spells:
+Eclipse Shield - Category: Flame
+Titanium - Category: Ice
+Armor Of The Undead - Category: Beyond
+
+Healing Spells:
+Reincarnation - Category: Electricity
+Soul Harvest - Category: Beyond
+ 
+Buff Spells:
+Killing Radius - Category: Ice
+Power of the Underworld - Category: Beyond
+Demonic Frenzy - Category: Beyond
+
+Debuff Spells:
+Curse of Laziness - Category: Ice
+Mark of Weakness - Category: Electricity
+Slowly We Rot - Category: Beyond

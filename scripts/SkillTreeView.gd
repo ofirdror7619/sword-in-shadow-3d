@@ -3,7 +3,6 @@ class_name SkillTreeView
 
 signal point_spend_requested(node_key: String)
 
-const TITLE_FONT: FontFile = preload("res://assets/fonts/PICKYSIDE.otf")
 const PALETTE_TEXT := Color(0.96, 0.86, 0.68)
 const PALETTE_TEXT_DIM := Color(0.7, 0.62, 0.52)
 const PALETTE_PANEL := Color(0.055, 0.022, 0.026, 0.97)
@@ -393,8 +392,8 @@ func _draw_hover_panel(tree_rect: Rect2, node: Dictionary, mouse_position: Vecto
 	tooltip_position.x = clampf(tooltip_position.x, tree_rect.position.x + 8.0, max_x)
 	tooltip_position.y = clampf(tooltip_position.y, tree_rect.position.y + 8.0, max_y)
 	var panel_rect := Rect2(tooltip_position, TOOLTIP_SIZE)
-	draw_rect(panel_rect, Color(PALETTE_PANEL.r, PALETTE_PANEL.g, PALETTE_PANEL.b, 0.95), true)
-	draw_rect(panel_rect, Color(0.2, 0.08, 0.08, 0.92), false, 2.0)
+	draw_rect(panel_rect, Color(PALETTE_PANEL.r, PALETTE_PANEL.g, PALETTE_PANEL.b, 1.0), true)
+	draw_rect(panel_rect, Color(0.2, 0.08, 0.08, 1.0), false, 2.0)
 
 	var state := _node_state(node)
 	var y := panel_rect.position.y + 22.0
@@ -632,12 +631,13 @@ func _wrap_text(text: String, max_width: float, font_size: int) -> Array[String]
 	var words := text.split(" ", false)
 	var lines: Array[String] = []
 	var current := ""
+	var font := _ui_font()
 	for word_variant in words:
 		var word := String(word_variant)
 		var next := word
 		if not current.is_empty():
 			next = "%s %s" % [current, word]
-		var width := TITLE_FONT.get_string_size(next, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+		var width := font.get_string_size(next, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 		if width <= max_width or current.is_empty():
 			current = next
 		else:
@@ -650,8 +650,12 @@ func _wrap_text(text: String, max_width: float, font_size: int) -> Array[String]
 	return lines
 
 func _draw_centered_string(text: String, baseline_center: Vector2, size: int, color: Color) -> void:
-	var text_size := TITLE_FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size)
-	draw_string(TITLE_FONT, baseline_center + Vector2(-text_size.x * 0.5, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, color)
+	var font := _ui_font()
+	var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size)
+	draw_string(font, baseline_center + Vector2(-text_size.x * 0.5, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, color)
 
 func _draw_left_string(text: String, baseline_left: Vector2, size: int, color: Color) -> void:
-	draw_string(TITLE_FONT, baseline_left, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, color)
+	draw_string(_ui_font(), baseline_left, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size, color)
+
+func _ui_font() -> Font:
+	return get_theme_font("font", "Label")
