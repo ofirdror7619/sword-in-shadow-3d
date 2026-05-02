@@ -1,0 +1,22 @@
+MISSION talk_to_Torren_Blackwell
+TITLE Talk to Torren Blackwell
+OBJECTIVE talk_to_npc:Torren_Blackwell
+DIALOGUE_FILE velmora/torren-blackwell-first-encounter.txt
+GIVEN add_spell:icesmash
+LOCKED true
+ON_COMPLETE add_map:world-map-velmora-after-torren.png
+ON_COMPLETE unlock_mission:travel_to_hoofgrove_wilds
+
+MISSION travel_to_hoofgrove_wilds
+TITLE Use the Teleport Device to travel to Hoofgrove Wilds
+OBJECTIVE teleport_to:hoofgrove_wilds
+GIVER_NPC Torren_Blackwell:Torren Blackwell
+REMINDER_FILE velmora/torren-blackwell-mission-unfinished.txt
+LOCKED true
+ON_COMPLETE unlock_area_mission:hoofgrove_wilds:clear_hoofgrove_wilds
+
+MISSION talk_to_torren_after_clearing_forest
+TITLE Talk to Torren Blackwell in Velmora
+OBJECTIVE talk_to_npc:Torren_Blackwell
+DIALOGUE_FILE velmora/torren-blackwell-hoofgrove-complete.txt
+LOCKED true

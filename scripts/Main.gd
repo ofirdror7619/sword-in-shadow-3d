@@ -3,54 +3,68 @@ extends Node3D
 const PlayerScript := preload("res://scripts/Player.gd")
 const ChestScript := preload("res://scripts/Chest.gd")
 const GoldScript := preload("res://scripts/DroppedGold.gd")
+const LootDropScript := preload("res://scripts/DroppedLoot.gd")
+const LootTableScript := preload("res://scripts/LootTable.gd")
 const ScrollScript := preload("res://scripts/Scroll.gd")
 const FireStormScript := preload("res://scripts/FireStorm.gd")
+const IceSmashScript := preload("res://scripts/IceSmash.gd")
+const LightningVortexScript := preload("res://scripts/LightningVortex.gd")
 const HudScript := preload("res://scripts/HUD.gd")
 const WhisperSystemScript := preload("res://scripts/WhisperSystem.gd")
 const MissionSystemScript := preload("res://scripts/MissionSystem.gd")
 const EXIT_TEXTURE: Texture2D = preload("res://assets/images/objects/portal.png")
-const FLOOR_TEXTURE: Texture2D = preload("res://assets/images/floor/castle-stone-floor.png")
+const FLOOR_TEXTURE: Texture2D = preload("res://assets/images/floor/black-vault-stone-floor.png")
 const OPENING_LOGO_TEXTURE: Texture2D = preload("res://assets/images/opening/logo.png")
 const OPENING_WHISPER_FONT: FontFile = preload("res://assets/fonts/Simbiot.ttf")
-const LEVEL_ONE_MUSIC: AudioStreamMP3 = preload("res://assets/audio/music/music-level-1.mp3")
-const TOWN_MUSIC: AudioStreamMP3 = preload("res://assets/audio/music/town.mp3")
+const BLACK_VAULT_MUSIC: AudioStreamMP3 = preload("res://assets/audio/music/black-vault.mp3")
+const VELMORA_MUSIC: AudioStreamMP3 = preload("res://assets/audio/music/velmora.mp3")
+const HOOFGROVE_WILDS_MUSIC_PATH := "res://assets/audio/music/hoofgrove-wilds.mp3"
 const OPENING_AURA_SOUND: AudioStreamMP3 = preload("res://assets/audio/sounds/aura.mp3")
 const ANGEL_DEAD_SOUND: AudioStream = preload("res://assets/audio/sounds/angel-dead.mp3")
 const EXIT_SOUND: AudioStream = preload("res://assets/audio/sounds/exit.mp3")
 const FIRE_STORM_SOUND: AudioStream = preload("res://assets/audio/sounds/fire-storm.mp3")
 const FIRE_STORM_BOOM_SOUND: AudioStream = preload("res://assets/audio/sounds/fire-storm-boom.mp3")
+const ICE_SMASH_SOUND: AudioStream = preload("res://assets/audio/sounds/icesmash.mp3")
 const TREASURE_CHEST_SOUND: AudioStream = preload("res://assets/audio/sounds/treasure-chest.mp3")
 const PORTAL_FRAME_TEXTURE_PATH := "res://assets/images/objects/PortalFrame.png"
-const DIAMOND_ITEM_TEXTURE_PATH := "res://assets/images/objects/diamond.png"
+const DIAMOND_ITEM_TEXTURE_PATH := "res://assets/images/objects/diamond-faded.png"
 const VENDOR_FRONT_TEXTURE_PATH := "res://assets/images/NPC/vendor-1/vendor-front.png"
 const VENDOR_SIDE_TEXTURE_PATH := "res://assets/images/NPC/vendor-1/vendor-side.png"
 const VENDOR_BACK_TEXTURE_PATH := "res://assets/images/NPC/vendor-1/vendor-back.png"
 const SPELL_SHOP_MODEL_PATH := "res://assets/images/NPC/spell-shop/spell-shop.glb"
 const SPELL_SHOP_TEXTURE_PATH := "res://assets/images/NPC/spell-shop/spell-shop.png"
-const TOWN_BARREL_TEXTURE_PATH := "res://assets/images/objects/town/barrel.png"
-const TOWN_VENDOR_MAN_TEXTURE_PATH := "res://assets/images/objects/town/aldric.png"
-const TOWN_VENDOR_WOMAN_TEXTURE_PATH := "res://assets/images/objects/town/syra.png"
-const TOWN_VENDOR_WARLOCK_TEXTURE_PATH := "res://assets/images/objects/town/zethyr.png"
-const TOWN_VENDOR_MAN_FACE_TEXTURE: Texture2D = preload("res://assets/images/objects/town/aldric-face.png")
-const TOWN_VENDOR_WOMAN_FACE_TEXTURE: Texture2D = preload("res://assets/images/objects/town/syra-face.png")
-const TOWN_VENDOR_WARLOCK_FACE_TEXTURE: Texture2D = preload("res://assets/images/objects/town/zethyr-face.png")
-const TOWN_TREE_TEXTURE_PATHS := [
-	"res://assets/images/objects/town/tree-1.png",
-	"res://assets/images/objects/town/tree-2.png",
-	"res://assets/images/objects/town/tree-3.png",
-	"res://assets/images/objects/town/tree-4.png"
+const VELMORA_BARREL_TEXTURE_PATH := "res://assets/images/objects/velmora/barrel.png"
+const VELMORA_VENDOR_MAN_TEXTURE_PATH := "res://assets/images/objects/velmora/aldric.png"
+const VELMORA_VENDOR_WOMAN_TEXTURE_PATH := "res://assets/images/objects/velmora/syra.png"
+const VELMORA_VENDOR_WARLOCK_TEXTURE_PATH := "res://assets/images/objects/velmora/zethyr.png"
+const TORREN_BLACKWELL_FRONT_TEXTURE_PATH := "res://assets/images/NPC/Torren-Blackwell/Torren-Blackwell-front.png"
+const TORREN_BLACKWELL_SIDE_TEXTURE_PATH := "res://assets/images/NPC/Torren-Blackwell/Torren-Blackwell-side.png"
+const TORREN_BLACKWELL_BACK_TEXTURE_PATH := "res://assets/images/NPC/Torren-Blackwell/Torren-Blackwell-back.png"
+const TORREN_BLACKWELL_FACE_TEXTURE_PATH := "res://assets/images/NPC/Torren-Blackwell/Torren-Blackwell-face.png"
+const VELMORA_VENDOR_MAN_FACE_TEXTURE: Texture2D = preload("res://assets/images/objects/velmora/aldric-face.png")
+const VELMORA_VENDOR_WOMAN_FACE_TEXTURE: Texture2D = preload("res://assets/images/objects/velmora/syra-face.png")
+const VELMORA_VENDOR_WARLOCK_FACE_TEXTURE: Texture2D = preload("res://assets/images/objects/velmora/zethyr-face.png")
+const VELMORA_TREE_TEXTURE_PATHS := [
+	"res://assets/images/objects/velmora/tree-1.png",
+	"res://assets/images/objects/velmora/tree-2.png",
+	"res://assets/images/objects/velmora/tree-3.png",
+	"res://assets/images/objects/velmora/tree-4.png"
 ]
 const WHISPER_INTRODUCTION_PATH := "res://theWhisper/introduction.txt"
 const WHISPER_AFTER_KILLING_PATH := "res://theWhisper/after-killing.txt"
 const WHISPER_WAITING_PATH := "res://theWhisper/waiting.txt"
 const SCROLLS_PATH := "res://scrolls/scrolls.txt"
 const SCROLLS_FALLBACK_PATH := "res://scrolls/scrollls.txt"
-const ALDRIC_FIRST_DIALOGUE_PATH := "res://dialogues/town/aldric-first-encounter.txt"
-const SYRA_FIRST_DIALOGUE_PATH := "res://dialogues/town/syra-first-encounter.txt"
-const ZETHYR_FIRST_DIALOGUE_PATH := "res://dialogues/town/zethyr-first-encounter.txt"
+const ALDRIC_FIRST_DIALOGUE_PATH := "res://dialogues/velmora/aldric-first-encounter.txt"
+const SYRA_FIRST_DIALOGUE_PATH := "res://dialogues/velmora/syra-first-encounter.txt"
+const ZETHYR_FIRST_DIALOGUE_PATH := "res://dialogues/velmora/zethyr-first-encounter.txt"
+const TORREN_BLACKWELL_DIALOGUE_PATH := "res://dialogues/velmora/torren-blackwell-first-encounter.txt"
+const TORREN_HOOFGROVE_COMPLETE_DIALOGUE_PATH := "res://dialogues/velmora/torren-blackwell-hoofgrove-complete.txt"
 const DIALOGUE_ALDRIC_FIRST := "aldric_first_encounter"
 const DIALOGUE_SYRA_FIRST := "syra_first_encounter"
 const DIALOGUE_ZETHYR_FIRST := "zethyr_first_encounter"
+const DIALOGUE_TORREN_BLACKWELL := "torren_blackwell_first_encounter"
+const DIALOGUE_TORREN_HOOFGROVE_COMPLETE := "torren_blackwell_hoofgrove_complete"
 
 const ARENA_HALF_SIZE := 34.0
 const STAGE_ENEMY_COUNT := 15
@@ -60,6 +74,8 @@ const CAMERA_ZOOM_MIN := 0.62
 const CAMERA_ZOOM_MAX := 1.45
 const CAMERA_ZOOM_STEP := 0.1
 const CAMERA_ZOOM_DEFAULT := 1.0
+const ICE_SMASH_CAMERA_SHAKE_DURATION := 0.34
+const ICE_SMASH_CAMERA_SHAKE_INTENSITY := 0.42
 const BRICK_TEXTURE_SIZE := 256
 const BRICK_WIDTH := 32
 const BRICK_HEIGHT := 16
@@ -72,64 +88,82 @@ const IDLE_WHISPER_DELAY := 8.0
 const IDLE_WHISPER_INTERVAL_MIN := 11.0
 const IDLE_WHISPER_INTERVAL_MAX := 18.0
 const AFTER_KILL_WHISPER_CHANCE := 0.62
-const START_IN_TOWN_FOR_TESTING := true
-const TEST_TOWN_START_GOLD := 1000
-const TEST_TOWN_START_DIAMONDS := 0
+const START_IN_VELMORA_FOR_TESTING := false
+const START_IN_HOOFGROVE_FOR_TESTING := false
+const TEST_VELMORA_START_GOLD := 1000
+const TEST_VELMORA_START_DIAMONDS := 0
 const VENDOR_SPRITE_GROUND_CLEARANCE := 0.06
-const AREA_CASTLE := "castle"
-const AREA_TOWN := "town"
-const TOWN_ORIGIN := Vector3(118.0, 0.0, 0.0)
-const TOWN_HALF_SIZE := 26.0
-const TOWN_SPAWN_POSITION := Vector3(118.0, 0.1, 18.0)
-const TOWN_TREE_SIGHT_CLEAR_RADIUS := 3.35
+const AREA_BLACK_VAULT := "black_vault"
+const AREA_VELMORA := "velmora"
+const AREA_HOOFGROVE_WILDS := "hoofgrove_wilds"
+const MISSION_AREAS := [AREA_BLACK_VAULT, AREA_VELMORA, AREA_HOOFGROVE_WILDS]
+const VELMORA_ORIGIN := Vector3(118.0, 0.0, 0.0)
+const VELMORA_HALF_SIZE := 26.0
+const VELMORA_SPAWN_POSITION := Vector3(118.0, 0.1, 18.0)
+const VELMORA_TREE_SIGHT_CLEAR_RADIUS := 3.35
+const HOOFGROVE_ORIGIN := Vector3(236.0, 0.0, 0.0)
+const HOOFGROVE_HALF_SIZE := 48.0
+const HOOFGROVE_SPAWN_POSITION := Vector3(236.0, 0.1, 34.0)
+const HOOFGROVE_CENTAUR_COUNT := 9
+const HOOFGROVE_WARRIOR_COUNT := 4
+const HOOFGROVE_GIANT_COUNT := 1
+const HOOFGROVE_CHEST_COUNT := 7
 const GLOVE_SOCKET_COUNT := 8
 const FADED_DIAMOND_CATALOG := [
-	{"id": "faded_rush", "icon": "🔴", "name": "Faded Diamond of Rush", "description": "-6% cooldown on abilities. Fast, aggressive playstyle.", "gold_cost": 120, "color": Color(0.93, 0.24, 0.24)},
-	{"id": "faded_focus", "icon": "🔵", "name": "Faded Diamond of Focus", "description": "+6% damage. Pure DPS.", "gold_cost": 120, "color": Color(0.25, 0.54, 1.0)},
-	{"id": "faded_vitality", "icon": "🟢", "name": "Faded Diamond of Vitality", "description": "+8% max HP and minor life steal. Survivability.", "gold_cost": 120, "color": Color(0.28, 0.88, 0.42)},
-	{"id": "faded_fortune", "icon": "🟡", "name": "Faded Diamond of Fortune", "description": "+8% gold and loot drop. Farming build.", "gold_cost": 120, "color": Color(1.0, 0.84, 0.24)},
-	{"id": "faded_corruption", "icon": "🟣", "name": "Faded Diamond of Corruption", "description": "Attacks apply shadow burn over time. Demon-theme perfect.", "gold_cost": 140, "color": Color(0.72, 0.32, 0.94)},
-	{"id": "faded_echo", "icon": "🔷", "name": "Faded Diamond of Echo", "description": "Chance to repeat attacks (double cast feel).", "gold_cost": 140, "color": Color(0.36, 0.9, 1.0)},
-	{"id": "faded_void", "icon": "⚫", "name": "Faded Diamond of Void", "description": "Attacks pierce enemies. Great crowd control.", "gold_cost": 140, "color": Color(0.37, 0.38, 0.44)},
-	{"id": "faded_fury", "icon": "🟠", "name": "Faded Diamond of Fury", "description": "Increases attack speed. Aggressive melee builds.", "gold_cost": 130, "color": Color(1.0, 0.54, 0.14)},
-	{"id": "faded_guardian", "icon": "⚪", "name": "Faded Diamond of Guardian", "description": "Temporary shield on hit or low HP. Defensive clutch.", "gold_cost": 130, "color": Color(0.92, 0.94, 1.0)},
-	{"id": "faded_flame_ring", "icon": "🔥", "name": "Faded Diamond of Flame Ring", "description": "Expands your fire aura and ring of flames.", "gold_cost": 150, "color": Color(1.0, 0.39, 0.08)},
-	{"id": "faded_frostbind", "icon": "❄️", "name": "Faded Diamond of Frostbind", "description": "Chance to slow or freeze enemies. Control playstyle.", "gold_cost": 150, "color": Color(0.72, 0.93, 1.0)},
-	{"id": "faded_storm", "icon": "⚡", "name": "Faded Diamond of Storm", "description": "Chain lightning between enemies. Strong and satisfying.", "gold_cost": 150, "color": Color(1.0, 0.94, 0.44)}
+	{"id": "faded_rush", "icon": "R", "name": "Faded Diamond of Rush", "description": "Increases movement speed.", "gold_cost": 120, "color": Color(1.0, 0.48, 0.12)},
+	{"id": "faded_focus", "icon": "Fo", "name": "Faded Diamond of Focus", "description": "Increases attack spell radius.", "gold_cost": 120, "color": Color(0.22, 0.92, 1.0)},
+	{"id": "faded_vitality", "icon": "V", "name": "Faded Diamond of Vitality", "description": "Faster healing rate.", "gold_cost": 120, "color": Color(0.0, 0.78, 0.42)},
+	{"id": "faded_fortune", "icon": "Ft", "name": "Faded Diamond of Fortune", "description": "Increases luck in loot and gold drops.", "gold_cost": 120, "color": Color(1.0, 0.84, 0.24)},
+	{"id": "faded_corruption", "icon": "C", "name": "Faded Diamond of Corruption", "description": "Increases Beyond spell effects.", "gold_cost": 140, "color": Color(0.32, 0.05, 0.72)},
+	{"id": "faded_echo", "icon": "E", "name": "Faded Diamond of Echo", "description": "Increases attack spell effects.", "gold_cost": 140, "color": Color(1.0, 0.08, 0.72)},
+	{"id": "faded_void", "icon": "Vo", "name": "Faded Diamond of Void", "description": "+1 summoned creature.", "gold_cost": 140, "color": Color(0.06, 0.03, 0.22)},
+	{"id": "faded_fury", "icon": "Fu", "name": "Faded Diamond of Fury", "description": "Increases attack spell damage.", "gold_cost": 130, "color": Color(0.92, 0.03, 0.02)},
+	{"id": "faded_guardian", "icon": "G", "name": "Faded Diamond of Guardian", "description": "Increases defensive spell effects.", "gold_cost": 130, "color": Color(0.68, 0.92, 1.0)},
+	{"id": "faded_flame_ring", "icon": "Fl", "name": "Faded Diamond of Flame Ring", "description": "Increases Flame spell effects.", "gold_cost": 150, "color": Color(1.0, 0.28, 0.06)},
+	{"id": "faded_frostbind", "icon": "Fr", "name": "Faded Diamond of Frostbind", "description": "Increases Ice spell effects.", "gold_cost": 150, "color": Color(0.42, 0.82, 1.0)},
+	{"id": "faded_storm", "icon": "S", "name": "Faded Diamond of Storm", "description": "Increases Electricity spell effects.", "gold_cost": 150, "color": Color(0.18, 0.58, 1.0)}
 ]
 const RELIC_CATALOG := [
 	{
 		"id": "teleport_device",
 		"name": "Teleport Device",
-		"description": "A relic anchor that returns you from town to the castle.",
-		"image": "res://assets/images/objects/teleport-device/teleport-device-outer-ring.png"
+		"description": "A relic anchor that returns you from Velmora to the Black Vault.",
+		"image": "res://assets/images/objects/teleport-device/teleport-device-outer-ring.png",
+		"mission_only": true
+	},
+	{
+		"id": "voodoo_doll",
+		"name": "Voodoo Doll",
+		"description": "A hooked little relic that hums when blood is close.",
+		"image": "res://assets/images/objects/relics/voodoo-doll.png",
+		"rarity": "rare"
 	}
 ]
 const SPELL_CATALOG := [
 	# --- Attack ---
-	{"id": "fire_storm",       "name": "Firestorm",          "description": "Fire Storm deals 25% more damage.",                    "diamond_cost": 4,  "category": "attack",  "image": "res://assets/images/spells/attack/firestorm.png"},
-	{"id": "absolute_zero",      "name": "Absolute Zero",         "description": "Freeze all nearby enemies briefly.",                    "diamond_cost": 6,  "category": "attack",  "image": "res://assets/images/spells/attack/AbsoluteZero.png"},
-	{"id": "abyssal_blade",      "name": "Abyssal Blade",         "description": "Shadow slash attack deals dark damage.",                "diamond_cost": 5,  "category": "attack",  "image": "res://assets/images/spells/attack/AbyssalBlade.png"},
-	{"id": "call_from_beyond",   "name": "Call From The Beyond",  "description": "Summon a demon ally from the void.",                   "diamond_cost": 7,  "category": "attack",  "image": "res://assets/images/spells/attack/CallFromTheBeyond.png"},
-	{"id": "electricity_vortex", "name": "Electricity Vortex",    "description": "Lightning chains between nearby enemies.",              "diamond_cost": 6,  "category": "attack",  "image": "res://assets/images/spells/attack/ElectricityVortex.png"},
-	{"id": "icesmash",           "name": "Ice Smash",             "description": "Falling ice crushes enemies below.",                   "diamond_cost": 5,  "category": "attack",  "image": "res://assets/images/spells/attack/Icesmash.png"},
-	{"id": "soul_drain",         "name": "Soul Drain",            "description": "Steal HP directly from enemies.",                      "diamond_cost": 5,  "category": "attack",  "image": "res://assets/images/spells/attack/SoulDrain.png"},
+	{"id": "fire_storm",       "name": "Firestorm",          "description": "Fire Storm deals 25% more damage.",                    "gold_cost": 1000,  "category": "attack",  "image": "res://assets/images/spells/attack/firestorm.png"},
+	{"id": "absolute_zero",      "name": "Absolute Zero",         "description": "Freeze all nearby enemies briefly.",                    "gold_cost": 1000,  "category": "attack",  "image": "res://assets/images/spells/attack/AbsoluteZero.png"},
+	{"id": "abyssal_blade",      "name": "Abyssal Blade",         "description": "Shadow slash attack deals dark damage.",                "gold_cost": 1000,  "category": "attack",  "image": "res://assets/images/spells/attack/AbyssalBlade.png"},
+	{"id": "call_from_beyond",   "name": "Call From The Beyond",  "description": "Summon a demon ally from the void.",                   "gold_cost": 1000,  "category": "attack",  "image": "res://assets/images/spells/attack/CallFromTheBeyond.png"},
+	{"id": "electricity_vortex", "name": "Electricity Vortex",    "description": "Lightning chains between nearby enemies.",              "gold_cost": 1000,  "category": "attack",  "image": "res://assets/images/spells/attack/ElectricityVortex.png"},
+	{"id": "icesmash",           "name": "Ice Smash",             "description": "Falling ice crushes enemies below.",                   "gold_cost": 1000,  "category": "attack",  "image": "res://assets/images/spells/attack/Icesmash.png"},
+	{"id": "soul_drain",         "name": "Soul Drain",            "description": "Steal HP directly from enemies.",                      "gold_cost": 1000,  "category": "attack",  "image": "res://assets/images/spells/attack/SoulDrain.png"},
 	# --- Buff ---
-	{"id": "demonic_frenzy",        "name": "Demonic Frenzy",           "description": "Attack speed greatly increased.",                    "diamond_cost": 5,  "category": "buff",    "image": "res://assets/images/spells/buff/DemonicFrenzy.png"},
-	{"id": "killing_radius",        "name": "Killing Radius",           "description": "Bigger area of effect on all attacks.",              "diamond_cost": 5,  "category": "buff",    "image": "res://assets/images/spells/buff/KillingRadius.png"},
-	{"id": "power_of_underworld",   "name": "Power of the Underworld",  "description": "Significantly increases all damage output.",         "diamond_cost": 6,  "category": "buff",    "image": "res://assets/images/spells/buff/PowerOfTheUnderWorld.png"},
-	{"id": "void_infusion",         "name": "Void Infusion",            "description": "Attacks apply shadow damage on hit.",               "diamond_cost": 6,  "category": "buff",    "image": "res://assets/images/spells/buff/VoidInfusion.png"},
+	{"id": "demonic_frenzy",        "name": "Demonic Frenzy",           "description": "Attack speed greatly increased.",                    "gold_cost": 1000,  "category": "buff",    "image": "res://assets/images/spells/buff/DemonicFrenzy.png"},
+	{"id": "killing_radius",        "name": "Killing Radius",           "description": "Bigger area of effect on all attacks.",              "gold_cost": 1000,  "category": "buff",    "image": "res://assets/images/spells/buff/KillingRadius.png"},
+	{"id": "power_of_underworld",   "name": "Power of the Underworld",  "description": "Significantly increases all damage output.",         "gold_cost": 1000,  "category": "buff",    "image": "res://assets/images/spells/buff/PowerOfTheUnderWorld.png"},
+	{"id": "void_infusion",         "name": "Void Infusion",            "description": "Attacks apply shadow damage on hit.",               "gold_cost": 1000,  "category": "buff",    "image": "res://assets/images/spells/buff/VoidInfusion.png"},
 	# --- Debuff ---
-	{"id": "curse_of_laziness",  "name": "Curse of Laziness",     "description": "Slow all nearby enemies.",                             "diamond_cost": 4,  "category": "debuff",  "image": "res://assets/images/spells/debuff/CurseOfLaziness.png"},
-	{"id": "mark_of_weakness",   "name": "Mark of Weakness",      "description": "Marked enemies take increased damage.",                 "diamond_cost": 4,  "category": "debuff",  "image": "res://assets/images/spells/debuff/MarkOfWeakness.png"},
-	{"id": "slowly_we_rot",      "name": "Slowly We Rot",         "description": "Applies damage over time to all enemies.",              "diamond_cost": 5,  "category": "debuff",  "image": "res://assets/images/spells/debuff/SlowlyWeRot.png"},
+	{"id": "curse_of_laziness",  "name": "Curse of Laziness",     "description": "Slow all nearby enemies.",                             "gold_cost": 1000,  "category": "debuff",  "image": "res://assets/images/spells/debuff/CurseOfLaziness.png"},
+	{"id": "mark_of_weakness",   "name": "Mark of Weakness",      "description": "Marked enemies take increased damage.",                 "gold_cost": 1000,  "category": "debuff",  "image": "res://assets/images/spells/debuff/MarkOfWeakness.png"},
+	{"id": "slowly_we_rot",      "name": "Slowly We Rot",         "description": "Applies damage over time to all enemies.",              "gold_cost": 1000,  "category": "debuff",  "image": "res://assets/images/spells/debuff/SlowlyWeRot.png"},
 	# --- Defense ---
-	{"id": "armor_of_undead",    "name": "Armor of the Undead",   "description": "Absorb a portion of incoming damage.",                  "diamond_cost": 5,  "category": "defense", "image": "res://assets/images/spells/defense/ArmorOfTheUndead.png"},
-	{"id": "eclipse_shield",     "name": "Eclipse Shield",        "description": "Reflects part of damage back to attackers.",            "diamond_cost": 6,  "category": "defense", "image": "res://assets/images/spells/defense/EclipseShield.png"},
-	{"id": "titanium",           "name": "Titanium",              "description": "Reduced damage taken from all sources.",                "diamond_cost": 5,  "category": "defense", "image": "res://assets/images/spells/defense/Titanium.png"},
+	{"id": "armor_of_undead",    "name": "Armor of the Undead",   "description": "Absorb a portion of incoming damage.",                  "gold_cost": 1000,  "category": "defense", "image": "res://assets/images/spells/defense/ArmorOfTheUndead.png"},
+	{"id": "eclipse_shield",     "name": "Eclipse Shield",        "description": "Reflects part of damage back to attackers.",            "gold_cost": 1000,  "category": "defense", "image": "res://assets/images/spells/defense/EclipseShield.png"},
+	{"id": "titanium",           "name": "Titanium",              "description": "Reduced damage taken from all sources.",                "gold_cost": 1000,  "category": "defense", "image": "res://assets/images/spells/defense/Titanium.png"},
 	# --- Healing ---
-	{"id": "reincarnation",      "name": "Reincarnation",         "description": "Faster healing rate at all times.",                     "diamond_cost": 5,  "category": "healing", "image": "res://assets/images/spells/healing/Reincarnation.png"},
-	{"id": "soul_harvest",       "name": "Soul Harvest",          "description": "Heal on each enemy kill.",                              "diamond_cost": 4,  "category": "healing", "image": "res://assets/images/spells/healing/SoulHarvest.png"},
+	{"id": "reincarnation",      "name": "Reincarnation",         "description": "Faster healing rate at all times.",                     "gold_cost": 1000,  "category": "healing", "image": "res://assets/images/spells/healing/Reincarnation.png"},
+	{"id": "soul_harvest",       "name": "Soul Harvest",          "description": "Heal on each enemy kill.",                              "gold_cost": 1000,  "category": "healing", "image": "res://assets/images/spells/healing/SoulHarvest.png"},
 ]
 const SPELL_THEME_CATEGORY_BY_ID := {
 	"fire_storm": "Flame",
@@ -165,6 +199,7 @@ var opening_active := false
 var opening_elapsed := 0.0
 var opening_whisper_revealed := false
 var music_player: AudioStreamPlayer
+var hoofgrove_wilds_music: AudioStreamMP3
 var opening_aura_player: AudioStreamPlayer
 var enemies: Array[Node3D] = []
 var rng := RandomNumberGenerator.new()
@@ -172,12 +207,13 @@ var game_level := 2
 var kills := 0
 var exit_open := false
 var exit_directive_completed := false
-var castle_encounter_spawned := false
-var castle_chests_spawned := false
+var black_vault_encounter_spawned := false
+var black_vault_chests_spawned := false
 var wall_texture: Texture2D
-var town_cobble_texture: Texture2D
-var town_roof_texture: Texture2D
-var town_wood_texture: Texture2D
+var hoofgrove_floor_texture: Texture2D
+var velmora_cobble_texture: Texture2D
+var velmora_roof_texture: Texture2D
+var velmora_wood_texture: Texture2D
 var exit_area: Area3D
 var exit_light: OmniLight3D
 var exit_sprite: Sprite3D
@@ -193,53 +229,79 @@ var active_scroll: Node3D
 var spawned_scroll_game_levels: Array[int] = []
 var idle_seconds := 0.0
 var idle_whisper_cooldown := 0.0
-var reveal_enemies_on_minimap := false
+var reveal_enemies_on_minimap := true
 var possession_fx_played := false
 var camera_zoom := CAMERA_ZOOM_DEFAULT
-var current_area := AREA_CASTLE
-var town_root: Node3D
-var town_built := false
+var camera_shake_time := 0.0
+var camera_shake_duration := 0.0
+var camera_shake_intensity := 0.0
+var current_area := AREA_BLACK_VAULT
+var velmora_root: Node3D
+var velmora_built := false
+var hoofgrove_root: Node3D
+var hoofgrove_built := false
+var hoofgrove_centaurs_spawned := false
+var hoofgrove_centaurs_remaining := 0
+var hoofgrove_hostiles_remaining := 0
+var hoofgrove_chests_spawned := false
+var hoofgrove_flying_birds: Array[Dictionary] = []
 var active_vendor_id := ""
 var vendor_front_texture: Texture2D
 var vendor_side_texture: Texture2D
 var vendor_back_texture: Texture2D
 var diamond_item_texture: Texture2D
-var town_barrel_texture: Texture2D
-var town_vendor_man_texture: Texture2D
-var town_vendor_woman_texture: Texture2D
-var town_vendor_warlock_texture: Texture2D
-var town_vendor_man_face_texture: Texture2D
-var town_vendor_woman_face_texture: Texture2D
-var town_vendor_warlock_face_texture: Texture2D
-var town_tree_textures: Array[Texture2D] = []
+var velmora_barrel_texture: Texture2D
+var velmora_vendor_man_texture: Texture2D
+var velmora_vendor_woman_texture: Texture2D
+var velmora_vendor_warlock_texture: Texture2D
+var velmora_vendor_man_face_texture: Texture2D
+var velmora_vendor_woman_face_texture: Texture2D
+var velmora_vendor_warlock_face_texture: Texture2D
+var torren_blackwell_front_texture: Texture2D
+var torren_blackwell_side_texture: Texture2D
+var torren_blackwell_back_texture: Texture2D
+var torren_blackwell_face_texture: Texture2D
+var torren_blackwell_root: Node3D
+var torren_blackwell_area: Area3D
+var velmora_tree_textures: Array[Texture2D] = []
 var spell_shop_texture: Texture2D
 var spell_shop_scene: PackedScene
 var vendor_sprites: Array[Dictionary] = []
 var owned_faded_diamonds: Dictionary = {}
 var socketed_faded_diamonds: Array[String] = []
 var owned_relics: Dictionary = {}
+var unlocked_maps: Array[String] = []
 var dialogue_flags: Dictionary = {}
+var mission_given_flags: Dictionary = {}
 var active_dialogue_id := ""
+var active_dialogue_npc_id := ""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	rng.randomize()
 	dialogue_flags.clear()
+	mission_given_flags.clear()
 	_load_whisper_texts()
 	_load_scroll_texts()
 	_make_music_player()
 	_make_lighting()
 	_make_camera()
-	_make_castle()
+	_make_black_vault()
 	_make_player()
 	_make_exit()
 	_make_hud()
 	_make_mission_system()
 	_make_whisper_system()
-	if START_IN_TOWN_FOR_TESTING:
-		player.add_gold(TEST_TOWN_START_GOLD)
-		player.add_diamonds(TEST_TOWN_START_DIAMONDS)
-		_enter_town()
+	if START_IN_VELMORA_FOR_TESTING:
+		player.add_gold(TEST_VELMORA_START_GOLD)
+		player.add_diamonds(TEST_VELMORA_START_DIAMONDS)
+		_enter_velmora()
+	elif START_IN_HOOFGROVE_FOR_TESTING:
+		player.add_gold(TEST_VELMORA_START_GOLD)
+		player.add_diamonds(TEST_VELMORA_START_DIAMONDS)
+		_add_relic("teleport_device")
+		_add_map("world-map-velmora-after-torren.png")
+		_enter_hoofgrove_wilds()
 	else:
 		_spawn_encounter()
 		_spawn_chests()
@@ -255,10 +317,12 @@ func _process(delta: float) -> void:
 	if player == null:
 		return
 	camera.global_position = camera.global_position.lerp(player.global_position + _camera_follow_offset(), 0.12)
+	_apply_camera_shake(delta)
 	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
 	if whisper_system != null:
 		whisper_system.update(delta, player)
 	_animate_exit_fx(delta)
+	_animate_hoofgrove_birds(delta)
 	_update_vendor_sprites()
 	_process_idle_whispers(delta)
 	_update_minimap()
@@ -277,6 +341,8 @@ func _input(event: InputEvent) -> void:
 		elif event is InputEventMouseButton and event.pressed:
 			_mark_player_activity()
 			if hud != null and hud.handle_spell_store_mouse_wheel(event):
+				return
+			if hud != null and hud.handle_skill_tree_mouse_wheel(event):
 				return
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				if block_zoom:
@@ -313,7 +379,7 @@ func _make_player() -> void:
 	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
 	player.stats_changed.connect(_on_player_stats_changed)
 	player.damaged.connect(_on_player_damaged)
-	player.firestorm_requested.connect(_on_firestorm_requested)
+	player.attack_spell_requested.connect(_on_attack_spell_requested)
 	player.died.connect(_on_player_died)
 
 func _make_camera() -> void:
@@ -334,11 +400,32 @@ func _adjust_camera_zoom(delta: float) -> void:
 func _reset_camera_zoom() -> void:
 	camera_zoom = CAMERA_ZOOM_DEFAULT
 
+func _shake_camera(intensity: float, duration: float) -> void:
+	camera_shake_intensity = maxf(camera_shake_intensity, intensity)
+	camera_shake_duration = maxf(camera_shake_duration, duration)
+	camera_shake_time = maxf(camera_shake_time, duration)
+
+func _apply_camera_shake(delta: float) -> void:
+	if camera == null or camera_shake_time <= 0.0:
+		return
+	camera_shake_time = maxf(camera_shake_time - delta, 0.0)
+	var duration := maxf(camera_shake_duration, 0.001)
+	var fade := camera_shake_time / duration
+	var strength := camera_shake_intensity * fade * fade
+	camera.global_position += Vector3(
+		rng.randf_range(-strength, strength),
+		rng.randf_range(-strength * 0.5, strength * 0.5),
+		rng.randf_range(-strength, strength)
+	)
+	if camera_shake_time <= 0.0:
+		camera_shake_duration = 0.0
+		camera_shake_intensity = 0.0
+
 func _make_hud() -> void:
 	hud = HudScript.new() as SISHUD
 	add_child(hud)
 	if player != null:
-		player.set_mouse_block_check(Callable(hud, "is_blocking_ui_visible"))
+		player.set_mouse_block_check(Callable(hud, "is_mouse_over_blocking_ui"))
 	hud.resurrect_requested.connect(_on_resurrect_requested)
 	hud.shop_purchase_requested.connect(_on_shop_purchase_requested)
 	hud.shop_closed.connect(_on_shop_closed)
@@ -347,6 +434,8 @@ func _make_hud() -> void:
 	hud.inventory_socket_clear_requested.connect(_on_inventory_socket_clear_requested)
 	hud.dialogue_finished.connect(_on_dialogue_finished)
 	hud.teleport_device_requested.connect(_on_teleport_device_requested)
+	hud.teleport_destination_requested.connect(_on_teleport_destination_requested)
+	hud.spell_slot_spell_selected.connect(_on_spell_slot_spell_selected)
 	hud.update_stats(_stats_for_hud(player.get_stats()))
 	_update_possession()
 
@@ -373,8 +462,8 @@ func _make_whisper_system() -> void:
 
 func _make_music_player() -> void:
 	music_player = AudioStreamPlayer.new()
-	music_player.name = "LevelOneMusic"
-	_set_background_music(LEVEL_ONE_MUSIC)
+	music_player.name = "BlackVaultMusic"
+	_set_background_music(BLACK_VAULT_MUSIC)
 	music_player.volume_db = -7.0
 	add_child(music_player)
 
@@ -391,6 +480,13 @@ func _set_background_music(track: AudioStreamMP3) -> void:
 	music_player.stream = stream_to_use
 	if was_playing and DisplayServer.get_name() != "headless":
 		music_player.play()
+
+func _hoofgrove_wilds_music() -> AudioStreamMP3:
+	if hoofgrove_wilds_music == null:
+		hoofgrove_wilds_music = AudioStreamMP3.load_from_file(HOOFGROVE_WILDS_MUSIC_PATH)
+	if hoofgrove_wilds_music != null:
+		return hoofgrove_wilds_music
+	return VELMORA_MUSIC
 
 func _make_opening_aura_player() -> void:
 	opening_aura_player = AudioStreamPlayer.new()
@@ -472,6 +568,20 @@ func _mark_dialogue_played(dialogue_id: String) -> void:
 		return
 	dialogue_flags[dialogue_id] = true
 
+func _dialogue_id_for_path(path: String) -> String:
+	var file_name := path.strip_edges().get_file().get_basename()
+	return file_name.replace("-", "_").replace(" ", "_")
+
+func _resolve_dialogue_path(path: String) -> String:
+	var clean_path := path.strip_edges().replace("\\", "/")
+	if clean_path.is_empty():
+		return ""
+	if clean_path.begins_with("res://"):
+		return clean_path
+	if clean_path.begins_with("dialogues/"):
+		return "res://%s" % clean_path
+	return "res://dialogues/%s" % clean_path
+
 func _load_dialogue_entries(path: String) -> Array[Dictionary]:
 	var entries: Array[Dictionary] = []
 	if not FileAccess.file_exists(path):
@@ -496,6 +606,28 @@ func _load_dialogue_entries(path: String) -> Array[Dictionary]:
 	_append_dialogue_entry(entries, current_speaker, current_lines)
 	return entries
 
+func _random_incomplete_reply(mission: Dictionary) -> String:
+	var path := _resolve_dialogue_path(String(mission.get("incomplete_replies_file", "")))
+	var lines := _load_dialogue_reply_lines(path)
+	if lines.is_empty():
+		lines = ["Did you forget what I've asked you?"]
+	return lines[rng.randi_range(0, lines.size() - 1)]
+
+func _load_dialogue_reply_lines(path: String) -> Array[String]:
+	var lines: Array[String] = []
+	if path.is_empty() or not FileAccess.file_exists(path):
+		return lines
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_warning("Could not open dialogue reply file: %s" % path)
+		return lines
+	for raw_line in file.get_as_text().split("\n", false):
+		var line := String(raw_line).replace("\r", "").strip_edges()
+		if line.is_empty() or line.begins_with("#") or line.begins_with(";"):
+			continue
+		lines.append(line)
+	return lines
+
 func _append_dialogue_entry(entries: Array[Dictionary], speaker: String, lines: Array[String]) -> void:
 	if speaker.is_empty() or lines.is_empty():
 		return
@@ -506,33 +638,57 @@ func _append_dialogue_entry(entries: Array[Dictionary], speaker: String, lines: 
 
 func _on_missions_changed(area: String, missions: Array[Dictionary]) -> void:
 	if hud == null:
+		_sync_torren_blackwell_visibility()
 		return
-	hud.set_missions(_mission_area_title(area), missions)
 	if area == current_area:
+		hud.set_missions(_mission_area_title(area), _missions_for_display(area, missions))
 		_update_objective()
+	_sync_torren_blackwell_visibility()
 
-func _on_mission_completed(_area: String, mission: Dictionary) -> void:
+func _on_mission_completed(area: String, mission: Dictionary) -> void:
 	var mission_text := String(mission.get("text", ""))
+	if area == AREA_BLACK_VAULT and String(mission.get("id", "")) == "clear_black_vault":
+		mission_text = _format_black_vault_mission_text(mission_text)
 	if mission_text.is_empty():
 		return
 	_say_whisper("Done. %s" % mission_text)
 
 func _on_mission_action_requested(_area: String, action: Dictionary, _mission: Dictionary) -> void:
+	_apply_mission_action(action)
+
+func _apply_mission_action(action: Dictionary) -> bool:
 	var action_type := String(action.get("type", "")).to_lower()
 	var target := String(action.get("target", ""))
 	match action_type:
 		"add_relic":
 			if _add_relic(target):
 				_say_whisper("Relic gained. %s" % _relic_display_name(target))
+				return true
+		"add_map":
+			if _add_map(target):
+				_say_whisper("Map revealed. %s" % _map_display_name(target))
+				return true
+		"add_spell", "learn_spell", "unlock_spell":
+			if _learn_spell_reward(target):
+				_say_whisper("Spell learned. %s" % _spell_display_name(target))
+				return true
+		"unlock_area_mission":
+			var parts := target.split(":", false, 1)
+			if parts.size() == 2 and mission_system != null:
+				mission_system.unlock_mission(String(parts[0]).strip_edges(), String(parts[1]).strip_edges())
+				return true
 		_:
 			pass
+	return false
 
 func _mission_area_title(area: String) -> String:
 	match area:
-		AREA_TOWN:
-			return "Town"
-		AREA_CASTLE:
-			return "Castle"
+		AREA_VELMORA:
+			return "Velmora"
+		AREA_HOOFGROVE_WILDS:
+			return "Hoofgrove Wilds"
+		AREA_BLACK_VAULT:
+			return "Black Vault"
 		_:
 			return area.capitalize()
 
@@ -547,6 +703,43 @@ func _active_mission_count(area: String) -> int:
 		return 0
 	return mission_system.get_active_missions(area).size()
 
+func _missions_for_display(area: String, missions: Array[Dictionary]) -> Array[Dictionary]:
+	var display_missions: Array[Dictionary] = []
+	for mission in missions:
+		var display_mission := mission.duplicate(true)
+		var mission_id := String(display_mission.get("id", ""))
+		if area == AREA_BLACK_VAULT and mission_id == "clear_black_vault":
+			var formatted_text := _format_black_vault_mission_text(String(display_mission.get("title", display_mission.get("text", ""))))
+			display_mission["title"] = formatted_text
+			display_mission["text"] = formatted_text
+		display_missions.append(display_mission)
+	return display_missions
+
+func _mission_text(area: String, mission_id: String, fallback: String) -> String:
+	if mission_system == null:
+		return fallback
+	for mission in mission_system.get_active_missions(area):
+		if String(mission.get("id", "")) == mission_id:
+			var mission_text := String(mission.get("title", mission.get("text", ""))).strip_edges()
+			if not mission_text.is_empty():
+				return mission_text
+	return fallback
+
+func _format_black_vault_mission_text(template: String) -> String:
+	var formatted := template
+	var first_placeholder := formatted.find("%s")
+	if first_placeholder >= 0:
+		formatted = formatted.substr(0, first_placeholder) + str(kills) + formatted.substr(first_placeholder + 2)
+	var second_placeholder := formatted.find("%s")
+	if second_placeholder >= 0:
+		formatted = formatted.substr(0, second_placeholder) + str(STAGE_ENEMY_COUNT) + formatted.substr(second_placeholder + 2)
+	return formatted
+
+func _refresh_current_missions_display() -> void:
+	if hud == null or mission_system == null:
+		return
+	hud.set_missions(_mission_area_title(current_area), _missions_for_display(current_area, mission_system.get_active_missions(current_area)))
+
 func _complete_vendor_talk_missions(vendor_id: String) -> void:
 	if mission_system == null:
 		return
@@ -557,6 +750,73 @@ func _complete_vendor_talk_missions(vendor_id: String) -> void:
 		"npc_name": npc_name,
 		"target": npc_name
 	})
+
+func _complete_teleport_destination_missions(area: String, destination_id: String) -> void:
+	if mission_system == null:
+		return
+	mission_system.complete_matching(area, "teleport_to", {
+		"destination_id": destination_id,
+		"target": destination_id,
+		"relic_id": "teleport_device"
+	})
+
+func _active_talk_mission_for_vendor(vendor_id: String) -> Dictionary:
+	if mission_system == null:
+		return {}
+	var npc_name := _vendor_npc_name(vendor_id)
+	var matches := mission_system.get_active_matching_missions(current_area, "talk_to_npc", {
+		"vendor_id": vendor_id,
+		"npc_id": npc_name,
+		"npc_name": npc_name,
+		"target": npc_name
+	})
+	return matches[0] if not matches.is_empty() else {}
+
+func _active_talk_mission_for_npc(npc_id: String, npc_name: String) -> Dictionary:
+	if mission_system == null:
+		return {}
+	var matches := mission_system.get_active_matching_missions(current_area, "talk_to_npc", {
+		"npc_id": npc_id,
+		"npc_name": npc_name,
+		"target": npc_id
+	})
+	return matches[0] if not matches.is_empty() else {}
+
+func _active_incomplete_mission_for_giver(npc_id: String) -> Dictionary:
+	if mission_system == null:
+		return {}
+	var wanted_id := _mission_lookup_key(npc_id)
+	for area in MISSION_AREAS:
+		for mission in mission_system.get_active_missions(String(area)):
+			var giver_id := _mission_lookup_key(String(mission.get("giver_npc_id", "")))
+			if not giver_id.is_empty() and giver_id == wanted_id:
+				return mission
+	return {}
+
+func _mission_lookup_key(value: String) -> String:
+	return value.strip_edges().to_lower().replace(" ", "_").replace("-", "_")
+
+func _grant_mission_given_items(area: String, mission: Dictionary) -> void:
+	if mission.is_empty():
+		return
+	var grants: Array = mission.get("given", [])
+	if grants.is_empty():
+		return
+	var mission_id := String(mission.get("id", "")).strip_edges()
+	if mission_id.is_empty():
+		return
+	var grant_key := "%s:%s" % [area, mission_id]
+	if bool(mission_given_flags.get(grant_key, false)):
+		return
+	var did_apply := false
+	for grant_variant in grants:
+		if grant_variant is Dictionary:
+			did_apply = _apply_mission_action((grant_variant as Dictionary).duplicate(true)) or did_apply
+	if did_apply:
+		mission_given_flags[grant_key] = true
+
+func _dialogue_path_for_mission(mission: Dictionary) -> String:
+	return _resolve_dialogue_path(String(mission.get("dialogue_file", "")))
 
 func _load_whisper_file_as_text(path: String) -> String:
 	var lines := _load_whisper_file_lines(path)
@@ -751,9 +1011,9 @@ func _make_lighting() -> void:
 	moon.shadow_enabled = true
 	add_child(moon)
 
-func _make_castle() -> void:
+func _make_black_vault() -> void:
 	var floor_body: StaticBody3D = StaticBody3D.new()
-	floor_body.name = "CastleFloor"
+	floor_body.name = "BlackVaultFloor"
 	add_child(floor_body)
 
 	var floor_collision := CollisionShape3D.new()
@@ -1016,23 +1276,479 @@ func _make_torch(position: Vector3) -> void:
 	flame.material_override = _material(Color(1.0, 0.28, 0.04), Color(1.0, 0.24, 0.02), 1.8)
 	add_child(flame)
 
-func _make_town() -> void:
-	if town_built:
+func _make_velmora() -> void:
+	if velmora_built:
 		return
-	town_built = true
+	velmora_built = true
 	_load_vendor_textures()
-	town_root = Node3D.new()
-	town_root.name = "Town"
-	town_root.position = TOWN_ORIGIN
-	add_child(town_root)
-	_make_town_floor()
-	_make_town_walls()
-	_make_town_backdrop()
-	_make_town_portal_marker(Vector3(0.0, 0.0, 20.0))
-	_make_town_store("diamond_vendor", "Syra's Diamonds", Vector3(-14.0, 0.0, 2.5), Color(0.035, 0.09, 0.12), Color(0.1, 0.78, 1.0), 90.0)
-	_make_town_store("spell_vendor", "Spells & Rituals", Vector3(14.0, 0.0, 2.0), Color(0.13, 0.035, 0.16), Color(0.76, 0.18, 1.0), -90.0)
-	_make_town_store("relic_vendor", "Aldric's Stall", Vector3(0.0, 0.0, -13.5), Color(0.13, 0.09, 0.035), Color(0.95, 0.66, 0.18), 0.0)
-	_make_town_street_dressing()
+	velmora_root = Node3D.new()
+	velmora_root.name = "Velmora"
+	velmora_root.position = VELMORA_ORIGIN
+	add_child(velmora_root)
+	_make_velmora_floor()
+	_make_velmora_walls()
+	_make_velmora_backdrop()
+	_make_velmora_portal_marker(Vector3(0.0, 0.0, 20.0))
+	_make_velmora_store("diamond_vendor", "Syra's Diamonds", Vector3(-14.0, 0.0, 2.5), Color(0.035, 0.09, 0.12), Color(0.1, 0.78, 1.0), 90.0)
+	_make_velmora_store("spell_vendor", "Spells & Rituals", Vector3(14.0, 0.0, 2.0), Color(0.13, 0.035, 0.16), Color(0.76, 0.18, 1.0), -90.0)
+	_make_velmora_store("relic_vendor", "Aldric's Stall", Vector3(0.0, 0.0, -13.5), Color(0.13, 0.09, 0.035), Color(0.95, 0.66, 0.18), 0.0)
+	_make_torren_blackwell_npc()
+	_make_velmora_street_dressing()
+	_sync_torren_blackwell_visibility()
+
+func _make_hoofgrove_wilds() -> void:
+	if hoofgrove_built:
+		return
+	hoofgrove_built = true
+	_load_vendor_textures()
+	hoofgrove_root = Node3D.new()
+	hoofgrove_root.name = "HoofgroveWilds"
+	hoofgrove_root.position = HOOFGROVE_ORIGIN
+	add_child(hoofgrove_root)
+
+	var floor_body := StaticBody3D.new()
+	floor_body.name = "HoofgroveFloor"
+	hoofgrove_root.add_child(floor_body)
+
+	var floor_collision := CollisionShape3D.new()
+	var floor_shape := BoxShape3D.new()
+	floor_shape.size = Vector3(HOOFGROVE_HALF_SIZE * 2.0, 0.35, HOOFGROVE_HALF_SIZE * 2.0)
+	floor_collision.shape = floor_shape
+	floor_collision.position.y = -0.2
+	floor_body.add_child(floor_collision)
+
+	var floor_mesh := MeshInstance3D.new()
+	var floor_plane := PlaneMesh.new()
+	floor_plane.size = Vector2(HOOFGROVE_HALF_SIZE * 2.0, HOOFGROVE_HALF_SIZE * 2.0)
+	floor_mesh.mesh = floor_plane
+	floor_mesh.material_override = _hoofgrove_floor_material()
+	floor_body.add_child(floor_mesh)
+	_make_hoofgrove_boundaries()
+
+	var arrival := Node3D.new()
+	arrival.name = "HoofgroveArrivalAnchor"
+	arrival.position = Vector3(0.0, 0.0, 34.0)
+	hoofgrove_root.add_child(arrival)
+	var ring := MeshInstance3D.new()
+	var ring_mesh := TorusMesh.new()
+	ring_mesh.inner_radius = 1.05
+	ring_mesh.outer_radius = 1.28
+	ring_mesh.ring_segments = 42
+	ring_mesh.rings = 8
+	ring.mesh = ring_mesh
+	ring.position.y = 1.8
+	ring.rotation_degrees.x = 90.0
+	ring.material_override = _portal_material(Color(0.18, 0.52, 0.18, 0.62), Color(0.45, 0.9, 0.28), 1.4)
+	arrival.add_child(ring)
+
+	var light := OmniLight3D.new()
+	light.position = Vector3(0.0, 2.0, 34.0)
+	light.light_color = Color(0.58, 0.9, 0.36)
+	light.light_energy = 2.1
+	light.omni_range = 8.0
+	hoofgrove_root.add_child(light)
+
+	var canopy_light := DirectionalLight3D.new()
+	canopy_light.name = "HoofgroveCanopyLight"
+	canopy_light.rotation_degrees = Vector3(-58.0, -28.0, 0.0)
+	canopy_light.light_color = Color(0.58, 0.82, 0.48)
+	canopy_light.light_energy = 0.42
+	hoofgrove_root.add_child(canopy_light)
+
+	_make_velmora_label(hoofgrove_root, "Hoofgrove Wilds", Vector3(0.0, 3.0, 30.5), Color(0.72, 0.92, 0.46), 30)
+	_make_hoofgrove_ground_detail()
+	_make_hoofgrove_forest()
+	_make_hoofgrove_wildlife()
+
+func _make_hoofgrove_boundaries() -> void:
+	if hoofgrove_root == null:
+		return
+	var thickness := 3.0
+	var height := 5.2
+	var half := HOOFGROVE_HALF_SIZE - 1.25
+	_make_hoofgrove_boundary_wall(Vector3(0.0, height * 0.5, -half - thickness * 0.5), Vector3(half * 2.0 + thickness * 2.0, height, thickness))
+	_make_hoofgrove_boundary_wall(Vector3(0.0, height * 0.5, half + thickness * 0.5), Vector3(half * 2.0 + thickness * 2.0, height, thickness))
+	_make_hoofgrove_boundary_wall(Vector3(-half - thickness * 0.5, height * 0.5, 0.0), Vector3(thickness, height, half * 2.0))
+	_make_hoofgrove_boundary_wall(Vector3(half + thickness * 0.5, height * 0.5, 0.0), Vector3(thickness, height, half * 2.0))
+	_make_hoofgrove_boundary_treeline()
+
+func _make_hoofgrove_boundary_wall(position: Vector3, size: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.name = "HoofgroveTreeWallCollider"
+	body.position = position
+	hoofgrove_root.add_child(body)
+
+	var collider := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collider.shape = shape
+	body.add_child(collider)
+
+func _make_hoofgrove_boundary_treeline() -> void:
+	if velmora_tree_textures.is_empty():
+		return
+	var inner_half := HOOFGROVE_HALF_SIZE - 2.1
+	var mid_half := HOOFGROVE_HALF_SIZE - 0.65
+	var outer_half := HOOFGROVE_HALF_SIZE + 0.85
+	var step := 2.35
+	var row_offsets := [-1.1, 0.35, 1.65]
+	var count := int(floor((inner_half * 2.0) / step))
+	for i in range(count + 1):
+		var coordinate := -inner_half + float(i) * step
+		var stagger := 0.55 if i % 2 == 0 else -0.55
+		for row_index in range(row_offsets.size()):
+			var row_shift: float = float(row_offsets[row_index])
+			var scale_value := rng.randf_range(1.5, 2.25) + float(row_index) * 0.14
+			_make_hoofgrove_tree_sprite(Vector3(coordinate + stagger, 0.0, -mid_half + row_shift), scale_value)
+			_make_hoofgrove_tree_sprite(Vector3(coordinate - stagger, 0.0, mid_half - row_shift), scale_value)
+			_make_hoofgrove_tree_sprite(Vector3(-mid_half + row_shift, 0.0, coordinate - stagger), scale_value)
+			_make_hoofgrove_tree_sprite(Vector3(mid_half - row_shift, 0.0, coordinate + stagger), scale_value)
+	_make_hoofgrove_tree_sprite(Vector3(-outer_half, 0.0, -outer_half), rng.randf_range(2.0, 2.5))
+	_make_hoofgrove_tree_sprite(Vector3(outer_half, 0.0, -outer_half), rng.randf_range(2.0, 2.5))
+	_make_hoofgrove_tree_sprite(Vector3(-outer_half, 0.0, outer_half), rng.randf_range(2.0, 2.5))
+	_make_hoofgrove_tree_sprite(Vector3(outer_half, 0.0, outer_half), rng.randf_range(2.0, 2.5))
+
+func _make_hoofgrove_forest() -> void:
+	var fixed_trees := [
+		Vector3(-13.0, 0.0, 30.0), Vector3(12.0, 0.0, 29.0),
+		Vector3(-22.0, 0.0, 18.0), Vector3(20.0, 0.0, 15.0),
+		Vector3(-26.0, 0.0, 0.0), Vector3(25.0, 0.0, -2.0),
+		Vector3(-18.0, 0.0, -21.0), Vector3(19.0, 0.0, -24.0),
+		Vector3(-5.0, 0.0, -36.0), Vector3(7.0, 0.0, -38.0)
+	]
+	for position in fixed_trees:
+		_make_hoofgrove_tree_sprite(position, rng.randf_range(1.05, 1.45))
+
+	for _i in range(58):
+		var position := _random_hoofgrove_tree_position()
+		var scale_value := rng.randf_range(0.82, 1.34)
+		_make_hoofgrove_tree_sprite(position, scale_value)
+
+	for _i in range(18):
+		_make_hoofgrove_underbrush(_random_hoofgrove_tree_position(), rng.randf_range(0.45, 0.95))
+
+func _make_hoofgrove_ground_detail() -> void:
+	if hoofgrove_root == null:
+		return
+	var leaf_materials: Array[StandardMaterial3D] = [
+		_material(Color(0.26, 0.18, 0.075), Color.BLACK, 0.0),
+		_material(Color(0.18, 0.25, 0.075), Color.BLACK, 0.0),
+		_material(Color(0.33, 0.11, 0.04), Color.BLACK, 0.0),
+		_material(Color(0.38, 0.29, 0.08), Color.BLACK, 0.0)
+	]
+	var stone_materials: Array[StandardMaterial3D] = [
+		_material(Color(0.18, 0.17, 0.145), Color.BLACK, 0.0),
+		_material(Color(0.24, 0.23, 0.2), Color.BLACK, 0.0),
+		_material(Color(0.12, 0.13, 0.115), Color.BLACK, 0.0)
+	]
+	var branch_material := _material(Color(0.13, 0.075, 0.035), Color.BLACK, 0.0)
+	var wet_mud_material := _material(Color(0.06, 0.045, 0.03), Color(0.015, 0.012, 0.008), 0.04)
+
+	for _i in range(34):
+		_make_hoofgrove_mud_patch(_random_hoofgrove_ground_position(), rng.randf_range(0.75, 1.9), wet_mud_material)
+	for _i in range(150):
+		var material := leaf_materials[rng.randi_range(0, leaf_materials.size() - 1)]
+		_make_hoofgrove_leaf_litter(_random_hoofgrove_ground_position(false), material)
+	for _i in range(64):
+		var material := stone_materials[rng.randi_range(0, stone_materials.size() - 1)]
+		_make_hoofgrove_ground_stone(_random_hoofgrove_ground_position(false), material)
+	for _i in range(18):
+		var material := stone_materials[rng.randi_range(0, stone_materials.size() - 1)]
+		_make_hoofgrove_boulder(_random_hoofgrove_ground_position(), rng.randf_range(0.55, 1.65), material)
+	for _i in range(46):
+		_make_hoofgrove_ground_branch(_random_hoofgrove_ground_position(false), rng.randf_range(0.55, 1.55), branch_material)
+
+func _random_hoofgrove_ground_position(keep_spawn_clear: bool = true) -> Vector3:
+	for _attempt in range(60):
+		var position := Vector3(
+			rng.randf_range(-HOOFGROVE_HALF_SIZE + 2.0, HOOFGROVE_HALF_SIZE - 2.0),
+			0.0,
+			rng.randf_range(-HOOFGROVE_HALF_SIZE + 2.0, HOOFGROVE_HALF_SIZE - 2.0)
+		)
+		if keep_spawn_clear and position.distance_to(Vector3(0.0, 0.0, 34.0)) < 5.0:
+			continue
+		return position
+	return Vector3(rng.randf_range(-34.0, 34.0), 0.0, rng.randf_range(-34.0, 22.0))
+
+func _make_hoofgrove_mud_patch(position: Vector3, scale_value: float, material: Material) -> void:
+	var patch := MeshInstance3D.new()
+	patch.name = "HoofgroveMudPatch"
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 1.0
+	mesh.bottom_radius = 1.0
+	mesh.height = 0.014
+	mesh.radial_segments = 18
+	patch.mesh = mesh
+	patch.position = position + Vector3(0.0, 0.012, 0.0)
+	patch.scale = Vector3(scale_value * rng.randf_range(0.8, 1.55), 1.0, scale_value * rng.randf_range(0.45, 1.0))
+	patch.rotation_degrees.y = rng.randf_range(0.0, 360.0)
+	patch.material_override = material
+	patch.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	hoofgrove_root.add_child(patch)
+
+func _make_hoofgrove_leaf_litter(position: Vector3, material: Material) -> void:
+	var leaf := MeshInstance3D.new()
+	leaf.name = "HoofgroveLeafLitter"
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(rng.randf_range(0.12, 0.32), 0.012, rng.randf_range(0.04, 0.11))
+	leaf.mesh = mesh
+	leaf.position = position + Vector3(0.0, 0.026, 0.0)
+	leaf.rotation_degrees = Vector3(0.0, rng.randf_range(0.0, 360.0), rng.randf_range(-8.0, 8.0))
+	leaf.material_override = material
+	leaf.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	hoofgrove_root.add_child(leaf)
+
+func _make_hoofgrove_ground_stone(position: Vector3, material: Material) -> void:
+	var stone := MeshInstance3D.new()
+	stone.name = "HoofgroveGroundStone"
+	var mesh := SphereMesh.new()
+	mesh.radius = rng.randf_range(0.08, 0.2)
+	mesh.height = rng.randf_range(0.08, 0.18)
+	stone.mesh = mesh
+	stone.position = position + Vector3(0.0, 0.045, 0.0)
+	stone.scale = Vector3(rng.randf_range(0.9, 1.45), rng.randf_range(0.28, 0.55), rng.randf_range(0.75, 1.25))
+	stone.rotation_degrees.y = rng.randf_range(0.0, 360.0)
+	stone.material_override = material
+	hoofgrove_root.add_child(stone)
+
+func _make_hoofgrove_boulder(position: Vector3, scale_value: float, material: Material) -> void:
+	var boulder := MeshInstance3D.new()
+	boulder.name = "HoofgroveBoulder"
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.55
+	mesh.height = 0.72
+	mesh.radial_segments = 14
+	mesh.rings = 7
+	boulder.mesh = mesh
+	boulder.position = position + Vector3(0.0, 0.18 * scale_value, 0.0)
+	boulder.scale = Vector3(
+		scale_value * rng.randf_range(0.9, 1.7),
+		scale_value * rng.randf_range(0.34, 0.82),
+		scale_value * rng.randf_range(0.75, 1.45)
+	)
+	boulder.rotation_degrees = Vector3(rng.randf_range(-4.0, 4.0), rng.randf_range(0.0, 360.0), rng.randf_range(-5.0, 5.0))
+	boulder.material_override = material
+	hoofgrove_root.add_child(boulder)
+
+	if rng.randf() < 0.38:
+		var moss := MeshInstance3D.new()
+		moss.name = "HoofgroveBoulderMoss"
+		var moss_mesh := CylinderMesh.new()
+		moss_mesh.top_radius = 0.42
+		moss_mesh.bottom_radius = 0.42
+		moss_mesh.height = 0.012
+		moss_mesh.radial_segments = 12
+		moss.mesh = moss_mesh
+		moss.position = boulder.position + Vector3(rng.randf_range(-0.16, 0.16), 0.24 * scale_value, rng.randf_range(-0.16, 0.16))
+		moss.scale = Vector3(scale_value * rng.randf_range(0.45, 0.95), 1.0, scale_value * rng.randf_range(0.28, 0.65))
+		moss.rotation_degrees.y = rng.randf_range(0.0, 360.0)
+		moss.material_override = _material(Color(0.055, 0.16, 0.045), Color(0.01, 0.055, 0.012), 0.06)
+		moss.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		hoofgrove_root.add_child(moss)
+
+func _make_hoofgrove_ground_branch(position: Vector3, length: float, material: Material) -> void:
+	var branch := _make_decoration_bar(length, rng.randf_range(0.035, 0.065), material)
+	branch.name = "HoofgroveFallenBranch"
+	branch.position = position + Vector3(0.0, 0.052, 0.0)
+	branch.rotation_degrees = Vector3(rng.randf_range(-3.0, 3.0), rng.randf_range(0.0, 360.0), rng.randf_range(-4.0, 4.0))
+	branch.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	hoofgrove_root.add_child(branch)
+	if rng.randf() < 0.45:
+		var twig := _make_decoration_bar(length * rng.randf_range(0.22, 0.42), rng.randf_range(0.02, 0.035), material)
+		twig.name = "HoofgroveFallenTwig"
+		twig.position = branch.position + Vector3(rng.randf_range(-0.22, 0.22), 0.01, rng.randf_range(-0.22, 0.22))
+		twig.rotation_degrees = branch.rotation_degrees + Vector3(0.0, rng.randf_range(35.0, 85.0), 0.0)
+		twig.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		hoofgrove_root.add_child(twig)
+
+func _random_hoofgrove_tree_position() -> Vector3:
+	for _attempt in range(80):
+		var position := Vector3(
+			rng.randf_range(-HOOFGROVE_HALF_SIZE + 3.0, HOOFGROVE_HALF_SIZE - 3.0),
+			0.0,
+			rng.randf_range(-HOOFGROVE_HALF_SIZE + 3.0, HOOFGROVE_HALF_SIZE - 3.0)
+		)
+		if position.distance_to(Vector3(0.0, 0.0, 34.0)) < 8.0:
+			continue
+		if absf(position.x) < 24.0 and absf(position.z) < 30.0:
+			continue
+		if absf(position.x) < 5.5 and position.z > -10.0 and position.z < 38.0:
+			continue
+		return position
+	return Vector3(rng.randf_range(-35.0, 35.0), 0.0, rng.randf_range(-35.0, -18.0))
+
+func _make_hoofgrove_tree_sprite(position: Vector3, scale_value: float) -> void:
+	if hoofgrove_root == null or velmora_tree_textures.is_empty():
+		return
+	var texture := velmora_tree_textures[rng.randi_range(0, velmora_tree_textures.size() - 1)]
+	var sprite := Sprite3D.new()
+	sprite.name = "HoofgroveVelmoraTree"
+	sprite.texture = texture
+	sprite.pixel_size = 0.0072
+	sprite.shaded = true
+	sprite.double_sided = true
+	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+	sprite.position = position + Vector3(0.0, 1.95 * scale_value, 0.0)
+	sprite.scale = Vector3.ONE * scale_value
+	sprite.modulate = Color(0.7, 0.86, 0.62, 1.0)
+	hoofgrove_root.add_child(sprite)
+
+func _make_hoofgrove_underbrush(position: Vector3, scale_value: float) -> void:
+	if hoofgrove_root == null:
+		return
+	var brush := MeshInstance3D.new()
+	brush.name = "HoofgroveUnderbrush"
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.52
+	mesh.height = 0.42
+	brush.mesh = mesh
+	brush.position = position + Vector3(0.0, 0.22, 0.0)
+	brush.scale = Vector3(1.4, 0.45, 0.9) * scale_value
+	brush.material_override = _material(Color(0.055, 0.19, 0.06), Color(0.01, 0.08, 0.02), 0.08)
+	hoofgrove_root.add_child(brush)
+
+func _make_hoofgrove_wildlife() -> void:
+	if hoofgrove_root == null:
+		return
+	hoofgrove_flying_birds.clear()
+	var bird_material := _material(Color(0.018, 0.019, 0.018), Color.BLACK, 0.0)
+	var wing_material := _material(Color(0.028, 0.03, 0.028), Color.BLACK, 0.0)
+	for _i in range(8):
+		var center := Vector3(rng.randf_range(-29.0, 29.0), rng.randf_range(7.0, 10.5), rng.randf_range(-30.0, 24.0))
+		_make_hoofgrove_flying_bird(center, rng.randf_range(5.5, 14.0), rng.randf_range(0.18, 0.42), bird_material, wing_material)
+	for _i in range(18):
+		var position := _random_hoofgrove_tree_position()
+		position += Vector3(rng.randf_range(-0.45, 0.45), rng.randf_range(2.6, 4.9), rng.randf_range(-0.28, 0.28))
+		_make_hoofgrove_perched_bird(position, rng.randf_range(0.65, 1.15), bird_material, wing_material)
+
+func _make_hoofgrove_flying_bird(center: Vector3, orbit_radius: float, speed: float, bird_material: Material, wing_material: Material) -> void:
+	var root := _make_hoofgrove_bird_visual("HoofgroveFlyingBird", bird_material, wing_material, 1.0)
+	root.position = center
+	hoofgrove_root.add_child(root)
+	var left_wing := root.get_node_or_null("LeftWing") as MeshInstance3D
+	var right_wing := root.get_node_or_null("RightWing") as MeshInstance3D
+	hoofgrove_flying_birds.append({
+		"root": root,
+		"left_wing": left_wing,
+		"right_wing": right_wing,
+		"center": center,
+		"radius": orbit_radius,
+		"speed": speed,
+		"phase": rng.randf_range(0.0, TAU),
+		"flap": rng.randf_range(0.0, TAU)
+	})
+
+func _make_hoofgrove_perched_bird(position: Vector3, scale_value: float, bird_material: Material, wing_material: Material) -> void:
+	var root := _make_hoofgrove_bird_visual("HoofgrovePerchedBird", bird_material, wing_material, scale_value)
+	root.position = position
+	root.rotation_degrees = Vector3(0.0, rng.randf_range(0.0, 360.0), 0.0)
+	hoofgrove_root.add_child(root)
+
+	var perch := _make_decoration_bar(rng.randf_range(0.45, 0.9) * scale_value, 0.025 * scale_value, _material(Color(0.11, 0.065, 0.03), Color.BLACK, 0.0))
+	perch.name = "HoofgroveBirdPerch"
+	perch.position = position + Vector3(0.0, -0.045 * scale_value, 0.0)
+	perch.rotation_degrees = Vector3(rng.randf_range(-4.0, 4.0), root.rotation_degrees.y + rng.randf_range(-24.0, 24.0), rng.randf_range(-5.0, 5.0))
+	hoofgrove_root.add_child(perch)
+
+func _make_hoofgrove_bird_visual(node_name: String, bird_material: Material, wing_material: Material, scale_value: float) -> Node3D:
+	var root := Node3D.new()
+	root.name = node_name
+	root.scale = Vector3.ONE * scale_value
+
+	var body := MeshInstance3D.new()
+	body.name = "Body"
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(0.18, 0.065, 0.08)
+	body.mesh = body_mesh
+	body.material_override = bird_material
+	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(body)
+
+	var head := MeshInstance3D.new()
+	head.name = "Head"
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.045
+	head_mesh.height = 0.06
+	head.mesh = head_mesh
+	head.position = Vector3(0.1, 0.025, 0.0)
+	head.material_override = bird_material
+	head.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(head)
+
+	var left_wing := _make_decoration_bar(0.3, 0.035, wing_material)
+	left_wing.name = "LeftWing"
+	left_wing.position = Vector3(-0.05, 0.0, -0.085)
+	left_wing.rotation_degrees = Vector3(0.0, 0.0, -18.0)
+	left_wing.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(left_wing)
+
+	var right_wing := _make_decoration_bar(0.3, 0.035, wing_material)
+	right_wing.name = "RightWing"
+	right_wing.position = Vector3(-0.05, 0.0, 0.085)
+	right_wing.rotation_degrees = Vector3(0.0, 0.0, 18.0)
+	right_wing.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(right_wing)
+	return root
+
+func _animate_hoofgrove_birds(delta: float) -> void:
+	if current_area != AREA_HOOFGROVE_WILDS:
+		return
+	for i in range(hoofgrove_flying_birds.size()):
+		var bird := hoofgrove_flying_birds[i]
+		var root := bird["root"] as Node3D
+		if root == null:
+			continue
+		var center: Vector3 = bird["center"]
+		var radius: float = float(bird["radius"])
+		var speed: float = float(bird["speed"])
+		var phase: float = float(bird["phase"]) + delta * speed
+		var flap: float = float(bird["flap"]) + delta * 9.5
+		bird["phase"] = phase
+		bird["flap"] = flap
+		var offset := Vector3(cos(phase) * radius, sin(phase * 1.7) * 0.55, sin(phase) * radius * 0.62)
+		root.position = center + offset
+		var tangent := Vector3(-sin(phase), 0.0, cos(phase) * 0.62)
+		if tangent.length_squared() > 0.001:
+			root.rotation.y = atan2(tangent.x, tangent.z)
+		var flap_angle := 18.0 + sin(flap) * 24.0
+		var left_wing := bird["left_wing"] as MeshInstance3D
+		var right_wing := bird["right_wing"] as MeshInstance3D
+		if left_wing != null:
+			left_wing.rotation_degrees.z = -flap_angle
+		if right_wing != null:
+			right_wing.rotation_degrees.z = flap_angle
+
+func _make_hoofgrove_tree(position: Vector3, scale_value: float) -> void:
+	if hoofgrove_root == null:
+		return
+	var root := Node3D.new()
+	root.name = "HoofgroveTree"
+	root.position = position
+	root.scale = Vector3.ONE * scale_value
+	hoofgrove_root.add_child(root)
+
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.16
+	trunk_mesh.bottom_radius = 0.25
+	trunk_mesh.height = 2.6
+	trunk.mesh = trunk_mesh
+	trunk.position.y = 1.3
+	trunk.material_override = _material(Color(0.16, 0.09, 0.045), Color.BLACK, 0.0)
+	root.add_child(trunk)
+
+	var leaf_material := _material(Color(0.08, 0.28, 0.11), Color(0.02, 0.12, 0.04), 0.16)
+	for offset in [Vector3(0.0, 2.65, 0.0), Vector3(0.48, 2.38, 0.1), Vector3(-0.48, 2.34, -0.08)]:
+		var leaves := MeshInstance3D.new()
+		var leaves_mesh := SphereMesh.new()
+		leaves_mesh.radius = 0.72
+		leaves_mesh.height = 1.05
+		leaves.mesh = leaves_mesh
+		leaves.position = offset
+		leaves.material_override = leaf_material
+		root.add_child(leaves)
 
 func _load_vendor_textures() -> void:
 	if vendor_front_texture == null and ResourceLoader.exists(VENDOR_FRONT_TEXTURE_PATH):
@@ -1041,75 +1757,88 @@ func _load_vendor_textures() -> void:
 		vendor_side_texture = load(VENDOR_SIDE_TEXTURE_PATH) as Texture2D
 	if vendor_back_texture == null and ResourceLoader.exists(VENDOR_BACK_TEXTURE_PATH):
 		vendor_back_texture = load(VENDOR_BACK_TEXTURE_PATH) as Texture2D
-	if diamond_item_texture == null and ResourceLoader.exists(DIAMOND_ITEM_TEXTURE_PATH):
-		diamond_item_texture = load(DIAMOND_ITEM_TEXTURE_PATH) as Texture2D
-	if town_barrel_texture == null and ResourceLoader.exists(TOWN_BARREL_TEXTURE_PATH):
-		town_barrel_texture = load(TOWN_BARREL_TEXTURE_PATH) as Texture2D
-	if town_vendor_man_texture == null and ResourceLoader.exists(TOWN_VENDOR_MAN_TEXTURE_PATH):
-		town_vendor_man_texture = load(TOWN_VENDOR_MAN_TEXTURE_PATH) as Texture2D
-	if town_vendor_woman_texture == null and ResourceLoader.exists(TOWN_VENDOR_WOMAN_TEXTURE_PATH):
-		town_vendor_woman_texture = load(TOWN_VENDOR_WOMAN_TEXTURE_PATH) as Texture2D
-	if town_vendor_warlock_texture == null and ResourceLoader.exists(TOWN_VENDOR_WARLOCK_TEXTURE_PATH):
-		town_vendor_warlock_texture = load(TOWN_VENDOR_WARLOCK_TEXTURE_PATH) as Texture2D
-	if town_vendor_man_face_texture == null:
-		town_vendor_man_face_texture = TOWN_VENDOR_MAN_FACE_TEXTURE
-	if town_vendor_woman_face_texture == null:
-		town_vendor_woman_face_texture = TOWN_VENDOR_WOMAN_FACE_TEXTURE
-	if town_vendor_warlock_face_texture == null:
-		town_vendor_warlock_face_texture = TOWN_VENDOR_WARLOCK_FACE_TEXTURE
-	if town_tree_textures.is_empty():
-		for tree_texture_path in TOWN_TREE_TEXTURE_PATHS:
+	if diamond_item_texture == null:
+		if ResourceLoader.exists(DIAMOND_ITEM_TEXTURE_PATH):
+			diamond_item_texture = load(DIAMOND_ITEM_TEXTURE_PATH) as Texture2D
+		else:
+			var diamond_image := Image.load_from_file(DIAMOND_ITEM_TEXTURE_PATH)
+			if diamond_image != null:
+				diamond_item_texture = ImageTexture.create_from_image(diamond_image)
+	if velmora_barrel_texture == null and ResourceLoader.exists(VELMORA_BARREL_TEXTURE_PATH):
+		velmora_barrel_texture = load(VELMORA_BARREL_TEXTURE_PATH) as Texture2D
+	if velmora_vendor_man_texture == null and ResourceLoader.exists(VELMORA_VENDOR_MAN_TEXTURE_PATH):
+		velmora_vendor_man_texture = load(VELMORA_VENDOR_MAN_TEXTURE_PATH) as Texture2D
+	if velmora_vendor_woman_texture == null and ResourceLoader.exists(VELMORA_VENDOR_WOMAN_TEXTURE_PATH):
+		velmora_vendor_woman_texture = load(VELMORA_VENDOR_WOMAN_TEXTURE_PATH) as Texture2D
+	if velmora_vendor_warlock_texture == null and ResourceLoader.exists(VELMORA_VENDOR_WARLOCK_TEXTURE_PATH):
+		velmora_vendor_warlock_texture = load(VELMORA_VENDOR_WARLOCK_TEXTURE_PATH) as Texture2D
+	if velmora_vendor_man_face_texture == null:
+		velmora_vendor_man_face_texture = VELMORA_VENDOR_MAN_FACE_TEXTURE
+	if velmora_vendor_woman_face_texture == null:
+		velmora_vendor_woman_face_texture = VELMORA_VENDOR_WOMAN_FACE_TEXTURE
+	if velmora_vendor_warlock_face_texture == null:
+		velmora_vendor_warlock_face_texture = VELMORA_VENDOR_WARLOCK_FACE_TEXTURE
+	if torren_blackwell_front_texture == null and ResourceLoader.exists(TORREN_BLACKWELL_FRONT_TEXTURE_PATH):
+		torren_blackwell_front_texture = load(TORREN_BLACKWELL_FRONT_TEXTURE_PATH) as Texture2D
+	if torren_blackwell_side_texture == null and ResourceLoader.exists(TORREN_BLACKWELL_SIDE_TEXTURE_PATH):
+		torren_blackwell_side_texture = load(TORREN_BLACKWELL_SIDE_TEXTURE_PATH) as Texture2D
+	if torren_blackwell_back_texture == null and ResourceLoader.exists(TORREN_BLACKWELL_BACK_TEXTURE_PATH):
+		torren_blackwell_back_texture = load(TORREN_BLACKWELL_BACK_TEXTURE_PATH) as Texture2D
+	if torren_blackwell_face_texture == null and ResourceLoader.exists(TORREN_BLACKWELL_FACE_TEXTURE_PATH):
+		torren_blackwell_face_texture = load(TORREN_BLACKWELL_FACE_TEXTURE_PATH) as Texture2D
+	if velmora_tree_textures.is_empty():
+		for tree_texture_path in VELMORA_TREE_TEXTURE_PATHS:
 			if ResourceLoader.exists(tree_texture_path):
 				var tree_texture := load(tree_texture_path) as Texture2D
 				if tree_texture != null:
-					town_tree_textures.append(tree_texture)
+					velmora_tree_textures.append(tree_texture)
 	if spell_shop_scene == null and ResourceLoader.exists(SPELL_SHOP_MODEL_PATH):
 		spell_shop_scene = load(SPELL_SHOP_MODEL_PATH) as PackedScene
 	if spell_shop_texture == null and ResourceLoader.exists(SPELL_SHOP_TEXTURE_PATH):
 		spell_shop_texture = load(SPELL_SHOP_TEXTURE_PATH) as Texture2D
 
-func _make_town_floor() -> void:
+func _make_velmora_floor() -> void:
 	var floor_body: StaticBody3D = StaticBody3D.new()
-	floor_body.name = "TownFloor"
-	town_root.add_child(floor_body)
+	floor_body.name = "VelmoraFloor"
+	velmora_root.add_child(floor_body)
 
 	var floor_collision: CollisionShape3D = CollisionShape3D.new()
 	var floor_shape: BoxShape3D = BoxShape3D.new()
-	floor_shape.size = Vector3(TOWN_HALF_SIZE * 2.0, 0.35, TOWN_HALF_SIZE * 2.0)
+	floor_shape.size = Vector3(VELMORA_HALF_SIZE * 2.0, 0.35, VELMORA_HALF_SIZE * 2.0)
 	floor_collision.shape = floor_shape
 	floor_collision.position.y = -0.2
 	floor_body.add_child(floor_collision)
 
 	var floor_mesh: MeshInstance3D = MeshInstance3D.new()
 	var plane: PlaneMesh = PlaneMesh.new()
-	plane.size = Vector2(TOWN_HALF_SIZE * 2.0, TOWN_HALF_SIZE * 2.0)
+	plane.size = Vector2(VELMORA_HALF_SIZE * 2.0, VELMORA_HALF_SIZE * 2.0)
 	floor_mesh.mesh = plane
-	floor_mesh.material_override = _town_floor_material()
+	floor_mesh.material_override = _velmora_floor_material()
 	floor_body.add_child(floor_mesh)
 
 	var street: MeshInstance3D = MeshInstance3D.new()
 	var street_plane: PlaneMesh = PlaneMesh.new()
-	street_plane.size = Vector2(11.0, TOWN_HALF_SIZE * 2.0 - 4.0)
+	street_plane.size = Vector2(11.0, VELMORA_HALF_SIZE * 2.0 - 4.0)
 	street.mesh = street_plane
 	street.position.y = 0.018
-	street.material_override = _town_street_material()
+	street.material_override = _velmora_street_material()
 	floor_body.add_child(street)
 
 	for puddle_position in [Vector3(-4.1, 0.025, 9.6), Vector3(3.0, 0.026, -4.4), Vector3(-2.6, 0.027, -14.5)]:
-		_make_town_puddle(floor_body, puddle_position)
+		_make_velmora_puddle(floor_body, puddle_position)
 
-func _make_town_walls() -> void:
-	_make_town_wall(Vector3(0.0, 1.95, -TOWN_HALF_SIZE), Vector3(TOWN_HALF_SIZE * 2.0, 3.9, 1.0))
-	_make_town_wall(Vector3(0.0, 1.95, TOWN_HALF_SIZE), Vector3(TOWN_HALF_SIZE * 2.0, 3.9, 1.0))
-	_make_town_wall(Vector3(-TOWN_HALF_SIZE, 1.95, 0.0), Vector3(1.0, 3.9, TOWN_HALF_SIZE * 2.0))
-	_make_town_wall(Vector3(TOWN_HALF_SIZE, 1.95, 0.0), Vector3(1.0, 3.9, TOWN_HALF_SIZE * 2.0))
+func _make_velmora_walls() -> void:
+	_make_velmora_wall(Vector3(0.0, 1.95, -VELMORA_HALF_SIZE), Vector3(VELMORA_HALF_SIZE * 2.0, 3.9, 1.0))
+	_make_velmora_wall(Vector3(0.0, 1.95, VELMORA_HALF_SIZE), Vector3(VELMORA_HALF_SIZE * 2.0, 3.9, 1.0))
+	_make_velmora_wall(Vector3(-VELMORA_HALF_SIZE, 1.95, 0.0), Vector3(1.0, 3.9, VELMORA_HALF_SIZE * 2.0))
+	_make_velmora_wall(Vector3(VELMORA_HALF_SIZE, 1.95, 0.0), Vector3(1.0, 3.9, VELMORA_HALF_SIZE * 2.0))
 	for lamp_position in [Vector3(-5.6, 0.0, 15.0), Vector3(5.6, 0.0, 12.0), Vector3(-6.0, 0.0, -5.5), Vector3(6.0, 0.0, -9.0)]:
-		_make_town_lamp(lamp_position)
+		_make_velmora_lamp(lamp_position)
 
-func _make_town_wall(position: Vector3, size: Vector3) -> void:
+func _make_velmora_wall(position: Vector3, size: Vector3) -> void:
 	var body: StaticBody3D = StaticBody3D.new()
 	body.position = position
-	town_root.add_child(body)
+	velmora_root.add_child(body)
 
 	var collider: CollisionShape3D = CollisionShape3D.new()
 	var shape: BoxShape3D = BoxShape3D.new()
@@ -1121,29 +1850,29 @@ func _make_town_wall(position: Vector3, size: Vector3) -> void:
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = size
 	mesh_instance.mesh = mesh
-	mesh_instance.material_override = _town_wall_material(size)
+	mesh_instance.material_override = _velmora_wall_material(size)
 	body.add_child(mesh_instance)
 
-func _make_town_backdrop() -> void:
+func _make_velmora_backdrop() -> void:
 	for tower_data in [
 		{"position": Vector3(-18.5, 0.0, -22.4), "height": 7.8, "width": 3.2, "accent": Color(0.38, 0.18, 0.75)},
 		{"position": Vector3(-8.5, 0.0, -23.2), "height": 9.2, "width": 2.6, "accent": Color(0.95, 0.55, 0.25)},
 		{"position": Vector3(9.0, 0.0, -23.0), "height": 8.4, "width": 3.0, "accent": Color(0.12, 0.75, 1.0)},
 		{"position": Vector3(19.0, 0.0, -22.0), "height": 6.8, "width": 3.4, "accent": Color(0.75, 0.2, 1.0)}
 	]:
-		_make_town_tower(tower_data["position"], float(tower_data["height"]), float(tower_data["width"]), tower_data["accent"])
-	_make_town_banner_line(Vector3(-20.0, 5.0, -16.5), Vector3(20.0, 4.4, -16.5), Color(0.14, 0.06, 0.16), Color(0.95, 0.65, 0.18))
-	_make_town_banner_line(Vector3(-18.0, 4.3, 8.5), Vector3(18.0, 4.8, 8.5), Color(0.05, 0.12, 0.2), Color(0.12, 0.78, 1.0))
+		_make_velmora_tower(tower_data["position"], float(tower_data["height"]), float(tower_data["width"]), tower_data["accent"])
+	_make_velmora_banner_line(Vector3(-20.0, 5.0, -16.5), Vector3(20.0, 4.4, -16.5), Color(0.14, 0.06, 0.16), Color(0.95, 0.65, 0.18))
+	_make_velmora_banner_line(Vector3(-18.0, 4.3, 8.5), Vector3(18.0, 4.8, 8.5), Color(0.05, 0.12, 0.2), Color(0.12, 0.78, 1.0))
 
-func _make_town_tower(position: Vector3, height: float, width: float, accent: Color) -> void:
+func _make_velmora_tower(position: Vector3, height: float, width: float, accent: Color) -> void:
 	var root: Node3D = Node3D.new()
 	root.name = "GothicBackdrop"
 	root.position = position
-	town_root.add_child(root)
+	velmora_root.add_child(root)
 
-	_make_town_box(root, "TowerBody", Vector3(width, height, width * 0.72), Vector3(0.0, height * 0.5, 0.0), _town_wall_material(Vector3(width, height, width)))
-	var roof_material: StandardMaterial3D = _town_roof_material()
-	_make_town_roof_pair(root, width * 0.78, width * 0.72, Vector3(0.0, height + 0.35, 0.0), roof_material)
+	_make_velmora_box(root, "TowerBody", Vector3(width, height, width * 0.72), Vector3(0.0, height * 0.5, 0.0), _velmora_wall_material(Vector3(width, height, width)))
+	var roof_material: StandardMaterial3D = _velmora_roof_material()
+	_make_velmora_roof_pair(root, width * 0.78, width * 0.72, Vector3(0.0, height + 0.35, 0.0), roof_material)
 	var spire: MeshInstance3D = MeshInstance3D.new()
 	var spire_mesh: CylinderMesh = CylinderMesh.new()
 	spire_mesh.top_radius = 0.0
@@ -1155,10 +1884,10 @@ func _make_town_tower(position: Vector3, height: float, width: float, accent: Co
 	spire.material_override = roof_material
 	root.add_child(spire)
 	for x in [-width * 0.24, width * 0.24]:
-		_make_town_window(root, Vector3(x, height * 0.52, width * 0.38), Vector2(0.38, 0.75), accent)
-	_make_town_window(root, Vector3(0.0, height * 0.72, width * 0.38), Vector2(0.46, 0.9), accent)
+		_make_velmora_window(root, Vector3(x, height * 0.52, width * 0.38), Vector2(0.38, 0.75), accent)
+	_make_velmora_window(root, Vector3(0.0, height * 0.72, width * 0.38), Vector2(0.46, 0.9), accent)
 
-func _make_town_lamp(position: Vector3) -> void:
+func _make_velmora_lamp(position: Vector3) -> void:
 	var post: MeshInstance3D = MeshInstance3D.new()
 	var post_mesh: CylinderMesh = CylinderMesh.new()
 	post_mesh.top_radius = 0.08
@@ -1167,19 +1896,19 @@ func _make_town_lamp(position: Vector3) -> void:
 	post.mesh = post_mesh
 	post.position = position + Vector3(0.0, 1.25, 0.0)
 	post.material_override = _material(Color(0.07, 0.052, 0.042), Color.BLACK, 0.0)
-	town_root.add_child(post)
+	velmora_root.add_child(post)
 
 	var hook: MeshInstance3D = _make_decoration_bar(0.72, 0.045, _decoration_material(Color(0.12, 0.085, 0.055), Color.BLACK, 0.0))
 	hook.position = position + Vector3(0.0, 2.42, 0.24)
 	hook.rotation_degrees.y = 90.0
-	town_root.add_child(hook)
+	velmora_root.add_child(hook)
 
 	var light: OmniLight3D = OmniLight3D.new()
 	light.position = position + Vector3(0.0, 2.35, 0.58)
 	light.light_color = Color(0.96, 0.58, 0.24)
 	light.light_energy = 2.55
 	light.omni_range = 9.2
-	town_root.add_child(light)
+	velmora_root.add_child(light)
 
 	var flame: MeshInstance3D = MeshInstance3D.new()
 	var flame_mesh: SphereMesh = SphereMesh.new()
@@ -1188,20 +1917,20 @@ func _make_town_lamp(position: Vector3) -> void:
 	flame.mesh = flame_mesh
 	flame.position = light.position
 	flame.material_override = _material(Color(1.0, 0.42, 0.08), Color(1.0, 0.26, 0.02), 2.1)
-	town_root.add_child(flame)
+	velmora_root.add_child(flame)
 
 	var cage_material: StandardMaterial3D = _decoration_material(Color(0.08, 0.055, 0.035), Color.BLACK, 0.0)
 	for x in [-0.16, 0.16]:
 		var cage: MeshInstance3D = _make_decoration_bar(0.45, 0.025, cage_material)
 		cage.position = light.position + Vector3(x, 0.0, 0.0)
 		cage.rotation_degrees.z = 90.0
-		town_root.add_child(cage)
+		velmora_root.add_child(cage)
 
-func _make_town_portal_marker(position: Vector3) -> void:
+func _make_velmora_portal_marker(position: Vector3) -> void:
 	var root: Node3D = Node3D.new()
-	root.name = "TownArrivalPortal"
+	root.name = "VelmoraArrivalPortal"
 	root.position = position
-	town_root.add_child(root)
+	velmora_root.add_child(root)
 	var ring: MeshInstance3D = MeshInstance3D.new()
 	var ring_mesh: TorusMesh = TorusMesh.new()
 	ring_mesh.inner_radius = 1.25
@@ -1220,12 +1949,12 @@ func _make_town_portal_marker(position: Vector3) -> void:
 	light.omni_range = 7.0
 	root.add_child(light)
 
-func _make_town_store(vendor_id: String, vendor_name: String, position: Vector3, stall_color: Color, accent: Color, yaw_degrees: float) -> void:
+func _make_velmora_store(vendor_id: String, vendor_name: String, position: Vector3, stall_color: Color, accent: Color, yaw_degrees: float) -> void:
 	var root: Node3D = Node3D.new()
 	root.name = vendor_name.replace(" ", "")
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
-	town_root.add_child(root)
+	velmora_root.add_child(root)
 
 	_make_shopfront(root, vendor_id, vendor_name, stall_color, accent)
 
@@ -1244,24 +1973,24 @@ func _make_town_store(vendor_id: String, vendor_name: String, position: Vector3,
 	area.add_child(shape_node)
 
 func _make_shopfront(parent: Node3D, vendor_id: String, vendor_name: String, stall_color: Color, accent: Color) -> void:
-	var stone_material := _town_wall_material(Vector3(7.2, 3.6, 0.9))
-	var wood_material := _town_wood_material()
-	var roof_material := _town_roof_material()
+	var stone_material := _velmora_wall_material(Vector3(7.2, 3.6, 0.9))
+	var wood_material := _velmora_wood_material()
+	var roof_material := _velmora_roof_material()
 	var accent_material := _material(stall_color.lightened(0.08), accent, 0.18)
 
-	_make_town_box(parent, "ShopBackWall", Vector3(7.2, 3.45, 0.72), Vector3(0.0, 1.75, -1.3), stone_material)
-	_make_town_box(parent, "ShopCounter", Vector3(5.9, 1.05, 1.35), Vector3(0.0, 0.55, 0.3), accent_material)
-	_make_town_box(parent, "ShopLedger", Vector3(4.8, 0.18, 1.18), Vector3(0.0, 1.15, 0.58), wood_material)
-	_make_town_box(parent, "ShopSignBoard", Vector3(5.1, 0.76, 0.16), Vector3(0.0, 2.82, 0.92), _material(Color(0.045, 0.034, 0.026), accent, 0.12))
-	_make_town_label(parent, vendor_name, Vector3(0.0, 2.82, 1.08), accent, 27)
-	_make_town_roof_pair(parent, 7.8, 4.2, Vector3(0.0, 3.58, -0.6), roof_material)
+	_make_velmora_box(parent, "ShopBackWall", Vector3(7.2, 3.45, 0.72), Vector3(0.0, 1.75, -1.3), stone_material)
+	_make_velmora_box(parent, "ShopCounter", Vector3(5.9, 1.05, 1.35), Vector3(0.0, 0.55, 0.3), accent_material)
+	_make_velmora_box(parent, "ShopLedger", Vector3(4.8, 0.18, 1.18), Vector3(0.0, 1.15, 0.58), wood_material)
+	_make_velmora_box(parent, "ShopSignBoard", Vector3(5.1, 0.76, 0.16), Vector3(0.0, 2.82, 0.92), _material(Color(0.045, 0.034, 0.026), accent, 0.12))
+	_make_velmora_label(parent, vendor_name, Vector3(0.0, 2.82, 1.08), accent, 27)
+	_make_velmora_roof_pair(parent, 7.8, 4.2, Vector3(0.0, 3.58, -0.6), roof_material)
 
 	for x in [-3.05, 3.05]:
-		_make_town_box(parent, "ShopPost", Vector3(0.2, 2.65, 0.2), Vector3(x, 1.34, 0.95), wood_material)
-		_make_town_box(parent, "ShopBrace", Vector3(1.0, 0.14, 0.18), Vector3(x * 0.92, 2.42, 0.94), wood_material, Vector3(0.0, 0.0, signf(-x) * 24.0))
+		_make_velmora_box(parent, "ShopPost", Vector3(0.2, 2.65, 0.2), Vector3(x, 1.34, 0.95), wood_material)
+		_make_velmora_box(parent, "ShopBrace", Vector3(1.0, 0.14, 0.18), Vector3(x * 0.92, 2.42, 0.94), wood_material, Vector3(0.0, 0.0, signf(-x) * 24.0))
 
 	for x in [-2.12, 2.12]:
-		_make_town_window(parent, Vector3(x, 1.92, 0.98), Vector2(0.92, 1.08), accent)
+		_make_velmora_window(parent, Vector3(x, 1.92, 0.98), Vector2(0.92, 1.08), accent)
 
 	match vendor_id:
 		"diamond_vendor":
@@ -1277,14 +2006,14 @@ func _make_shopfront(parent: Node3D, vendor_id: String, vendor_name: String, sta
 
 func _make_diamond_shop_details(parent: Node3D, accent: Color) -> void:
 	if diamond_item_texture != null:
-		_make_colored_diamond_sprite(parent, Vector3(0.0, 3.42, 1.1), 0.0042, Vector3.ONE * 0.72, Color(0.72, 0.93, 1.0))
+		_make_colored_diamond_sprite(parent, Vector3(0.0, 3.42, 1.1), 0.0042, Vector3.ONE * 0.72, Color(0.68, 0.92, 1.0))
 		var showcase := [
-			{"x": -2.15, "color": Color(0.93, 0.24, 0.24)},
-			{"x": -1.29, "color": Color(0.25, 0.54, 1.0)},
-			{"x": -0.43, "color": Color(0.28, 0.88, 0.42)},
-			{"x": 0.43, "color": Color(0.72, 0.32, 0.94)},
-			{"x": 1.29, "color": Color(1.0, 0.39, 0.08)},
-			{"x": 2.15, "color": Color(1.0, 0.94, 0.44)}
+			{"x": -2.15, "color": Color(1.0, 0.48, 0.12)},
+			{"x": -1.29, "color": Color(0.22, 0.92, 1.0)},
+			{"x": -0.43, "color": Color(0.0, 0.78, 0.42)},
+			{"x": 0.43, "color": Color(0.32, 0.05, 0.72)},
+			{"x": 1.29, "color": Color(1.0, 0.28, 0.06)},
+			{"x": 2.15, "color": Color(0.18, 0.58, 1.0)}
 		]
 		for gem_data in showcase:
 			_make_colored_diamond_sprite(parent, Vector3(float(gem_data["x"]), 1.48, 1.1), 0.0032, Vector3.ONE * 0.34, gem_data["color"])
@@ -1292,7 +2021,7 @@ func _make_diamond_shop_details(parent: Node3D, accent: Color) -> void:
 		_make_diamond_icon(parent, Vector3(0.0, 3.42, 1.1), 0.78, accent)
 		for x in [-1.9, -0.65, 0.65, 1.9]:
 			_make_diamond_icon(parent, Vector3(x, 1.42, 1.1), 0.32, accent)
-	_make_town_box(parent, "GemCloth", Vector3(4.8, 0.08, 1.0), Vector3(0.0, 1.28, 0.78), _material(Color(0.02, 0.05, 0.085), accent, 0.08))
+	_make_velmora_box(parent, "GemCloth", Vector3(4.8, 0.08, 1.0), Vector3(0.0, 1.28, 0.78), _material(Color(0.02, 0.05, 0.085), accent, 0.08))
 	var light := OmniLight3D.new()
 	light.position = Vector3(0.0, 2.05, 1.15)
 	light.light_color = accent
@@ -1323,7 +2052,7 @@ func _make_spell_shop_details(parent: Node3D, accent: Color) -> void:
 		_make_spell_shop_image(parent, accent)
 
 func _make_relic_shop_details(parent: Node3D, accent: Color) -> void:
-	_make_town_box(parent, "RelicCloth", Vector3(4.9, 0.08, 1.0), Vector3(0.0, 1.28, 0.78), _material(Color(0.12, 0.075, 0.02), accent, 0.08))
+	_make_velmora_box(parent, "RelicCloth", Vector3(4.9, 0.08, 1.0), Vector3(0.0, 1.28, 0.78), _material(Color(0.12, 0.075, 0.02), accent, 0.08))
 	for x in [-1.7, 0.0, 1.7]:
 		var relic: MeshInstance3D = MeshInstance3D.new()
 		var mesh: CylinderMesh = CylinderMesh.new()
@@ -1336,7 +2065,7 @@ func _make_relic_shop_details(parent: Node3D, accent: Color) -> void:
 		relic.material_override = _material(Color(0.45, 0.34, 0.16), accent, 0.22)
 		parent.add_child(relic)
 
-func _make_town_roof_pair(parent: Node3D, width: float, depth: float, position: Vector3, material: Material) -> void:
+func _make_velmora_roof_pair(parent: Node3D, width: float, depth: float, position: Vector3, material: Material) -> void:
 	for x in [-width * 0.22, width * 0.22]:
 		var roof: MeshInstance3D = MeshInstance3D.new()
 		var mesh: BoxMesh = BoxMesh.new()
@@ -1347,11 +2076,11 @@ func _make_town_roof_pair(parent: Node3D, width: float, depth: float, position: 
 		roof.material_override = material
 		parent.add_child(roof)
 
-func _make_town_window(parent: Node3D, position: Vector3, size: Vector2, accent: Color) -> void:
-	_make_town_box(parent, "WindowFrame", Vector3(size.x + 0.18, size.y + 0.18, 0.08), position + Vector3(0.0, 0.0, -0.02), _town_wood_material())
-	_make_town_box(parent, "WindowGlow", Vector3(size.x, size.y, 0.09), position, _material(accent.darkened(0.35), accent, 1.25))
-	_make_town_box(parent, "WindowMullionV", Vector3(0.055, size.y + 0.08, 0.1), position + Vector3(0.0, 0.0, 0.03), _town_wood_material())
-	_make_town_box(parent, "WindowMullionH", Vector3(size.x + 0.08, 0.055, 0.1), position + Vector3(0.0, 0.0, 0.03), _town_wood_material())
+func _make_velmora_window(parent: Node3D, position: Vector3, size: Vector2, accent: Color) -> void:
+	_make_velmora_box(parent, "WindowFrame", Vector3(size.x + 0.18, size.y + 0.18, 0.08), position + Vector3(0.0, 0.0, -0.02), _velmora_wood_material())
+	_make_velmora_box(parent, "WindowGlow", Vector3(size.x, size.y, 0.09), position, _material(accent.darkened(0.35), accent, 1.25))
+	_make_velmora_box(parent, "WindowMullionV", Vector3(0.055, size.y + 0.08, 0.1), position + Vector3(0.0, 0.0, 0.03), _velmora_wood_material())
+	_make_velmora_box(parent, "WindowMullionH", Vector3(size.x + 0.08, 0.055, 0.1), position + Vector3(0.0, 0.0, 0.03), _velmora_wood_material())
 
 func _make_diamond_icon(parent: Node3D, position: Vector3, scale_value: float, accent: Color) -> void:
 	var gem: MeshInstance3D = MeshInstance3D.new()
@@ -1384,41 +2113,127 @@ func _make_colored_diamond_sprite(parent: Node3D, position: Vector3, pixel_size:
 	sprite.modulate = tint
 	parent.add_child(sprite)
 
-func _make_town_street_dressing() -> void:
+func _make_torren_blackwell_npc() -> void:
+	if velmora_root == null or torren_blackwell_root != null:
+		return
+	var root := Node3D.new()
+	root.name = "TorrenBlackwell"
+	root.position = Vector3(-7.0, 0.0, -5.5)
+	root.rotation_degrees.y = 18.0
+	root.visible = false
+	velmora_root.add_child(root)
+	torren_blackwell_root = root
+
+	var accent := Color(0.95, 0.62, 0.24)
+	var shadow: MeshInstance3D = MeshInstance3D.new()
+	shadow.name = "TorrenShadow"
+	var shadow_mesh: CylinderMesh = CylinderMesh.new()
+	shadow_mesh.top_radius = 0.72
+	shadow_mesh.bottom_radius = 0.72
+	shadow_mesh.height = 0.012
+	shadow_mesh.radial_segments = 28
+	shadow.mesh = shadow_mesh
+	shadow.position = Vector3(0.0, 0.025, 0.0)
+	shadow.scale = Vector3(1.15, 1.0, 0.58)
+	shadow.material_override = _portal_smoke_material(Color(0.0, 0.0, 0.0, 0.36), Color.BLACK, 0.0)
+	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(shadow)
+
+	var sprite_texture := torren_blackwell_front_texture if torren_blackwell_front_texture != null else vendor_front_texture
+	if sprite_texture != null:
+		var sprite := Sprite3D.new()
+		sprite.name = "TorrenSprite"
+		sprite.texture = sprite_texture
+		sprite.pixel_size = 0.0048
+		sprite.shaded = false
+		sprite.double_sided = true
+		sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		var sprite_height_world := float(sprite_texture.get_height()) * sprite.pixel_size * absf(sprite.scale.y)
+		sprite.position = Vector3(0.0, sprite_height_world * 0.5 + VENDOR_SPRITE_GROUND_CLEARANCE, 0.0)
+		root.add_child(sprite)
+		_register_directional_sprite(sprite, root, torren_blackwell_front_texture, torren_blackwell_side_texture, torren_blackwell_back_texture)
+	else:
+		_make_vendor_figure(root, Vector3.ZERO, accent)
+
+	_make_velmora_label(root, "Torren Blackwell", Vector3(0.0, 2.82, 0.0), accent, 22)
+
+	var area := Area3D.new()
+	area.name = "TorrenBlackwellArea"
+	area.body_entered.connect(_on_torren_blackwell_entered)
+	area.body_exited.connect(_on_torren_blackwell_exited)
+	root.add_child(area)
+	torren_blackwell_area = area
+
+	var shape_node := CollisionShape3D.new()
+	var shape := SphereShape3D.new()
+	shape.radius = 1.75
+	shape_node.shape = shape
+	shape_node.position.y = 1.0
+	area.add_child(shape_node)
+
+func _sync_torren_blackwell_visibility() -> void:
+	if torren_blackwell_root == null:
+		return
+	var should_show := current_area == AREA_VELMORA and _is_torren_blackwell_available()
+	torren_blackwell_root.visible = should_show
+	if torren_blackwell_area != null:
+		torren_blackwell_area.monitoring = should_show
+		torren_blackwell_area.monitorable = should_show
+
+func _is_torren_blackwell_available() -> bool:
+	return _is_torren_blackwell_mission_active() or not _active_incomplete_mission_for_giver("Torren_Blackwell").is_empty()
+
+func _is_torren_blackwell_mission_active() -> bool:
+	return (
+		_is_mission_active(AREA_VELMORA, "talk_to_Torren_Blackwell")
+		or _is_mission_active(AREA_VELMORA, "talk_to_torren_after_clearing_forest")
+	)
+
+func _is_mission_active(area: String, mission_id: String) -> bool:
+	if mission_system == null:
+		return false
+	for mission in mission_system.get_active_missions(area):
+		if String(mission.get("id", "")) == mission_id:
+			return true
+	return false
+
+func _make_velmora_street_dressing() -> void:
 	for crate_data in [
 		{"position": Vector3(-9.4, 0.0, 13.5), "yaw": 14.0},
 		{"position": Vector3(9.6, 0.0, 8.5), "yaw": -18.0},
 		{"position": Vector3(-10.2, 0.0, -8.0), "yaw": 32.0},
 		{"position": Vector3(10.8, 0.0, -14.0), "yaw": -8.0}
 	]:
-		_make_town_crate(crate_data["position"], float(crate_data["yaw"]))
+		_make_velmora_crate(crate_data["position"], float(crate_data["yaw"]))
 	for _index in range(16):
-		_make_town_barrel(_random_town_decor_position())
-	_make_town_banner(Vector3(-22.4, 2.5, 5.0), 90.0, Color(0.16, 0.04, 0.2), Color(0.78, 0.18, 1.0))
-	_make_town_banner(Vector3(22.4, 2.7, -6.0), -90.0, Color(0.05, 0.11, 0.18), Color(0.12, 0.78, 1.0))
-	_make_town_market_canopy(Vector3(-5.3, 0.0, -16.2), -8.0, Color(0.18, 0.035, 0.045), Color(0.95, 0.36, 0.12))
-	_make_town_market_canopy(Vector3(6.4, 0.0, -17.2), 12.0, Color(0.06, 0.1, 0.13), Color(0.15, 0.8, 1.0))
-	_make_town_greenery()
-	_make_town_fences()
+		_make_velmora_barrel(_random_velmora_decor_position())
+	_make_velmora_banner(Vector3(-22.4, 2.5, 5.0), 90.0, Color(0.16, 0.04, 0.2), Color(0.78, 0.18, 1.0))
+	_make_velmora_banner(Vector3(22.4, 2.7, -6.0), -90.0, Color(0.05, 0.11, 0.18), Color(0.12, 0.78, 1.0))
+	_make_velmora_market_canopy(Vector3(-5.3, 0.0, -16.2), -8.0, Color(0.18, 0.035, 0.045), Color(0.95, 0.36, 0.12))
+	_make_velmora_market_canopy(Vector3(6.4, 0.0, -17.2), 12.0, Color(0.06, 0.1, 0.13), Color(0.15, 0.8, 1.0))
+	_make_velmora_greenery()
+	_make_velmora_fences()
 
-func _make_town_crate(position: Vector3, yaw_degrees: float) -> void:
+func _make_velmora_crate(position: Vector3, yaw_degrees: float) -> void:
 	var root: Node3D = Node3D.new()
-	root.name = "TownCrate"
+	root.name = "VelmoraCrate"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
-	town_root.add_child(root)
-	_make_town_box(root, "Crate", Vector3(0.95, 0.78, 0.95), Vector3(0.0, 0.39, 0.0), _town_wood_material())
-	_make_town_box(root, "CrateBandA", Vector3(1.05, 0.11, 0.08), Vector3(0.0, 0.28, 0.5), _material(Color(0.07, 0.052, 0.038), Color.BLACK, 0.0))
-	_make_town_box(root, "CrateBandB", Vector3(1.05, 0.11, 0.08), Vector3(0.0, 0.56, 0.5), _material(Color(0.07, 0.052, 0.038), Color.BLACK, 0.0))
+	velmora_root.add_child(root)
+	_make_velmora_box(root, "Crate", Vector3(0.95, 0.78, 0.95), Vector3(0.0, 0.39, 0.0), _velmora_wood_material())
+	_make_velmora_box(root, "CrateBandA", Vector3(1.05, 0.11, 0.08), Vector3(0.0, 0.28, 0.5), _material(Color(0.07, 0.052, 0.038), Color.BLACK, 0.0))
+	_make_velmora_box(root, "CrateBandB", Vector3(1.05, 0.11, 0.08), Vector3(0.0, 0.56, 0.5), _material(Color(0.07, 0.052, 0.038), Color.BLACK, 0.0))
 
-func _make_town_barrel(position: Vector3) -> void:
-	if town_barrel_texture != null:
-		var barrel_sprite := _make_town_billboard_sprite(town_barrel_texture, "TownBarrel", 0.004, Vector3.ONE * rng.randf_range(0.22, 0.34), Color.WHITE)
+func _make_velmora_barrel(position: Vector3) -> void:
+	if velmora_barrel_texture != null:
+		var barrel_sprite := _make_velmora_billboard_sprite(velmora_barrel_texture, "VelmoraBarrel", 0.004, Vector3.ONE * rng.randf_range(0.22, 0.34), Color.WHITE)
 		barrel_sprite.position = position + Vector3(0.0, 0.2, 0.0)
 		barrel_sprite.rotation_degrees.y = rng.randf_range(0.0, 360.0)
 		return
 	var barrel: MeshInstance3D = MeshInstance3D.new()
-	barrel.name = "TownBarrel"
+	barrel.name = "VelmoraBarrel"
 	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = 0.36
 	mesh.bottom_radius = 0.42
@@ -1426,27 +2241,27 @@ func _make_town_barrel(position: Vector3) -> void:
 	mesh.radial_segments = 14
 	barrel.mesh = mesh
 	barrel.position = position + Vector3(0.0, 0.46, 0.0)
-	barrel.material_override = _town_wood_material()
-	town_root.add_child(barrel)
+	barrel.material_override = _velmora_wood_material()
+	velmora_root.add_child(barrel)
 
-func _make_town_banner(position: Vector3, yaw_degrees: float, cloth: Color, accent: Color) -> void:
+func _make_velmora_banner(position: Vector3, yaw_degrees: float, cloth: Color, accent: Color) -> void:
 	var root: Node3D = Node3D.new()
-	root.name = "TownBanner"
+	root.name = "VelmoraBanner"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
-	town_root.add_child(root)
-	_make_town_box(root, "BannerRod", Vector3(1.1, 0.06, 0.06), Vector3(0.0, 0.36, 0.0), _town_wood_material())
-	_make_town_box(root, "BannerCloth", Vector3(0.92, 1.32, 0.06), Vector3(0.0, -0.33, 0.0), _material(cloth, accent, 0.08))
+	velmora_root.add_child(root)
+	_make_velmora_box(root, "BannerRod", Vector3(1.1, 0.06, 0.06), Vector3(0.0, 0.36, 0.0), _velmora_wood_material())
+	_make_velmora_box(root, "BannerCloth", Vector3(0.92, 1.32, 0.06), Vector3(0.0, -0.33, 0.0), _material(cloth, accent, 0.08))
 	_make_diamond_icon(root, Vector3(0.0, -0.18, 0.05), 0.28, accent)
 
-func _make_town_banner_line(start: Vector3, end: Vector3, cloth: Color, accent: Color) -> void:
+func _make_velmora_banner_line(start: Vector3, end: Vector3, cloth: Color, accent: Color) -> void:
 	var center := (start + end) * 0.5
 	var delta := end - start
 	var length := Vector2(delta.x, delta.z).length()
 	var line: MeshInstance3D = _make_decoration_bar(length, 0.035, _decoration_material(Color(0.1, 0.07, 0.055), Color.BLACK, 0.0))
 	line.position = center
 	line.rotation_degrees.y = rad_to_deg(atan2(delta.z, delta.x))
-	town_root.add_child(line)
+	velmora_root.add_child(line)
 	for i in range(7):
 		var ratio := float(i) / 6.0
 		var flag_position := start.lerp(end, ratio) + Vector3(0.0, -0.28 - float(i % 2) * 0.14, 0.0)
@@ -1457,22 +2272,22 @@ func _make_town_banner_line(start: Vector3, end: Vector3, cloth: Color, accent: 
 		flag.position = flag_position
 		flag.rotation_degrees.y = line.rotation_degrees.y
 		flag.material_override = _material(cloth.lerp(accent, float(i % 3) * 0.12), accent, 0.06)
-		town_root.add_child(flag)
+		velmora_root.add_child(flag)
 
-func _make_town_market_canopy(position: Vector3, yaw_degrees: float, cloth: Color, accent: Color) -> void:
+func _make_velmora_market_canopy(position: Vector3, yaw_degrees: float, cloth: Color, accent: Color) -> void:
 	var root: Node3D = Node3D.new()
 	root.name = "MarketCanopy"
 	root.position = position
 	root.rotation_degrees.y = yaw_degrees
-	town_root.add_child(root)
-	_make_town_box(root, "CanopyTable", Vector3(3.8, 0.65, 1.25), Vector3(0.0, 0.33, 0.0), _town_wood_material())
-	_make_town_box(root, "CanopyCloth", Vector3(4.3, 0.18, 2.0), Vector3(0.0, 2.08, -0.1), _material(cloth, accent, 0.1))
+	velmora_root.add_child(root)
+	_make_velmora_box(root, "CanopyTable", Vector3(3.8, 0.65, 1.25), Vector3(0.0, 0.33, 0.0), _velmora_wood_material())
+	_make_velmora_box(root, "CanopyCloth", Vector3(4.3, 0.18, 2.0), Vector3(0.0, 2.08, -0.1), _material(cloth, accent, 0.1))
 	for x in [-1.85, 1.85]:
-		_make_town_box(root, "CanopyPost", Vector3(0.13, 2.1, 0.13), Vector3(x, 1.05, 0.65), _town_wood_material())
+		_make_velmora_box(root, "CanopyPost", Vector3(0.13, 2.1, 0.13), Vector3(x, 1.05, 0.65), _velmora_wood_material())
 	for x in [-1.1, 0.0, 1.1]:
 		_make_diamond_icon(root, Vector3(x, 0.86, 0.68), 0.24, accent)
 
-func _populate_town_people(count: int) -> void:
+func _populate_velmora_people(count: int) -> void:
 	var outfit_accents := [
 		Color(0.58, 0.22, 0.14),
 		Color(0.12, 0.28, 0.52),
@@ -1482,14 +2297,14 @@ func _populate_town_people(count: int) -> void:
 	]
 	for i in range(count):
 		var citizen := Node3D.new()
-		citizen.name = "TownCitizen%s" % i
-		citizen.position = _random_town_citizen_position()
+		citizen.name = "VelmoraCitizen%s" % i
+		citizen.position = _random_velmora_citizen_position()
 		citizen.rotation_degrees.y = rng.randf_range(0.0, 360.0)
-		town_root.add_child(citizen)
+		velmora_root.add_child(citizen)
 		var accent: Color = outfit_accents[rng.randi_range(0, outfit_accents.size() - 1)]
-		_make_town_citizen_figure(citizen, accent)
+		_make_velmora_citizen_figure(citizen, accent)
 
-func _random_town_citizen_position() -> Vector3:
+func _random_velmora_citizen_position() -> Vector3:
 	var position := Vector3(0.0, 0.0, 0.0)
 	for _attempt in range(20):
 		position = Vector3(rng.randf_range(-18.0, 18.0), 0.0, rng.randf_range(-18.0, 18.0))
@@ -1506,14 +2321,14 @@ func _random_town_citizen_position() -> Vector3:
 		break
 	return position
 
-func _make_town_citizen_figure(parent: Node3D, accent: Color) -> void:
+func _make_velmora_citizen_figure(parent: Node3D, accent: Color) -> void:
 	var skin := _material(Color(0.58, 0.44, 0.35), Color.BLACK, 0.0)
 	var cloth := _material(accent.darkened(0.2), accent, 0.05)
 	var cloth_dark := _material(accent.darkened(0.42), accent.darkened(0.2), 0.0)
-	_make_town_box(parent, "CitizenBody", Vector3(0.46, 0.84, 0.32), Vector3(0.0, 0.92, 0.0), cloth)
-	_make_town_box(parent, "CitizenHead", Vector3(0.28, 0.28, 0.28), Vector3(0.0, 1.52, 0.0), skin)
+	_make_velmora_box(parent, "CitizenBody", Vector3(0.46, 0.84, 0.32), Vector3(0.0, 0.92, 0.0), cloth)
+	_make_velmora_box(parent, "CitizenHead", Vector3(0.28, 0.28, 0.28), Vector3(0.0, 1.52, 0.0), skin)
 	for x in [-0.14, 0.14]:
-		_make_town_box(parent, "CitizenLeg", Vector3(0.12, 0.7, 0.14), Vector3(x, 0.35, 0.0), cloth_dark)
+		_make_velmora_box(parent, "CitizenLeg", Vector3(0.12, 0.7, 0.14), Vector3(x, 0.35, 0.0), cloth_dark)
 	if vendor_front_texture != null:
 		var cloak := Sprite3D.new()
 		cloak.texture = vendor_front_texture
@@ -1528,8 +2343,8 @@ func _make_town_citizen_figure(parent: Node3D, accent: Color) -> void:
 		cloak.modulate = Color(1.0, 1.0, 1.0, 0.68).lerp(accent, 0.18)
 		parent.add_child(cloak)
 
-func _make_town_greenery() -> void:
-	if town_tree_textures.is_empty():
+func _make_velmora_greenery() -> void:
+	if velmora_tree_textures.is_empty():
 		for tree_data in [
 			{"position": Vector3(-21.0, 0.0, 16.5), "scale": 1.0},
 			{"position": Vector3(21.5, 0.0, 14.0), "scale": 1.08},
@@ -1538,25 +2353,25 @@ func _make_town_greenery() -> void:
 			{"position": Vector3(-12.8, 0.0, 21.4), "scale": 0.88},
 			{"position": Vector3(13.0, 0.0, 21.6), "scale": 0.9}
 		]:
-			_make_town_tree(tree_data["position"], float(tree_data["scale"]))
+			_make_velmora_tree(tree_data["position"], float(tree_data["scale"]))
 		return
 
 	for _index in range(52):
-		var tree_texture := town_tree_textures[rng.randi_range(0, town_tree_textures.size() - 1)]
+		var tree_texture := velmora_tree_textures[rng.randi_range(0, velmora_tree_textures.size() - 1)]
 		var tree_scale := rng.randf_range(0.9, 1.45)
-		var tree_sprite := _make_town_billboard_sprite(tree_texture, "TownTree", 0.0068, Vector3.ONE * tree_scale, Color.WHITE)
-		tree_sprite.position = _random_town_tree_position(tree_scale) + Vector3(0.0, 1.95 * tree_scale, 0.0)
+		var tree_sprite := _make_velmora_billboard_sprite(tree_texture, "VelmoraTree", 0.0068, Vector3.ONE * tree_scale, Color.WHITE)
+		tree_sprite.position = _random_velmora_tree_position(tree_scale) + Vector3(0.0, 1.95 * tree_scale, 0.0)
 		tree_sprite.rotation_degrees.y = rng.randf_range(0.0, 360.0)
 
-func _random_town_tree_position(tree_scale: float) -> Vector3:
+func _random_velmora_tree_position(tree_scale: float) -> Vector3:
 	var position := Vector3.ZERO
 	for _attempt in range(140):
 		position = Vector3(
-			rng.randf_range(-TOWN_HALF_SIZE + 2.0, TOWN_HALF_SIZE - 2.0),
+			rng.randf_range(-VELMORA_HALF_SIZE + 2.0, VELMORA_HALF_SIZE - 2.0),
 			0.0,
-			rng.randf_range(-TOWN_HALF_SIZE + 2.0, TOWN_HALF_SIZE - 2.0)
+			rng.randf_range(-VELMORA_HALF_SIZE + 2.0, VELMORA_HALF_SIZE - 2.0)
 		)
-		if _is_town_tree_position_clear(position, tree_scale):
+		if _is_velmora_tree_position_clear(position, tree_scale):
 			return position
 
 	for fallback_position in [
@@ -1569,46 +2384,46 @@ func _random_town_tree_position(tree_scale: float) -> Vector3:
 		Vector3(-22.0, 0.0, 0.0),
 		Vector3(22.0, 0.0, -1.0)
 	]:
-		if _is_town_tree_position_clear(fallback_position, tree_scale):
+		if _is_velmora_tree_position_clear(fallback_position, tree_scale):
 			return fallback_position
 
 	return Vector3(-22.0, 0.0, 22.0)
 
-func _is_town_tree_position_clear(position: Vector3, tree_scale: float) -> bool:
+func _is_velmora_tree_position_clear(position: Vector3, tree_scale: float) -> bool:
 	if absf(position.x) < 5.4:
 		return false
-	if position.distance_to(Vector3(0.0, 0.0, 20.0)) < 4.8 + TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
+	if position.distance_to(Vector3(0.0, 0.0, 20.0)) < 4.8 + VELMORA_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
 		return false
-	if position.distance_to(Vector3(-14.0, 0.0, 2.5)) < 8.5 + TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
+	if position.distance_to(Vector3(-14.0, 0.0, 2.5)) < 8.5 + VELMORA_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
 		return false
-	if position.distance_to(Vector3(14.0, 0.0, 2.0)) < 8.5 + TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
+	if position.distance_to(Vector3(14.0, 0.0, 2.0)) < 8.5 + VELMORA_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
 		return false
-	if position.distance_to(Vector3(0.0, 0.0, -13.5)) < 8.5 + TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
+	if position.distance_to(Vector3(0.0, 0.0, -13.5)) < 8.5 + VELMORA_TREE_SIGHT_CLEAR_RADIUS * tree_scale:
 		return false
-	return not _town_tree_intrudes_on_shop_sight(position, tree_scale)
+	return not _velmora_tree_intrudes_on_shop_sight(position, tree_scale)
 
-func _town_tree_intrudes_on_shop_sight(position: Vector3, tree_scale: float) -> bool:
-	var tree_footprint := TOWN_TREE_SIGHT_CLEAR_RADIUS * tree_scale
+func _velmora_tree_intrudes_on_shop_sight(position: Vector3, tree_scale: float) -> bool:
+	var tree_footprint := VELMORA_TREE_SIGHT_CLEAR_RADIUS * tree_scale
 	var tree_ground_position := Vector2(position.x, position.z)
-	for clear_zone in _town_shop_tree_clear_zones():
+	for clear_zone in _velmora_shop_tree_clear_zones():
 		if clear_zone.grow(tree_footprint).has_point(tree_ground_position):
 			return true
 	return false
 
-func _town_shop_tree_clear_zones() -> Array[Rect2]:
+func _velmora_shop_tree_clear_zones() -> Array[Rect2]:
 	return [
 		Rect2(Vector2(-18.6, -4.3), Vector2(15.0, 13.2)),
 		Rect2(Vector2(3.6, -4.3), Vector2(15.0, 13.2)),
 		Rect2(Vector2(-8.3, -18.8), Vector2(16.6, 14.6))
 	]
 
-func _random_town_decor_position(street_half_width: float = 3.6) -> Vector3:
+func _random_velmora_decor_position(street_half_width: float = 3.6) -> Vector3:
 	var position := Vector3.ZERO
 	for _attempt in range(35):
 		position = Vector3(
-			rng.randf_range(-TOWN_HALF_SIZE + 2.0, TOWN_HALF_SIZE - 2.0),
+			rng.randf_range(-VELMORA_HALF_SIZE + 2.0, VELMORA_HALF_SIZE - 2.0),
 			0.0,
-			rng.randf_range(-TOWN_HALF_SIZE + 2.0, TOWN_HALF_SIZE - 2.0)
+			rng.randf_range(-VELMORA_HALF_SIZE + 2.0, VELMORA_HALF_SIZE - 2.0)
 		)
 		if absf(position.x) < street_half_width:
 			continue
@@ -1623,7 +2438,7 @@ func _random_town_decor_position(street_half_width: float = 3.6) -> Vector3:
 		break
 	return position
 
-func _make_town_billboard_sprite(texture: Texture2D, sprite_name: String, pixel_size: float, sprite_scale: Vector3, tint: Color) -> Sprite3D:
+func _make_velmora_billboard_sprite(texture: Texture2D, sprite_name: String, pixel_size: float, sprite_scale: Vector3, tint: Color) -> Sprite3D:
 	var sprite: Sprite3D = Sprite3D.new()
 	sprite.name = sprite_name
 	sprite.texture = texture
@@ -1635,15 +2450,15 @@ func _make_town_billboard_sprite(texture: Texture2D, sprite_name: String, pixel_
 	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	sprite.scale = sprite_scale
 	sprite.modulate = tint
-	town_root.add_child(sprite)
+	velmora_root.add_child(sprite)
 	return sprite
 
-func _make_town_tree(position: Vector3, scale_value: float) -> void:
+func _make_velmora_tree(position: Vector3, scale_value: float) -> void:
 	var root := Node3D.new()
-	root.name = "TownTree"
+	root.name = "VelmoraTree"
 	root.position = position
 	root.scale = Vector3.ONE * scale_value
-	town_root.add_child(root)
+	velmora_root.add_child(root)
 
 	var trunk: MeshInstance3D = MeshInstance3D.new()
 	var trunk_mesh: CylinderMesh = CylinderMesh.new()
@@ -1652,7 +2467,7 @@ func _make_town_tree(position: Vector3, scale_value: float) -> void:
 	trunk_mesh.height = 2.4
 	trunk.mesh = trunk_mesh
 	trunk.position = Vector3(0.0, 1.2, 0.0)
-	trunk.material_override = _town_wood_material()
+	trunk.material_override = _velmora_wood_material()
 	root.add_child(trunk)
 
 	var leaf_material: StandardMaterial3D = _material(Color(0.1, 0.28, 0.15), Color(0.04, 0.09, 0.05), 0.06)
@@ -1666,19 +2481,19 @@ func _make_town_tree(position: Vector3, scale_value: float) -> void:
 		leaves.material_override = leaf_material
 		root.add_child(leaves)
 
-func _make_town_fences() -> void:
-	_make_town_fence_row(Vector3(-17.5, 0.0, 18.8), Vector3(-6.0, 0.0, 18.8), 8)
-	_make_town_fence_row(Vector3(6.0, 0.0, 18.8), Vector3(17.5, 0.0, 18.8), 8)
-	_make_town_fence_row(Vector3(-22.0, 0.0, -11.5), Vector3(-22.0, 0.0, 6.0), 9)
-	_make_town_fence_row(Vector3(22.0, 0.0, -10.0), Vector3(22.0, 0.0, 7.5), 9)
+func _make_velmora_fences() -> void:
+	_make_velmora_fence_row(Vector3(-17.5, 0.0, 18.8), Vector3(-6.0, 0.0, 18.8), 8)
+	_make_velmora_fence_row(Vector3(6.0, 0.0, 18.8), Vector3(17.5, 0.0, 18.8), 8)
+	_make_velmora_fence_row(Vector3(-22.0, 0.0, -11.5), Vector3(-22.0, 0.0, 6.0), 9)
+	_make_velmora_fence_row(Vector3(22.0, 0.0, -10.0), Vector3(22.0, 0.0, 7.5), 9)
 
-func _make_town_fence_row(start: Vector3, end: Vector3, segments: int) -> void:
-	var fence_material := _town_wood_material()
+func _make_velmora_fence_row(start: Vector3, end: Vector3, segments: int) -> void:
+	var fence_material := _velmora_wood_material()
 	var rail_height := [0.55, 0.9]
 	for i in range(segments + 1):
 		var t := float(i) / float(maxi(segments, 1))
 		var post_position := start.lerp(end, t)
-		_make_town_box(town_root, "FencePost", Vector3(0.11, 1.05, 0.11), post_position + Vector3(0.0, 0.52, 0.0), fence_material)
+		_make_velmora_box(velmora_root, "FencePost", Vector3(0.11, 1.05, 0.11), post_position + Vector3(0.0, 0.52, 0.0), fence_material)
 	for i in range(segments):
 		var from := start.lerp(end, float(i) / float(maxi(segments, 1)))
 		var to := start.lerp(end, float(i + 1) / float(maxi(segments, 1)))
@@ -1692,11 +2507,11 @@ func _make_town_fence_row(start: Vector3, end: Vector3, segments: int) -> void:
 			var rail := _make_decoration_bar(length, 0.075, fence_material)
 			rail.position = center + Vector3(0.0, y, 0.0)
 			rail.rotation_degrees.y = yaw
-			town_root.add_child(rail)
+			velmora_root.add_child(rail)
 
-func _make_town_puddle(parent: Node3D, position: Vector3) -> void:
+func _make_velmora_puddle(parent: Node3D, position: Vector3) -> void:
 	var puddle: MeshInstance3D = MeshInstance3D.new()
-	puddle.name = "TownPuddle"
+	puddle.name = "VelmoraPuddle"
 	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = 0.7
 	mesh.bottom_radius = 0.7
@@ -1708,7 +2523,7 @@ func _make_town_puddle(parent: Node3D, position: Vector3) -> void:
 	puddle.material_override = _portal_smoke_material(Color(0.04, 0.07, 0.085, 0.42), Color(0.02, 0.08, 0.11), 0.16)
 	parent.add_child(puddle)
 
-func _make_town_box(parent: Node3D, name: String, size: Vector3, position: Vector3, material: Material, rotation_degrees_value: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+func _make_velmora_box(parent: Node3D, name: String, size: Vector3, position: Vector3, material: Material, rotation_degrees_value: Vector3 = Vector3.ZERO) -> MeshInstance3D:
 	var box: MeshInstance3D = MeshInstance3D.new()
 	box.name = name
 	var mesh: BoxMesh = BoxMesh.new()
@@ -1803,7 +2618,7 @@ func _make_spell_shop_image(parent: Node3D, accent: Color) -> void:
 	parent.add_child(sprite)
 
 func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendor_id: String = "") -> void:
-	var vendor_texture: Texture2D = _town_vendor_texture_for(vendor_id)
+	var vendor_texture: Texture2D = _velmora_vendor_texture_for(vendor_id)
 	if vendor_texture != null:
 		var shadow: MeshInstance3D = MeshInstance3D.new()
 		shadow.name = "VendorShadow"
@@ -1834,10 +2649,7 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendo
 		sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
 		parent.add_child(sprite)
 		if vendor_texture == vendor_front_texture and vendor_side_texture != null and vendor_back_texture != null:
-			vendor_sprites.append({
-				"sprite": sprite,
-				"parent": parent
-			})
+			_register_directional_sprite(sprite, parent, vendor_front_texture, vendor_side_texture, vendor_back_texture)
 		return
 
 	var body: MeshInstance3D = MeshInstance3D.new()
@@ -1861,20 +2673,31 @@ func _make_vendor_figure(parent: Node3D, position: Vector3, accent: Color, vendo
 	head.material_override = _material(Color(0.62, 0.48, 0.34), Color.BLACK, 0.0)
 	parent.add_child(head)
 
-func _town_vendor_texture_for(vendor_id: String) -> Texture2D:
+func _velmora_vendor_texture_for(vendor_id: String) -> Texture2D:
 	match vendor_id:
 		"diamond_vendor":
-			if town_vendor_woman_texture != null:
-				return town_vendor_woman_texture
+			if velmora_vendor_woman_texture != null:
+				return velmora_vendor_woman_texture
 		"spell_vendor":
-			if town_vendor_warlock_texture != null:
-				return town_vendor_warlock_texture
+			if velmora_vendor_warlock_texture != null:
+				return velmora_vendor_warlock_texture
 		"relic_vendor":
-			if town_vendor_man_texture != null:
-				return town_vendor_man_texture
+			if velmora_vendor_man_texture != null:
+				return velmora_vendor_man_texture
 	if vendor_front_texture != null:
 		return vendor_front_texture
 	return null
+
+func _register_directional_sprite(sprite: Sprite3D, parent: Node3D, front_texture: Texture2D, side_texture: Texture2D, back_texture: Texture2D) -> void:
+	if sprite == null or parent == null or front_texture == null or side_texture == null or back_texture == null:
+		return
+	vendor_sprites.append({
+		"sprite": sprite,
+		"parent": parent,
+		"front_texture": front_texture,
+		"side_texture": side_texture,
+		"back_texture": back_texture
+	})
 
 func _update_vendor_sprites() -> void:
 	if camera == null or vendor_sprites.is_empty():
@@ -1884,21 +2707,26 @@ func _update_vendor_sprites() -> void:
 		var parent: Node3D = vendor_data["parent"] as Node3D
 		if sprite == null or parent == null or not is_instance_valid(sprite) or not is_instance_valid(parent):
 			continue
+		var front_texture := vendor_data.get("front_texture") as Texture2D
+		var side_texture := vendor_data.get("side_texture") as Texture2D
+		var back_texture := vendor_data.get("back_texture") as Texture2D
+		if front_texture == null or side_texture == null or back_texture == null:
+			continue
 		var local_camera := parent.to_local(camera.global_position)
 		local_camera.y = 0.0
 		if local_camera.length_squared() <= 0.001:
 			continue
 		if local_camera.z >= absf(local_camera.x) * 0.72:
-			sprite.texture = vendor_front_texture
+			sprite.texture = front_texture
 			sprite.flip_h = false
 		elif local_camera.z <= -absf(local_camera.x) * 0.72:
-			sprite.texture = vendor_back_texture
+			sprite.texture = back_texture
 			sprite.flip_h = false
 		else:
-			sprite.texture = vendor_side_texture
+			sprite.texture = side_texture
 			sprite.flip_h = local_camera.x < 0.0
 
-func _make_town_label(parent: Node3D, text: String, position: Vector3, color: Color, font_size: int = 34) -> void:
+func _make_velmora_label(parent: Node3D, text: String, position: Vector3, color: Color, font_size: int = 34) -> void:
 	var label := Label3D.new()
 	label.text = text
 	label.position = position
@@ -2057,16 +2885,16 @@ func _make_exit() -> void:
 	_make_exit_fx()
 
 func _spawn_encounter() -> void:
-	current_area = AREA_CASTLE
-	_set_mission_area(AREA_CASTLE)
-	_set_background_music(LEVEL_ONE_MUSIC)
+	current_area = AREA_BLACK_VAULT
+	_set_mission_area(AREA_BLACK_VAULT)
+	_set_background_music(BLACK_VAULT_MUSIC)
 	if player != null:
 		player.set_attacks_enabled(true)
 	if hud != null:
 		hud.set_minimap_visible(true)
-	if castle_encounter_spawned:
+	if black_vault_encounter_spawned:
 		return
-	castle_encounter_spawned = true
+	black_vault_encounter_spawned = true
 	var spawn_points: Array[Vector3] = _enemy_spawn_points()
 	for i in range(spawn_points.size()):
 		var enemy_kind := SISEnemy.ENEMY_KIND_ANGEL
@@ -2086,9 +2914,9 @@ func _spawn_enemy_at(spawn_position: Vector3, elite: bool = false, enemy_kind: S
 	enemies.append(enemy)
 
 func _spawn_chests() -> void:
-	if castle_chests_spawned:
+	if black_vault_chests_spawned:
 		return
-	castle_chests_spawned = true
+	black_vault_chests_spawned = true
 	var chest_points: Array[Vector3] = [
 		Vector3(23.0, 0.1, 23.0),
 		Vector3(-23.0, 0.1, 0.0),
@@ -2104,6 +2932,54 @@ func _spawn_chests() -> void:
 		add_child(chest)
 		chest.configure(player)
 		chest.opened.connect(_on_chest_opened)
+
+func _spawn_hoofgrove_chests() -> void:
+	if hoofgrove_chests_spawned or hoofgrove_root == null or player == null:
+		return
+	hoofgrove_chests_spawned = true
+	var local_positions: Array[Vector3] = []
+	for _i in range(HOOFGROVE_CHEST_COUNT):
+		local_positions.append(_random_hoofgrove_chest_position(local_positions))
+	for local_position in local_positions:
+		var chest: SISChest = ChestScript.new() as SISChest
+		chest.position = local_position + Vector3(0.0, 0.1, 0.0)
+		chest.rotation.y = rng.randf_range(0.0, TAU)
+		hoofgrove_root.add_child(chest)
+		chest.configure(player)
+		chest.opened.connect(_on_chest_opened)
+		_make_hoofgrove_chest_glint(local_position)
+
+func _random_hoofgrove_chest_position(existing_positions: Array[Vector3]) -> Vector3:
+	for _attempt in range(120):
+		var position := Vector3(
+			rng.randf_range(-HOOFGROVE_HALF_SIZE + 7.0, HOOFGROVE_HALF_SIZE - 7.0),
+			0.0,
+			rng.randf_range(-HOOFGROVE_HALF_SIZE + 7.0, HOOFGROVE_HALF_SIZE - 7.0)
+		)
+		if position.distance_to(HOOFGROVE_SPAWN_POSITION - HOOFGROVE_ORIGIN) < 12.0:
+			continue
+		if absf(position.x) < 5.0 and position.z > -12.0 and position.z < 39.0:
+			continue
+		var too_close := false
+		for existing in existing_positions:
+			if position.distance_to(existing) < 9.0:
+				too_close = true
+				break
+		if too_close:
+			continue
+		return position
+	return _random_hoofgrove_ground_position()
+
+func _make_hoofgrove_chest_glint(local_position: Vector3) -> void:
+	if hoofgrove_root == null:
+		return
+	var glint := OmniLight3D.new()
+	glint.name = "HoofgroveChestGlint"
+	glint.position = local_position + Vector3(0.0, 0.85, 0.0)
+	glint.light_color = Color(1.0, 0.72, 0.34)
+	glint.light_energy = 0.45
+	glint.omni_range = 2.4
+	hoofgrove_root.add_child(glint)
 
 func _spawn_scroll_for_game_level(scroll_level: int) -> void:
 	if scroll_level < 1 or scroll_level > scroll_entries.size():
@@ -2163,24 +3039,55 @@ func _enemy_spawn_points() -> Array[Vector3]:
 		Vector3(-6.0, 0.1, -25.0), Vector3(6.0, 0.1, -25.0)
 	]
 
-func _on_firestorm_requested(target_position: Vector3) -> void:
-	if current_area == AREA_TOWN:
+func _on_attack_spell_requested(target_position: Vector3) -> void:
+	if current_area == AREA_VELMORA:
 		return
+	match player.get_active_attack_spell_id():
+		"icesmash":
+			_cast_icesmash(target_position)
+		"electricity_vortex":
+			_cast_electricity_vortex(target_position)
+		_:
+			_cast_firestorm(target_position)
+
+func _cast_firestorm(target_position: Vector3) -> void:
 	_play_sound(FIRE_STORM_SOUND, -2.0)
 	_play_firestorm_impact_sequence()
 	var storm: SISFireStorm = FireStormScript.new() as SISFireStorm
 	add_child(storm)
 	storm.configure(target_position, enemies, player.level)
 	storm.radius += player.get_skill_radius_bonus()
+	storm.radius += player.get_socket_attack_radius_bonus()
 	if player.has_spell("wide_flame"):
 		storm.radius += 1.35
 		storm.strikes += 4
-	storm.damage = int(round(float(storm.damage) * player.get_damage_multiplier()))
-	if player.has_spell("fire_storm"):
-		storm.damage = int(round(float(storm.damage) * 1.25))
-	storm.damage = int(round(float(storm.damage) * player.get_skill_damage_multiplier()))
+	storm.radius *= player.get_socket_spell_effect_multiplier(player.get_active_attack_spell_id())
+	storm.damage = player.get_active_attack_spell_damage()
 	storm.enemy_hit.connect(_on_firestorm_enemy_hit)
 	_say_whisper("Yes. Let the ceiling learn to burn.")
+
+func _cast_icesmash(target_position: Vector3) -> void:
+	_play_sound(ICE_SMASH_SOUND, 3.5)
+	var smash := IceSmashScript.new()
+	smash.configure(target_position, enemies, player.level)
+	smash.radius += player.get_skill_radius_bonus()
+	smash.radius += player.get_socket_attack_radius_bonus()
+	smash.radius *= player.get_socket_spell_effect_multiplier(player.get_active_attack_spell_id())
+	smash.damage = player.get_active_attack_spell_damage()
+	add_child(smash)
+	smash.enemy_hit.connect(_on_firestorm_enemy_hit)
+	smash.impact_landed.connect(_on_icesmash_impact_landed)
+	_say_whisper("Good. Make the sky remember winter.")
+
+func _on_icesmash_impact_landed(_impact_position: Vector3, impact_radius: float) -> void:
+	_shake_camera(ICE_SMASH_CAMERA_SHAKE_INTENSITY + impact_radius * 0.012, ICE_SMASH_CAMERA_SHAKE_DURATION)
+
+func _cast_electricity_vortex(target_position: Vector3) -> void:
+	var vortex := LightningVortexScript.new()
+	vortex.configure(target_position, Vector3.ZERO, 0.0, player.get_active_attack_spell_damage(), false, enemies)
+	add_child(vortex)
+	vortex.enemy_hit.connect(_on_firestorm_enemy_hit)
+	_say_whisper("Let their bones learn the shape of lightning.")
 
 func _play_firestorm_impact_sequence() -> void:
 	var boom_delays := [0.24, 0.42, 0.60, 0.78, 1.04, 1.30, 1.48]
@@ -2195,15 +3102,19 @@ func _on_firestorm_enemy_hit(enemy: Node3D, damage: int) -> void:
 		enemy.take_damage(damage)
 
 func _on_enemy_killed(enemy: Node3D) -> void:
-	if enemy.get("enemy_kind") == SISEnemy.ENEMY_KIND_ANGEL:
+	var enemy_kind: StringName = enemy.get("enemy_kind")
+	if enemy_kind == SISEnemy.ENEMY_KIND_ANGEL:
 		_play_sound(ANGEL_DEAD_SOUND, -1.5)
+	if current_area == AREA_HOOFGROVE_WILDS and enemy_kind == SISEnemy.ENEMY_KIND_CENTAUR:
+		hoofgrove_centaurs_remaining = maxi(0, hoofgrove_centaurs_remaining - 1)
+	if current_area == AREA_HOOFGROVE_WILDS and _is_hoofgrove_mission_enemy(enemy_kind):
+		hoofgrove_hostiles_remaining = maxi(0, hoofgrove_hostiles_remaining - 1)
 	kills += 1
 	var first_kill := kills == 1
 	if first_kill:
 		hud.set_whispers_enabled(true)
 	enemies.erase(enemy)
 	var xp_reward: int = int(enemy.get("xp_reward"))
-	var gold_reward: int = int(enemy.get("gold_reward"))
 	var leveled_up := player.gain_xp(xp_reward)
 	player.notify_kill()
 	var kill_streak := 1
@@ -2212,15 +3123,24 @@ func _on_enemy_killed(enemy: Node3D) -> void:
 		kill_streak = int(whisper_system.kill_streak)
 	if hud != null:
 		hud.notify_kill_feedback(kill_streak)
-	_spawn_gold(enemy.global_position, gold_reward + rng.randi_range(0, 8))
+	var loot_drops := LootTableScript.roll_enemy_loot(rng, player, enemy, FADED_DIAMOND_CATALOG, RELIC_CATALOG, SPELL_CATALOG)
+	_spawn_loot_drops(enemy.global_position, loot_drops)
 	var opened_exit := false
-	if kills >= STAGE_ENEMY_COUNT and not exit_open:
+	if current_area == AREA_BLACK_VAULT and kills >= STAGE_ENEMY_COUNT and not exit_open:
 		exit_open = true
 		opened_exit = true
 		exit_light.light_color = Color(0.15, 0.85, 1.0)
 		exit_light.light_energy = 3.4
 		if exit_sprite != null:
 			exit_sprite.modulate = Color(0.82, 1.12, 1.25, 1.0)
+	if mission_system != null:
+		mission_system.complete_matching(current_area, "kill", {
+			"kills": kills,
+			"required": STAGE_ENEMY_COUNT,
+			"area": current_area,
+			"enemy_kind": String(enemy_kind),
+			"remaining": hoofgrove_hostiles_remaining if current_area == AREA_HOOFGROVE_WILDS else 1
+		})
 	if opened_exit:
 		_say_whisper("The door yields. Leave, if leaving is still your idea.")
 	elif first_kill:
@@ -2235,13 +3155,23 @@ func _on_enemy_killed(enemy: Node3D) -> void:
 	_update_objective()
 	_update_possession()
 
+func _is_hoofgrove_mission_enemy(enemy_kind: StringName) -> bool:
+	return enemy_kind == SISEnemy.ENEMY_KIND_CENTAUR \
+		or enemy_kind == SISEnemy.ENEMY_KIND_HUMAN_WARRIOR \
+		or enemy_kind == SISEnemy.ENEMY_KIND_GIANT
+
 func _maybe_say_after_kill_whisper() -> void:
 	if rng.randf() <= AFTER_KILL_WHISPER_CHANCE:
 		_say_random_whisper(after_killing_whispers)
 
 func _on_chest_opened(chest: Node3D) -> void:
 	_play_sound(TREASURE_CHEST_SOUND, -1.0)
-	_spawn_gold(chest.global_position + Vector3(0.0, 0.4, 0.0), rng.randi_range(18, 38))
+	var chest_gold := rng.randi_range(18, 38)
+	if player != null:
+		var loot_luck := player.get_socket_loot_luck_bonus()
+		if loot_luck > 0.0 and rng.randf() < loot_luck:
+			chest_gold += rng.randi_range(8, 16)
+	_spawn_gold(chest.global_position + Vector3(0.0, 0.4, 0.0), chest_gold)
 	if rng.randf() < 0.45:
 		_say_whisper("Tribute in a box. How thoughtful of the dead.")
 
@@ -2267,6 +3197,21 @@ func _spawn_gold(position: Vector3, amount: int) -> void:
 	add_child(gold)
 	gold.picked_up.connect(_on_gold_picked_up)
 
+func _spawn_loot_drops(position: Vector3, drops: Array[Dictionary]) -> void:
+	for drop in drops:
+		var drop_type := String(drop.get("type", ""))
+		if drop_type == LootTableScript.TYPE_GOLD:
+			_spawn_gold(position, int(drop.get("amount", 1)))
+		else:
+			_spawn_loot_item(position, drop)
+
+func _spawn_loot_item(position: Vector3, drop: Dictionary) -> void:
+	var pickup := LootDropScript.new()
+	pickup.configure(drop)
+	pickup.position = position + Vector3(rng.randf_range(-0.75, 0.75), 0.7, rng.randf_range(-0.75, 0.75))
+	add_child(pickup)
+	pickup.picked_up.connect(_on_loot_item_picked_up)
+
 func _on_gold_picked_up(amount: int) -> void:
 	_play_sound(TREASURE_CHEST_SOUND, -5.0)
 	var multiplier := 1.0
@@ -2274,6 +3219,32 @@ func _on_gold_picked_up(amount: int) -> void:
 		multiplier = player.get_gold_gain_multiplier()
 	var payout := maxi(1, int(round(float(amount) * multiplier)))
 	player.add_gold(payout)
+
+func _on_loot_item_picked_up(drop: Dictionary) -> void:
+	_play_sound(TREASURE_CHEST_SOUND, -4.5)
+	if player == null:
+		return
+	var drop_type := String(drop.get("type", ""))
+	var item_id := String(drop.get("id", ""))
+	var display_name := String(drop.get("display_name", item_id.replace("_", " ").capitalize()))
+	match drop_type:
+		LootTableScript.TYPE_DIAMOND:
+			if item_id.is_empty():
+				return
+			owned_faded_diamonds[item_id] = int(owned_faded_diamonds.get(item_id, 0)) + 1
+			_apply_socketed_diamond_bonuses()
+			if hud != null:
+				hud.update_stats(_stats_for_hud(player.get_stats()))
+			_say_whisper("Diamond claimed. %s." % display_name)
+		LootTableScript.TYPE_RELIC:
+			if _add_relic(item_id):
+				_say_whisper("Relic gained. %s." % _relic_display_name(item_id))
+		LootTableScript.TYPE_SPELL:
+			if _learn_spell_reward(item_id):
+				_say_whisper("Spell learned. %s." % _spell_display_name(item_id))
+			else:
+				player.add_gold(120)
+				_say_whisper("%s was already etched into you. It became gold." % display_name)
 
 func _on_player_stats_changed(stats: Dictionary) -> void:
 	if hud != null:
@@ -2287,20 +3258,29 @@ func _stats_for_hud(base_stats: Dictionary) -> Dictionary:
 	payload["faded_owned"] = owned_faded_diamonds.duplicate(true)
 	payload["faded_sockets"] = socketed_faded_diamonds.duplicate()
 	payload["faded_catalog"] = _faded_catalog_for_hud()
+	payload["faded_bonus_summary"] = _socketed_diamond_bonus_summary()
 	payload["relic_owned"] = owned_relics.duplicate(true)
 	payload["relic_catalog"] = _relic_catalog_for_hud()
+	payload["unlocked_maps"] = unlocked_maps.duplicate()
+	payload["current_area"] = current_area
 	return payload
 
 func _faded_catalog_for_hud() -> Array[Dictionary]:
 	var list: Array[Dictionary] = []
-	for diamond in FADED_DIAMOND_CATALOG:
-		list.append({
-			"id": String(diamond["id"]),
-			"icon": String(diamond["icon"]),
-			"name": String(diamond["name"]),
-			"bonus": String(diamond["description"]),
-			"color": diamond["color"]
-		})
+	for tier in LootTableScript.DIAMOND_TIERS:
+		var tier_id := String(tier["id"])
+		var tier_name := String(tier["name"])
+		for diamond in FADED_DIAMOND_CATALOG:
+			var base_id := _diamond_base_id(String(diamond["id"]))
+			var diamond_id := "%s_%s" % [tier_id, base_id]
+			var base_name := String(diamond["name"]).replace("Faded ", "")
+			list.append({
+				"id": diamond_id,
+				"icon": String(diamond["icon"]),
+				"name": "%s %s" % [tier_name, base_name],
+				"bonus": _diamond_bonus_text(diamond_id),
+				"color": diamond["color"]
+			})
 	return list
 
 func _relic_catalog_for_hud() -> Array[Dictionary]:
@@ -2326,11 +3306,60 @@ func _add_relic(relic_id: String) -> bool:
 func _has_relic(relic_id: String) -> bool:
 	return int(owned_relics.get(relic_id, 0)) > 0
 
+func _add_map(map_id: String) -> bool:
+	var clean_id := map_id.strip_edges()
+	if clean_id.is_empty() or unlocked_maps.has(clean_id):
+		return false
+	unlocked_maps.append(clean_id)
+	if hud != null and player != null:
+		hud.update_stats(_stats_for_hud(player.get_stats()))
+	return true
+
+func _learn_spell_reward(spell_id: String) -> bool:
+	if player == null:
+		return false
+	var clean_id := spell_id.strip_edges()
+	if clean_id.is_empty():
+		return false
+	var learned := player.learn_spell(clean_id)
+	if learned and hud != null:
+		hud.update_stats(_stats_for_hud(player.get_stats()))
+	return learned
+
+func _map_display_name(map_id: String) -> String:
+	var clean_id := map_id.get_file().get_basename().replace("-", " ").replace("_", " ")
+	return _mission_title_case(clean_id)
+
+func _mission_title_case(text: String) -> String:
+	var result := ""
+	var at_word_start := true
+	for i in range(text.length()):
+		var character := text.substr(i, 1)
+		var is_letter := character.to_lower() != character.to_upper()
+		var is_digit := character >= "0" and character <= "9"
+		if is_letter:
+			if at_word_start:
+				result += character.to_upper()
+			else:
+				result += character.to_lower()
+			at_word_start = false
+		else:
+			result += character
+			if not is_digit:
+				at_word_start = true
+	return result
+
 func _relic_display_name(relic_id: String) -> String:
 	for relic in RELIC_CATALOG:
 		if String(relic["id"]) == relic_id:
 			return String(relic["name"])
 	return relic_id.replace("_", " ").capitalize()
+
+func _spell_display_name(spell_id: String) -> String:
+	for spell in SPELL_CATALOG:
+		if String(spell["id"]) == spell_id:
+			return String(spell["name"])
+	return spell_id.replace("_", " ").capitalize()
 
 func _ensure_faded_socket_size() -> void:
 	while socketed_faded_diamonds.size() < GLOVE_SOCKET_COUNT:
@@ -2350,61 +3379,212 @@ func _available_faded_diamond_count(diamond_id: String) -> int:
 	return maxi(0, owned - _socketed_count(diamond_id))
 
 func _diamond_catalog_entry(diamond_id: String) -> Dictionary:
+	var tier_id := _diamond_tier_id(diamond_id)
+	var base_id := _diamond_base_id(diamond_id)
 	for diamond in FADED_DIAMOND_CATALOG:
-		if String(diamond["id"]) == diamond_id:
-			return diamond
+		if _diamond_base_id(String(diamond["id"])) == base_id:
+			var entry: Dictionary = diamond.duplicate(true)
+			entry["id"] = "%s_%s" % [tier_id, base_id]
+			entry["name"] = "%s %s" % [_diamond_tier_name(tier_id), String(diamond["name"]).replace("Faded ", "")]
+			return entry
 	return {}
 
 func _diamond_socket_bonus(diamond_id: String) -> Dictionary:
-	match diamond_id:
+	var multiplier := _diamond_tier_bonus_multiplier(_diamond_tier_id(diamond_id))
+	var base_id := "%s_%s" % [LootTableScript.TIER_FADED, _diamond_base_id(diamond_id)]
+	var bonus := {}
+	match base_id:
 		"faded_rush":
-			return {"damage": 0.0, "move_speed": 0.0, "cooldown": 0.25, "gold": 0.0}
+			bonus = {"move_speed": 0.1}
 		"faded_focus":
-			return {"damage": 0.06, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+			bonus = {"attack_radius": 0.6}
 		"faded_vitality":
-			return {"damage": 0.03, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+			bonus = {"healing_rate": 0.2}
 		"faded_fortune":
-			return {"damage": 0.0, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.12}
+			bonus = {"gold": 0.12, "loot_luck": 0.12}
 		"faded_corruption":
-			return {"damage": 0.07, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+			bonus = {"beyond_effect": 0.1}
 		"faded_echo":
-			return {"damage": 0.05, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+			bonus = {"attack_effect": 0.08}
 		"faded_void":
-			return {"damage": 0.05, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+			bonus = {"summon_slots": 1.0}
 		"faded_fury":
-			return {"damage": 0.0, "move_speed": 0.1, "cooldown": 0.0, "gold": 0.0}
+			bonus = {"attack_damage": 0.1}
 		"faded_guardian":
-			return {"damage": 0.02, "move_speed": 0.0, "cooldown": 0.1, "gold": 0.0}
+			bonus = {"defense_effect": 0.1}
 		"faded_flame_ring":
-			return {"damage": 0.08, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+			bonus = {"flame_effect": 0.1}
 		"faded_frostbind":
-			return {"damage": 0.02, "move_speed": 0.0, "cooldown": 0.1, "gold": 0.0}
+			bonus = {"ice_effect": 0.1}
 		"faded_storm":
-			return {"damage": 0.08, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
-		_:
-			return {"damage": 0.0, "move_speed": 0.0, "cooldown": 0.0, "gold": 0.0}
+			bonus = {"electricity_effect": 0.1}
+	return _scale_diamond_bonus(bonus, multiplier)
 
-func _apply_socketed_diamond_bonuses() -> void:
+func _diamond_tier_id(diamond_id: String) -> String:
+	var clean_id := diamond_id.strip_edges().to_lower()
+	for tier in LootTableScript.DIAMOND_TIERS:
+		var tier_id := String(tier["id"])
+		if clean_id.begins_with("%s_" % tier_id):
+			return tier_id
+	return LootTableScript.TIER_FADED
+
+func _diamond_base_id(diamond_id: String) -> String:
+	var clean_id := diamond_id.strip_edges().to_lower()
+	for tier in LootTableScript.DIAMOND_TIERS:
+		var prefix := "%s_" % String(tier["id"])
+		if clean_id.begins_with(prefix):
+			return clean_id.substr(prefix.length())
+	return clean_id
+
+func _diamond_tier_name(tier_id: String) -> String:
+	for tier in LootTableScript.DIAMOND_TIERS:
+		if String(tier["id"]) == tier_id:
+			return String(tier["name"])
+	return "Faded"
+
+func _diamond_tier_bonus_multiplier(tier_id: String) -> float:
+	match tier_id:
+		LootTableScript.TIER_WHISPERING:
+			return 1.45
+		LootTableScript.TIER_CORRUPTED:
+			return 2.05
+		LootTableScript.TIER_ABYSSAL:
+			return 3.1
+		LootTableScript.TIER_DIVINE:
+			return 4.8
+		_:
+			return 1.0
+
+func _scale_diamond_bonus(bonus: Dictionary, multiplier: float) -> Dictionary:
+	if bonus.is_empty() or is_equal_approx(multiplier, 1.0):
+		return bonus
+	var scaled := {}
+	for key in bonus:
+		scaled[key] = float(bonus[key]) * multiplier
+	return scaled
+
+func _diamond_bonus_text(diamond_id: String) -> String:
+	var lines := _diamond_bonus_lines(_diamond_socket_bonus(diamond_id))
+	if lines.is_empty():
+		return "No active socket bonus."
+	return "Socket bonus: %s." % ", ".join(lines)
+
+func _diamond_bonus_lines(bonus: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var damage_bonus := float(bonus.get("damage_bonus", bonus.get("damage", 0.0)))
+	var attack_damage_bonus := float(bonus.get("attack_damage_bonus", bonus.get("attack_damage", 0.0)))
+	var move_speed_bonus := float(bonus.get("move_speed_bonus", bonus.get("move_speed", 0.0)))
+	var cooldown_reduction := float(bonus.get("cooldown_reduction", bonus.get("cooldown", 0.0)))
+	var gold_gain_bonus := float(bonus.get("gold_gain_bonus", bonus.get("gold", 0.0)))
+	var attack_radius_bonus := float(bonus.get("attack_radius_bonus", bonus.get("attack_radius", 0.0)))
+	var healing_rate_bonus := float(bonus.get("healing_rate_bonus", bonus.get("healing_rate", 0.0)))
+	var loot_luck_bonus := float(bonus.get("loot_luck_bonus", bonus.get("loot_luck", 0.0)))
+	var attack_effect_bonus := float(bonus.get("attack_effect_bonus", bonus.get("attack_effect", 0.0)))
+	var beyond_effect_bonus := float(bonus.get("beyond_effect_bonus", bonus.get("beyond_effect", 0.0)))
+	var defense_effect_bonus := float(bonus.get("defense_effect_bonus", bonus.get("defense_effect", 0.0)))
+	var flame_effect_bonus := float(bonus.get("flame_effect_bonus", bonus.get("flame_effect", 0.0)))
+	var ice_effect_bonus := float(bonus.get("ice_effect_bonus", bonus.get("ice_effect", 0.0)))
+	var electricity_effect_bonus := float(bonus.get("electricity_effect_bonus", bonus.get("electricity_effect", 0.0)))
+	var summon_slots_bonus := int(round(float(bonus.get("summon_slots_bonus", bonus.get("summon_slots", 0.0)))))
+	if damage_bonus > 0.0:
+		lines.append("+%d%% damage" % int(round(damage_bonus * 100.0)))
+	if attack_damage_bonus > 0.0:
+		lines.append("+%d%% attack spell damage" % int(round(attack_damage_bonus * 100.0)))
+	if move_speed_bonus > 0.0:
+		lines.append("+%d%% movement speed" % int(round(move_speed_bonus * 100.0)))
+	if cooldown_reduction > 0.0:
+		lines.append("-%s sec ability cooldown" % _format_bonus_decimal(cooldown_reduction))
+	if gold_gain_bonus > 0.0:
+		lines.append("+%d%% gold gained" % int(round(gold_gain_bonus * 100.0)))
+	if attack_radius_bonus > 0.0:
+		lines.append("+%s attack spell radius" % _format_bonus_decimal(attack_radius_bonus))
+	if healing_rate_bonus > 0.0:
+		lines.append("+%d%% healing rate" % int(round(healing_rate_bonus * 100.0)))
+	if loot_luck_bonus > 0.0:
+		lines.append("+%d%% loot luck" % int(round(loot_luck_bonus * 100.0)))
+	if attack_effect_bonus > 0.0:
+		lines.append("+%d%% attack spell effect" % int(round(attack_effect_bonus * 100.0)))
+	if beyond_effect_bonus > 0.0:
+		lines.append("+%d%% Beyond spell effect" % int(round(beyond_effect_bonus * 100.0)))
+	if defense_effect_bonus > 0.0:
+		lines.append("+%d%% defensive spell effect" % int(round(defense_effect_bonus * 100.0)))
+	if flame_effect_bonus > 0.0:
+		lines.append("+%d%% Flame spell effect" % int(round(flame_effect_bonus * 100.0)))
+	if ice_effect_bonus > 0.0:
+		lines.append("+%d%% Ice spell effect" % int(round(ice_effect_bonus * 100.0)))
+	if electricity_effect_bonus > 0.0:
+		lines.append("+%d%% Electricity spell effect" % int(round(electricity_effect_bonus * 100.0)))
+	if summon_slots_bonus > 0:
+		lines.append("+%d summoned creature" % summon_slots_bonus)
+	return lines
+
+func _socketed_diamond_bonus_totals() -> Dictionary:
 	_ensure_faded_socket_size()
 	var total_damage_bonus := 0.0
+	var total_attack_damage_bonus := 0.0
 	var total_move_speed_bonus := 0.0
 	var total_cooldown_reduction := 0.0
 	var total_gold_bonus := 0.0
+	var total_attack_radius_bonus := 0.0
+	var total_healing_rate_bonus := 0.0
+	var total_loot_luck_bonus := 0.0
+	var total_attack_effect_bonus := 0.0
+	var total_beyond_effect_bonus := 0.0
+	var total_defense_effect_bonus := 0.0
+	var total_flame_effect_bonus := 0.0
+	var total_ice_effect_bonus := 0.0
+	var total_electricity_effect_bonus := 0.0
+	var total_summon_slots_bonus := 0
 	for diamond_id in socketed_faded_diamonds:
 		if diamond_id.is_empty():
 			continue
 		var bonus := _diamond_socket_bonus(diamond_id)
 		total_damage_bonus += float(bonus.get("damage", 0.0))
+		total_attack_damage_bonus += float(bonus.get("attack_damage", 0.0))
 		total_move_speed_bonus += float(bonus.get("move_speed", 0.0))
 		total_cooldown_reduction += float(bonus.get("cooldown", 0.0))
 		total_gold_bonus += float(bonus.get("gold", 0.0))
+		total_attack_radius_bonus += float(bonus.get("attack_radius", 0.0))
+		total_healing_rate_bonus += float(bonus.get("healing_rate", 0.0))
+		total_loot_luck_bonus += float(bonus.get("loot_luck", 0.0))
+		total_attack_effect_bonus += float(bonus.get("attack_effect", 0.0))
+		total_beyond_effect_bonus += float(bonus.get("beyond_effect", 0.0))
+		total_defense_effect_bonus += float(bonus.get("defense_effect", 0.0))
+		total_flame_effect_bonus += float(bonus.get("flame_effect", 0.0))
+		total_ice_effect_bonus += float(bonus.get("ice_effect", 0.0))
+		total_electricity_effect_bonus += float(bonus.get("electricity_effect", 0.0))
+		total_summon_slots_bonus += int(round(float(bonus.get("summon_slots", 0.0))))
+	return {
+		"damage_bonus": total_damage_bonus,
+		"attack_damage_bonus": total_attack_damage_bonus,
+		"move_speed_bonus": total_move_speed_bonus,
+		"cooldown_reduction": total_cooldown_reduction,
+		"gold_gain_bonus": total_gold_bonus,
+		"attack_radius_bonus": total_attack_radius_bonus,
+		"healing_rate_bonus": total_healing_rate_bonus,
+		"loot_luck_bonus": total_loot_luck_bonus,
+		"attack_effect_bonus": total_attack_effect_bonus,
+		"beyond_effect_bonus": total_beyond_effect_bonus,
+		"defense_effect_bonus": total_defense_effect_bonus,
+		"flame_effect_bonus": total_flame_effect_bonus,
+		"ice_effect_bonus": total_ice_effect_bonus,
+		"electricity_effect_bonus": total_electricity_effect_bonus,
+		"summon_slots_bonus": total_summon_slots_bonus
+	}
+
+func _socketed_diamond_bonus_summary() -> Array[String]:
+	return _diamond_bonus_lines(_socketed_diamond_bonus_totals())
+
+func _format_bonus_decimal(value: float) -> String:
+	var rounded := snappedf(value, 0.01)
+	if is_equal_approx(rounded, round(rounded)):
+		return str(int(round(rounded)))
+	return "%.2f" % rounded
+
+func _apply_socketed_diamond_bonuses() -> void:
+	var totals := _socketed_diamond_bonus_totals()
 	if player != null:
-		player.set_faded_diamond_bonuses({
-			"damage_bonus": total_damage_bonus,
-			"move_speed_bonus": total_move_speed_bonus,
-			"cooldown_reduction": total_cooldown_reduction,
-			"gold_gain_bonus": total_gold_bonus
-		})
+		player.set_faded_diamond_bonuses(totals)
 
 func _on_inventory_socket_drop_requested(slot_index: int, diamond_id: String, source_slot_index: int) -> void:
 	if player == null:
@@ -2439,6 +3619,13 @@ func _on_inventory_socket_clear_requested(slot_index: int) -> void:
 	socketed_faded_diamonds[slot_index] = ""
 	_apply_socketed_diamond_bonuses()
 
+func _on_spell_slot_spell_selected(category: String, spell_id: String) -> void:
+	if player == null:
+		return
+	player.set_active_spell(category, spell_id)
+	if hud != null:
+		hud.update_stats(_stats_for_hud(player.get_stats()))
+
 func _on_player_damaged(amount: int) -> void:
 	if whisper_system != null:
 		whisper_system.record_player_damage(amount, player)
@@ -2451,8 +3638,10 @@ func _on_resurrect_requested() -> void:
 	if player == null or player.alive:
 		return
 	var spawn_position := PLAYER_START_POSITION
-	if current_area == AREA_TOWN:
-		spawn_position = TOWN_SPAWN_POSITION
+	if current_area == AREA_VELMORA:
+		spawn_position = VELMORA_SPAWN_POSITION
+	elif current_area == AREA_HOOFGROVE_WILDS:
+		spawn_position = HOOFGROVE_SPAWN_POSITION
 	player.resurrect_at(spawn_position)
 	hud.hide_death()
 	camera.global_position = player.global_position + _camera_follow_offset()
@@ -2463,13 +3652,21 @@ func _on_exit_entered(body: Node3D) -> void:
 	if body.name != "Player":
 		return
 	if exit_open:
+		if _is_mission_active(AREA_BLACK_VAULT, "return_to_velmora_with_teleport"):
+			_say_whisper("The portal has gone cold. Use the device.")
+			return
 		_play_sound(EXIT_SOUND, -1.0)
 		if not exit_directive_completed:
 			exit_directive_completed = true
 			_update_possession()
-		_enter_town()
+		if mission_system != null:
+			mission_system.complete_matching(current_area, "enter_the_portal_in_the_black_vault", {
+				"area": current_area,
+				"target": "black_vault_portal"
+			})
+		_enter_velmora()
 	else:
-		_say_whisper("Locked. The castle wants blood before it opens.")
+		_say_whisper("Locked. The Black Vault wants blood before it opens.")
 
 func _on_teleport_device_requested() -> void:
 	if player == null:
@@ -2477,19 +3674,47 @@ func _on_teleport_device_requested() -> void:
 	if not _has_relic("teleport_device"):
 		_say_whisper("No relic answers from your pack yet.")
 		return
-	if current_area != AREA_TOWN:
-		_say_whisper("The anchor is already biting castle stone.")
+	if current_area != AREA_VELMORA:
+		_say_whisper("The anchor is already biting Black Vault stone.")
 		return
-	if mission_system != null:
-		mission_system.complete_matching(current_area, "use_relic", {
-			"relic_id": "teleport_device",
-			"target": "teleport_device"
-		})
-	_enter_castle_from_town()
+	_complete_teleport_destination_missions(current_area, AREA_BLACK_VAULT)
+	_enter_black_vault_from_velmora()
 
-func _enter_castle_from_town() -> void:
+func _on_teleport_destination_requested(destination_id: String) -> void:
+	if player == null:
+		return
+	if not _has_relic("teleport_device"):
+		_say_whisper("No relic answers from your pack yet.")
+		return
+	match destination_id:
+		"black_vault":
+			if current_area == AREA_BLACK_VAULT:
+				_say_whisper("The Black Vault is already under your feet.")
+				return
+			_complete_teleport_destination_missions(current_area, AREA_BLACK_VAULT)
+			_enter_black_vault_from_velmora()
+		"velmora":
+			if current_area == AREA_VELMORA:
+				_say_whisper("Velmora already has you.")
+				return
+			if current_area == AREA_HOOFGROVE_WILDS and _is_mission_active(AREA_HOOFGROVE_WILDS, "clear_hoofgrove_wilds"):
+				_say_whisper("Hoofgrove still has teeth standing.")
+				return
+			_complete_teleport_destination_missions(current_area, AREA_VELMORA)
+			_enter_velmora()
+		"hoofgrove_wilds":
+			if current_area == AREA_HOOFGROVE_WILDS:
+				_say_whisper("Hoofgrove already has your scent.")
+				return
+			_complete_teleport_destination_missions(current_area, AREA_HOOFGROVE_WILDS)
+			_enter_hoofgrove_wilds()
+		_:
+			_say_whisper("That anchor is still dark.")
+
+func _enter_black_vault_from_velmora() -> void:
 	active_vendor_id = ""
 	active_dialogue_id = ""
+	active_dialogue_npc_id = ""
 	if hud != null:
 		hud.hide_dialogue()
 		hud.hide_shop()
@@ -2504,14 +3729,19 @@ func _enter_castle_from_town() -> void:
 	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
 	_update_objective()
 	_update_minimap()
+	if hud != null:
+		hud.update_stats(_stats_for_hud(player.get_stats()))
 	_say_whisper("Back to the stone and screaming.")
 
-func _enter_town() -> void:
-	_make_town()
-	current_area = AREA_TOWN
-	_set_mission_area(AREA_TOWN)
-	_set_background_music(TOWN_MUSIC)
+func _enter_velmora() -> void:
+	_make_velmora()
+	current_area = AREA_VELMORA
+	_set_mission_area(AREA_VELMORA)
+	_sync_torren_blackwell_visibility()
+	_set_background_music(VELMORA_MUSIC)
 	active_vendor_id = ""
+	active_dialogue_id = ""
+	active_dialogue_npc_id = ""
 	if hud != null:
 		hud.hide_shop()
 		hud.hide_diamond_store()
@@ -2519,24 +3749,83 @@ func _enter_town() -> void:
 		hud.set_minimap_visible(false)
 	if player != null:
 		player.set_attacks_enabled(false)
-	player.teleport_to(TOWN_SPAWN_POSITION)
+	player.teleport_to(VELMORA_SPAWN_POSITION)
 	camera.global_position = player.global_position + _camera_follow_offset()
 	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
 	_update_objective()
+	if hud != null:
+		hud.update_stats(_stats_for_hud(player.get_stats()))
 	_say_whisper("A door behind us. A market ahead. Spend wisely.")
 
+func _enter_hoofgrove_wilds() -> void:
+	_make_hoofgrove_wilds()
+	current_area = AREA_HOOFGROVE_WILDS
+	_set_mission_area(AREA_HOOFGROVE_WILDS)
+	_set_background_music(_hoofgrove_wilds_music())
+	active_vendor_id = ""
+	active_dialogue_id = ""
+	active_dialogue_npc_id = ""
+	if hud != null:
+		hud.hide_dialogue()
+		hud.hide_shop()
+		hud.hide_diamond_store()
+		hud.hide_spell_store()
+		hud.set_minimap_visible(false)
+	if player != null:
+		player.set_attacks_enabled(true)
+		player.teleport_to(HOOFGROVE_SPAWN_POSITION)
+	_spawn_hoofgrove_centaurs()
+	_spawn_hoofgrove_chests()
+	camera.global_position = player.global_position + _camera_follow_offset()
+	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
+	_update_objective()
+	_refresh_current_missions_display()
+	if hud != null:
+		hud.update_stats(_stats_for_hud(player.get_stats()))
+	_say_whisper("Hoofgrove Wilds. New soil. Old hunger.")
+
+func _spawn_hoofgrove_centaurs() -> void:
+	if hoofgrove_centaurs_spawned or player == null:
+		return
+	hoofgrove_centaurs_spawned = true
+	hoofgrove_centaurs_remaining = HOOFGROVE_CENTAUR_COUNT
+	hoofgrove_hostiles_remaining = HOOFGROVE_CENTAUR_COUNT + HOOFGROVE_WARRIOR_COUNT + HOOFGROVE_GIANT_COUNT
+	var local_points := [
+		Vector3(-11.0, 0.1, 21.0),
+		Vector3(12.0, 0.1, 18.0),
+		Vector3(-18.0, 0.1, 8.0),
+		Vector3(17.0, 0.1, 5.0),
+		Vector3(-15.0, 0.1, -8.0),
+		Vector3(14.0, 0.1, -10.0),
+		Vector3(-8.0, 0.1, -22.0),
+		Vector3(8.0, 0.1, -24.0),
+		Vector3(-24.0, 0.1, -25.0),
+		Vector3(24.0, 0.1, -25.0),
+		Vector3(-2.0, 0.1, -34.0),
+		Vector3(3.0, 0.1, 0.0)
+	]
+	for index in range(mini(HOOFGROVE_CENTAUR_COUNT, local_points.size())):
+		_spawn_enemy_at(HOOFGROVE_ORIGIN + local_points[index], false, SISEnemy.ENEMY_KIND_CENTAUR)
+	var warrior_start := HOOFGROVE_CENTAUR_COUNT
+	for index in range(HOOFGROVE_WARRIOR_COUNT):
+		var point_index := warrior_start + index
+		if point_index < local_points.size():
+			_spawn_enemy_at(HOOFGROVE_ORIGIN + local_points[point_index], false, SISEnemy.ENEMY_KIND_HUMAN_WARRIOR)
+	_spawn_enemy_at(HOOFGROVE_ORIGIN + Vector3(0.0, 0.1, -40.0), false, SISEnemy.ENEMY_KIND_GIANT)
+
 func _on_vendor_entered(body: Node3D, vendor_id: String) -> void:
-	if body.name != "Player" or current_area != AREA_TOWN:
+	if body.name != "Player" or current_area != AREA_VELMORA:
 		return
 	active_vendor_id = vendor_id
-	if vendor_id == "relic_vendor" and not _has_played_dialogue(DIALOGUE_ALDRIC_FIRST):
-		_start_vendor_dialogue(DIALOGUE_ALDRIC_FIRST, ALDRIC_FIRST_DIALOGUE_PATH, town_vendor_man_face_texture)
-		return
-	if vendor_id == "diamond_vendor" and not _has_played_dialogue(DIALOGUE_SYRA_FIRST):
-		_start_vendor_dialogue(DIALOGUE_SYRA_FIRST, SYRA_FIRST_DIALOGUE_PATH, town_vendor_woman_face_texture)
-		return
-	if vendor_id == "spell_vendor" and not _has_played_dialogue(DIALOGUE_ZETHYR_FIRST):
-		_start_vendor_dialogue(DIALOGUE_ZETHYR_FIRST, ZETHYR_FIRST_DIALOGUE_PATH, town_vendor_warlock_face_texture)
+	var mission := _active_talk_mission_for_vendor(vendor_id)
+	if not mission.is_empty():
+		var dialogue_path := _dialogue_path_for_mission(mission)
+		var dialogue_id := _dialogue_id_for_path(dialogue_path)
+		if not dialogue_path.is_empty() and not _has_played_dialogue(dialogue_id):
+			_start_vendor_dialogue(dialogue_id, dialogue_path, _vendor_face_texture(vendor_id), mission)
+			return
+		_complete_vendor_talk_missions(vendor_id)
+		_show_vendor_shop(vendor_id, _vendor_greeting(vendor_id))
 		return
 	_complete_vendor_talk_missions(vendor_id)
 	_show_vendor_shop(vendor_id, _vendor_greeting(vendor_id))
@@ -2546,27 +3835,94 @@ func _on_vendor_exited(body: Node3D, vendor_id: String) -> void:
 		return
 	active_vendor_id = ""
 	active_dialogue_id = ""
+	active_dialogue_npc_id = ""
 	if hud != null:
 		hud.hide_dialogue()
 		hud.hide_shop()
 		hud.hide_diamond_store()
 		hud.hide_spell_store()
 
-func _start_vendor_dialogue(dialogue_id: String, path: String, npc_face_texture: Texture2D) -> void:
+func _on_torren_blackwell_entered(body: Node3D) -> void:
+	if body.name != "Player" or current_area != AREA_VELMORA:
+		return
+	if not _is_torren_blackwell_available():
+		return
+	active_vendor_id = ""
+	var mission := _active_talk_mission_for_npc("Torren_Blackwell", "Torren Blackwell")
+	if not mission.is_empty():
+		var dialogue_path := _dialogue_path_for_mission(mission)
+		var dialogue_id := _dialogue_id_for_path(dialogue_path)
+		if not dialogue_path.is_empty() and not _has_played_dialogue(dialogue_id):
+			_start_torren_blackwell_dialogue(dialogue_id, dialogue_path, mission)
+			return
+		_complete_torren_blackwell_mission()
+		return
+	var incomplete_mission := _active_incomplete_mission_for_giver("Torren_Blackwell")
+	if not incomplete_mission.is_empty():
+		_start_torren_blackwell_incomplete_reply(incomplete_mission)
+
+func _on_torren_blackwell_exited(body: Node3D) -> void:
+	if body.name != "Player" or not active_dialogue_npc_id.begins_with("Torren_Blackwell"):
+		return
+	active_dialogue_id = ""
+	active_dialogue_npc_id = ""
+	if hud != null:
+		hud.hide_dialogue()
+
+func _start_vendor_dialogue(dialogue_id: String, path: String, npc_face_texture: Texture2D, mission: Dictionary = {}) -> void:
 	if hud == null:
 		return
 	var entries := _load_dialogue_entries(path)
 	if entries.is_empty():
 		_mark_dialogue_played(dialogue_id)
+		_complete_vendor_talk_missions(active_vendor_id)
 		_show_vendor_shop(active_vendor_id, _vendor_greeting(active_vendor_id))
 		return
+	_grant_mission_given_items(current_area, mission)
 	active_dialogue_id = dialogue_id
+	active_dialogue_npc_id = _vendor_npc_name(active_vendor_id)
 	hud.show_dialogue(entries, npc_face_texture)
+
+func _start_torren_blackwell_dialogue(dialogue_id: String = DIALOGUE_TORREN_BLACKWELL, path: String = TORREN_BLACKWELL_DIALOGUE_PATH, mission: Dictionary = {}) -> void:
+	if hud == null:
+		return
+	var entries := _load_dialogue_entries(path)
+	if entries.is_empty():
+		_complete_torren_blackwell_mission()
+		return
+	_grant_mission_given_items(current_area, mission)
+	active_dialogue_id = dialogue_id
+	active_dialogue_npc_id = "Torren_Blackwell"
+	hud.hide_shop()
+	hud.hide_diamond_store()
+	hud.hide_spell_store()
+	hud.show_dialogue(entries, torren_blackwell_face_texture)
+
+func _start_torren_blackwell_incomplete_reply(mission: Dictionary) -> void:
+	if hud == null:
+		return
+	var reply := _random_incomplete_reply(mission)
+	if reply.is_empty():
+		return
+	active_dialogue_id = ""
+	active_dialogue_npc_id = "Torren_Blackwell_Reminder"
+	hud.hide_shop()
+	hud.hide_diamond_store()
+	hud.hide_spell_store()
+	hud.show_dialogue([{
+		"speaker": "Torren",
+		"text": reply
+	}], torren_blackwell_face_texture)
 
 func _on_dialogue_finished() -> void:
 	var completed_dialogue_id := active_dialogue_id
+	var completed_dialogue_npc_id := active_dialogue_npc_id
 	active_dialogue_id = ""
+	active_dialogue_npc_id = ""
 	_mark_dialogue_played(completed_dialogue_id)
+	if completed_dialogue_npc_id == "Torren_Blackwell":
+		_complete_torren_blackwell_mission()
+		return
 	if not active_vendor_id.is_empty():
 		_complete_vendor_talk_missions(active_vendor_id)
 		_show_vendor_shop(active_vendor_id, _vendor_greeting(active_vendor_id))
@@ -2574,16 +3930,35 @@ func _on_dialogue_finished() -> void:
 		_add_relic("teleport_device")
 		_say_whisper("Relic gained. %s" % _relic_display_name("teleport_device"))
 
+func _complete_torren_blackwell_mission() -> void:
+	if mission_system == null:
+		return
+	mission_system.complete_matching(current_area, "talk_to_npc", {
+		"npc_id": "Torren_Blackwell",
+		"npc_name": "Torren Blackwell",
+		"target": "Torren_Blackwell"
+	})
+	_sync_torren_blackwell_visibility()
+
 func _show_vendor_shop(vendor_id: String, status_text: String) -> void:
 	if hud == null:
 		return
 	match vendor_id:
 		"diamond_vendor":
-			hud.show_diamond_store(_vendor_title(vendor_id), _diamond_store_items(), _wallet_text(), status_text, town_vendor_woman_face_texture)
+			hud.show_diamond_store(_vendor_title(vendor_id), _diamond_store_items(), _gold_wallet_text(), status_text, velmora_vendor_woman_face_texture)
 		"spell_vendor":
-			hud.show_spell_store(_vendor_title(vendor_id), _spell_store_items(), _wallet_text(), status_text, town_vendor_warlock_face_texture)
+			hud.show_spell_store(_vendor_title(vendor_id), _spell_store_items(), _gold_wallet_text(), status_text, velmora_vendor_warlock_face_texture)
 		_:
-			hud.show_shop(_vendor_title(vendor_id), _shop_items_for_vendor(vendor_id), status_text, _wallet_text(), town_vendor_man_face_texture)
+			hud.show_shop(_vendor_title(vendor_id), _shop_items_for_vendor(vendor_id), status_text, _wallet_text(), velmora_vendor_man_face_texture)
+
+func _vendor_face_texture(vendor_id: String) -> Texture2D:
+	match vendor_id:
+		"diamond_vendor":
+			return velmora_vendor_woman_face_texture
+		"spell_vendor":
+			return velmora_vendor_warlock_face_texture
+		_:
+			return velmora_vendor_man_face_texture
 
 func _vendor_npc_name(vendor_id: String) -> String:
 	match vendor_id:
@@ -2611,10 +3986,10 @@ func _vendor_greeting(vendor_id: String) -> String:
 	match vendor_id:
 		"diamond_vendor":
 			if game_level <= 1:
-				return "Syra smiles. Faded diamonds unlock after level 1. Return with more blood on your hands."
+				return "Syra smiles. Faded diamonds unlock after the Black Vault. Return with more blood on your hands."
 			return "Syra opens a case of faded diamonds. Each color bends your build in a different direction."
 		"spell_vendor":
-			return "Zethyr watches you carefully. Spend diamonds to bind permanent spell upgrades."
+			return "Zethyr watches you carefully. Spend gold to bind permanent spell upgrades."
 		"relic_vendor":
 			return "Aldric leans on the counter. More stock is on its way. Come back soon."
 		_:
@@ -2628,7 +4003,7 @@ func _shop_items_for_vendor(vendor_id: String) -> Array[Dictionary]:
 				items.append({
 					"id": "faded_locked",
 					"name": "Faded Diamonds (Locked)",
-					"description": "Reach level 2 to unlock Syra's full faded catalog.",
+					"description": "Clear the Black Vault to unlock Syra's full faded catalog.",
 					"price": "-"
 				})
 			else:
@@ -2637,7 +4012,7 @@ func _shop_items_for_vendor(vendor_id: String) -> Array[Dictionary]:
 					var owned_count := int(owned_faded_diamonds.get(item_id, 0))
 					var socketed_count := _socketed_count(item_id)
 					var available_count := _available_faded_diamond_count(item_id)
-					var description := String(diamond["description"])
+					var description := _diamond_bonus_text(item_id)
 					if owned_count > 0:
 						description += " Owned: %s (Socketed: %s, Available: %s)" % [owned_count, socketed_count, available_count]
 					items.append({
@@ -2656,7 +4031,7 @@ func _shop_items_for_vendor(vendor_id: String) -> Array[Dictionary]:
 					"id": String(spell["id"]),
 					"name": String(spell["name"]),
 					"description": description,
-					"price": "%s diamonds" % int(spell["diamond_cost"])
+					"price": "%s gold" % int(spell["gold_cost"])
 				})
 		"relic_vendor":
 			items.append({
@@ -2670,13 +4045,16 @@ func _shop_items_for_vendor(vendor_id: String) -> Array[Dictionary]:
 func _wallet_text() -> String:
 	return "Gold %s    Diamonds %s" % [player.gold, player.diamonds]
 
+func _gold_wallet_text() -> String:
+	return "Gold %s" % player.gold
+
 func _diamond_store_items() -> Array[Dictionary]:
 	var items: Array[Dictionary] = []
 	if game_level <= 1:
 		items.append({
 			"id": "faded_locked",
 			"name": "Faded Diamonds (Locked)",
-			"description": "Reach level 2 to unlock Syra's full faded catalog.",
+			"description": "Clear the Black Vault to unlock Syra's full faded catalog.",
 			"price": "—",
 			"color": Color(0.5, 0.5, 0.5),
 			"owned_count": 0
@@ -2687,7 +4065,7 @@ func _diamond_store_items() -> Array[Dictionary]:
 		var owned_count := int(owned_faded_diamonds.get(item_id, 0))
 		var socketed_count := _socketed_count(item_id)
 		var available_count := _available_faded_diamond_count(item_id)
-		var description := String(diamond["description"])
+		var description := _diamond_bonus_text(item_id)
 		if owned_count > 0:
 			description += "\nOwned: %s  |  Socketed: %s  |  Available: %s" % [owned_count, socketed_count, available_count]
 		items.append({
@@ -2711,7 +4089,7 @@ func _spell_store_items() -> Array[Dictionary]:
 			"category": String(spell.get("category", "attack")),
 			"spell_category": _spell_theme_category_for_id(spell_id),
 			"image": String(spell.get("image", "")),
-			"diamond_cost": int(spell["diamond_cost"]),
+			"gold_cost": int(spell["gold_cost"]),
 			"learned": player.has_spell(spell_id)
 		})
 	return items
@@ -2735,7 +4113,7 @@ func _on_shop_purchase_requested(item_id: String) -> void:
 
 func _buy_faded_diamond(item_id: String) -> String:
 	if game_level <= 1:
-		return "Syra will only sell faded diamonds after level 1."
+		return "Syra will only sell faded diamonds after the Black Vault."
 	for diamond in FADED_DIAMOND_CATALOG:
 		if String(diamond["id"]) != item_id:
 			continue
@@ -2753,9 +4131,9 @@ func _buy_spell(item_id: String) -> String:
 			continue
 		if player.has_spell(item_id):
 			return "Already learned."
-		var cost := int(spell["diamond_cost"])
-		if not player.spend_diamonds(cost):
-			return "Not enough diamonds."
+		var cost := int(spell["gold_cost"])
+		if not player.spend_gold(cost):
+			return "Not enough gold."
 		player.learn_spell(item_id)
 		return "Learned %s." % String(spell["name"])
 	return "The spell vendor cannot teach that."
@@ -2769,17 +4147,39 @@ func _on_skill_tree_point_requested(node_key: String) -> void:
 	player.unlock_skill_node(node_key)
 
 func _update_objective() -> void:
-	if current_area == AREA_TOWN:
-		var open_missions := _active_mission_count(AREA_TOWN)
+	if current_area == AREA_VELMORA:
+		var open_missions := _active_mission_count(AREA_VELMORA)
 		if open_missions > 0:
-			hud.set_objective("Town missions: %s open." % open_missions)
+			hud.set_objective("Velmora missions: %s open." % open_missions)
 		else:
-			hud.set_objective("Town reached. Visit vendors to buy diamonds and spells.")
+			hud.set_objective("Velmora reached. Visit vendors to buy diamonds and spells.")
+		_refresh_current_missions_display()
+		return
+	if current_area == AREA_HOOFGROVE_WILDS:
+		if _is_mission_active(AREA_HOOFGROVE_WILDS, "clear_hoofgrove_wilds"):
+			hud.set_objective("Clear Hoofgrove Wilds: %s hostiles remain." % hoofgrove_hostiles_remaining)
+		elif _is_mission_active(AREA_HOOFGROVE_WILDS, "return_to_velmora_with_teleport"):
+			hud.set_objective("Talk to Torren Blackwell in Velmora.")
+		elif _is_mission_active(AREA_VELMORA, "talk_to_torren_after_clearing_forest"):
+			hud.set_objective("Talk to Torren Blackwell in Velmora.")
+		else:
+			hud.set_objective("Hoofgrove Wilds reached. The road ahead is waking.")
+		_refresh_current_missions_display()
+		return
+	if _is_mission_active(AREA_BLACK_VAULT, "return_to_velmora_with_teleport"):
+		hud.set_objective("Use the Teleport Device to return to Velmora.")
+		_refresh_current_missions_display()
 		return
 	if exit_open:
 		hud.set_objective("Enter the portal. Leave the dead behind.")
 	else:
-		hud.set_objective("Slay everyone in the castle: %s/%s lives taken. Crack open their chests." % [kills, STAGE_ENEMY_COUNT])
+		var objective_template := _mission_text(
+			AREA_BLACK_VAULT,
+			"clear_black_vault",
+			"Slay everyone in the Black Vault: %s/%s lives taken. Crack open their chests."
+		)
+		hud.set_objective(_format_black_vault_mission_text(objective_template))
+	_refresh_current_missions_display()
 
 func _update_possession() -> void:
 	if hud == null:
@@ -2796,9 +4196,13 @@ func _update_minimap() -> void:
 	if hud == null or player == null:
 		return
 	var enemy_positions: Array[Vector3] = []
-	if current_area == AREA_TOWN:
+	if current_area == AREA_VELMORA:
 		hud.set_minimap_visible(false)
-		hud.update_minimap(player.global_position - TOWN_ORIGIN, enemy_positions, TOWN_HALF_SIZE)
+		hud.update_minimap(player.global_position - VELMORA_ORIGIN, enemy_positions, VELMORA_HALF_SIZE)
+		return
+	if current_area == AREA_HOOFGROVE_WILDS:
+		hud.set_minimap_visible(false)
+		hud.update_minimap(player.global_position - HOOFGROVE_ORIGIN, enemy_positions, HOOFGROVE_HALF_SIZE)
 		return
 	hud.set_minimap_visible(true)
 	var can_see_enemies := reveal_enemies_on_minimap
@@ -2891,11 +4295,26 @@ func _floor_material() -> StandardMaterial3D:
 	material.uv1_scale = Vector3(9.0, 9.0, 1.0)
 	return material
 
-func _town_floor_material() -> StandardMaterial3D:
-	if town_cobble_texture == null:
-		town_cobble_texture = _make_town_cobble_texture()
+func _hoofgrove_floor_material() -> StandardMaterial3D:
+	if hoofgrove_floor_texture == null:
+		hoofgrove_floor_texture = _make_hoofgrove_floor_texture()
 	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.albedo_texture = town_cobble_texture
+	material.albedo_texture = hoofgrove_floor_texture
+	material.albedo_color = Color(0.58, 0.52, 0.42)
+	material.emission_enabled = true
+	material.emission = Color(0.018, 0.026, 0.012)
+	material.emission_texture = hoofgrove_floor_texture
+	material.emission_energy_multiplier = 0.11
+	material.roughness = 1.0
+	material.texture_repeat = true
+	material.uv1_scale = Vector3(13.0, 13.0, 1.0)
+	return material
+
+func _velmora_floor_material() -> StandardMaterial3D:
+	if velmora_cobble_texture == null:
+		velmora_cobble_texture = _make_velmora_cobble_texture()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_texture = velmora_cobble_texture
 	material.albedo_color = Color(0.22, 0.205, 0.185)
 	material.emission_enabled = true
 	material.emission = Color(0.035, 0.025, 0.018)
@@ -2905,11 +4324,11 @@ func _town_floor_material() -> StandardMaterial3D:
 	material.uv1_scale = Vector3(7.0, 7.0, 1.0)
 	return material
 
-func _town_street_material() -> StandardMaterial3D:
-	if town_cobble_texture == null:
-		town_cobble_texture = _make_town_cobble_texture()
+func _velmora_street_material() -> StandardMaterial3D:
+	if velmora_cobble_texture == null:
+		velmora_cobble_texture = _make_velmora_cobble_texture()
 	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.albedo_texture = town_cobble_texture
+	material.albedo_texture = velmora_cobble_texture
 	material.albedo_color = Color(0.34, 0.32, 0.3)
 	material.emission_enabled = true
 	material.emission = Color(0.04, 0.033, 0.03)
@@ -2919,7 +4338,7 @@ func _town_street_material() -> StandardMaterial3D:
 	material.uv1_scale = Vector3(2.3, 10.0, 1.0)
 	return material
 
-func _town_wall_material(size: Vector3) -> StandardMaterial3D:
+func _velmora_wall_material(size: Vector3) -> StandardMaterial3D:
 	if wall_texture == null:
 		wall_texture = _make_brick_texture()
 	var horizontal_repeats: float = max(size.x, size.z) * 0.42
@@ -2936,11 +4355,11 @@ func _town_wall_material(size: Vector3) -> StandardMaterial3D:
 	material.uv1_scale = Vector3(horizontal_repeats, vertical_repeats, 1.0)
 	return material
 
-func _town_roof_material() -> StandardMaterial3D:
-	if town_roof_texture == null:
-		town_roof_texture = _make_town_roof_texture()
+func _velmora_roof_material() -> StandardMaterial3D:
+	if velmora_roof_texture == null:
+		velmora_roof_texture = _make_velmora_roof_texture()
 	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.albedo_texture = town_roof_texture
+	material.albedo_texture = velmora_roof_texture
 	material.albedo_color = Color(0.26, 0.24, 0.31)
 	material.emission_enabled = true
 	material.emission = Color(0.025, 0.018, 0.04)
@@ -2950,11 +4369,11 @@ func _town_roof_material() -> StandardMaterial3D:
 	material.uv1_scale = Vector3(4.0, 3.0, 1.0)
 	return material
 
-func _town_wood_material() -> StandardMaterial3D:
-	if town_wood_texture == null:
-		town_wood_texture = _make_town_wood_texture()
+func _velmora_wood_material() -> StandardMaterial3D:
+	if velmora_wood_texture == null:
+		velmora_wood_texture = _make_velmora_wood_texture()
 	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.albedo_texture = town_wood_texture
+	material.albedo_texture = velmora_wood_texture
 	material.albedo_color = Color(0.33, 0.21, 0.13)
 	material.emission_enabled = true
 	material.emission = Color(0.035, 0.022, 0.014)
@@ -2964,7 +4383,49 @@ func _town_wood_material() -> StandardMaterial3D:
 	material.uv1_scale = Vector3(2.4, 2.4, 1.0)
 	return material
 
-func _make_town_cobble_texture() -> Texture2D:
+func _make_hoofgrove_floor_texture() -> Texture2D:
+	var image := Image.create(BRICK_TEXTURE_SIZE, BRICK_TEXTURE_SIZE, false, Image.FORMAT_RGBA8)
+	var dirt_dark := Color(0.055, 0.04, 0.027)
+	var dirt_mid := Color(0.16, 0.105, 0.058)
+	var mud := Color(0.075, 0.058, 0.038)
+	var leaf_green := Color(0.095, 0.17, 0.052)
+	var leaf_gold := Color(0.27, 0.19, 0.06)
+	var dead_leaf := Color(0.22, 0.095, 0.035)
+	var stone := Color(0.25, 0.235, 0.2)
+	var wood := Color(0.13, 0.075, 0.034)
+
+	for y in BRICK_TEXTURE_SIZE:
+		for x in BRICK_TEXTURE_SIZE:
+			var coarse := _brick_noise(int(x / 5), int(y / 5), 101)
+			var fine := _brick_noise(x, y, 103)
+			var wet := _brick_noise(int(x / 13), int(y / 13), 105)
+			var color: Color = dirt_mid.lerp(dirt_dark, coarse * 0.38).lerp(mud, wet * 0.34)
+			color = color.lerp(Color(0.045, 0.082, 0.035), _brick_noise(int(x / 9), int(y / 9), 106) * 0.22)
+
+			var leaf_seed := _brick_noise(x, y, 107)
+			if leaf_seed > 0.88:
+				var leaf_color: Color = leaf_green.lerp(leaf_gold, _brick_noise(x, y, 108))
+				leaf_color = leaf_color.lerp(dead_leaf, _brick_noise(x, y, 109) * 0.55)
+				color = color.lerp(leaf_color, 0.72)
+
+			var pebble_seed := _brick_noise(int(x / 2), int(y / 2), 111)
+			if pebble_seed > 0.955:
+				color = color.lerp(stone, 0.82)
+
+			var branch_wave := absf(sin(float(x) * 0.12 + float(y) * 0.055 + _brick_hash(int(x / 18), int(y / 18), 113) * 4.0))
+			if branch_wave < 0.035 and _brick_noise(int(x / 4), int(y / 4), 115) > 0.72:
+				color = color.lerp(wood, 0.78)
+
+			if fine > 0.91:
+				color = color.lightened(0.08)
+			elif fine < 0.1:
+				color = color.darkened(0.12)
+			image.set_pixel(x, y, color)
+
+	image.generate_mipmaps()
+	return ImageTexture.create_from_image(image)
+
+func _make_velmora_cobble_texture() -> Texture2D:
 	var image := Image.create(BRICK_TEXTURE_SIZE, BRICK_TEXTURE_SIZE, false, Image.FORMAT_RGBA8)
 	var mortar := Color(0.035, 0.034, 0.038)
 	var stone_dark := Color(0.12, 0.105, 0.105)
@@ -2996,7 +4457,7 @@ func _make_town_cobble_texture() -> Texture2D:
 	image.generate_mipmaps()
 	return ImageTexture.create_from_image(image)
 
-func _make_town_roof_texture() -> Texture2D:
+func _make_velmora_roof_texture() -> Texture2D:
 	var image := Image.create(BRICK_TEXTURE_SIZE, BRICK_TEXTURE_SIZE, false, Image.FORMAT_RGBA8)
 	var slate_dark := Color(0.065, 0.065, 0.09)
 	var slate_mid := Color(0.15, 0.14, 0.19)
@@ -3016,7 +4477,7 @@ func _make_town_roof_texture() -> Texture2D:
 	image.generate_mipmaps()
 	return ImageTexture.create_from_image(image)
 
-func _make_town_wood_texture() -> Texture2D:
+func _make_velmora_wood_texture() -> Texture2D:
 	var image := Image.create(BRICK_TEXTURE_SIZE, BRICK_TEXTURE_SIZE, false, Image.FORMAT_RGBA8)
 	var wood_dark := Color(0.12, 0.07, 0.04)
 	var wood_mid := Color(0.28, 0.16, 0.085)

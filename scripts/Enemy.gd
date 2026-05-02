@@ -1,12 +1,17 @@
 extends CharacterBody3D
 class_name SISEnemy
 
+const LightningVortexScript := preload("res://scripts/LightningVortex.gd")
+const ProgressionConfigScript := preload("res://scripts/ProgressionConfig.gd")
 const ANGEL_BODY_TEXTURE: Texture2D = preload("res://assets/images/enemies/angel/angel-body.png")
 const ANGEL_LEFT_WING_TEXTURE: Texture2D = preload("res://assets/images/enemies/angel/angel-left-wing.png")
 const ANGEL_RIGHT_WING_TEXTURE: Texture2D = preload("res://assets/images/enemies/angel/angel-right-wing.png")
 const ANGEL_BODY_BACK_PATH := "res://assets/images/enemies/angel/angel-back.png"
 const KNIGHT_MODEL_PATH := "res://assets/images/enemies/knight/knight.glb"
 const CLERIC_MODEL_PATH := "res://assets/images/enemies/cleric/cleric.glb"
+const CENTAUR_MODEL_PATH := "res://assets/images/enemies/centaur/centaur.glb"
+const HUMAN_WARRIOR_MODEL_PATH := "res://assets/images/enemies/human-warrior/human-warrior.glb"
+const GIANT_MODEL_PATH := "res://assets/images/enemies/giant/giant.glb"
 const STATUS_FX_SCENE: PackedScene = preload("res://assets/images/statusFX/effects/status/vfx_status_shatter.tscn")
 
 signal killed(enemy: Node3D)
@@ -15,14 +20,24 @@ const ENEMY_KIND_ANGEL := &"angel"
 const ENEMY_KIND_KNIGHT := &"knight"
 const ENEMY_KIND_CLERIC := &"cleric"
 const ENEMY_KIND_SKELETON := &"skeleton"
+const ENEMY_KIND_CENTAUR := &"centaur"
+const ENEMY_KIND_HUMAN_WARRIOR := &"human_warrior"
+const ENEMY_KIND_GIANT := &"giant"
 const GRAVITY := 30.0
 const ATTACK_RANGE := 1.35
 const ATTACK_INTERVAL := 0.9
 const CLERIC_ATTACK_INTERVAL := 1.65
 const CLERIC_SIGHT_RANGE := 16.0
+const CENTAUR_ATTACK_INTERVAL := 1.85
+const CENTAUR_SIGHT_RANGE := 17.0
+const CENTAUR_IDEAL_RANGE := 8.5
+const CENTAUR_VORTEX_SPEED := 8.6
 const CLERIC_VISUAL_HEIGHT := 2.45
 const CLERIC_PROXY_BASE_HEIGHT := 1.78
 const CLERIC_LIFE_BAR_HEIGHT := 2.82
+const CENTAUR_VISUAL_HEIGHT := 2.25
+const CENTAUR_PROXY_BASE_HEIGHT := 1.86
+const CENTAUR_LIFE_BAR_HEIGHT := 2.62
 const NOTICE_RANGE := 13.5
 const LOSE_INTEREST_RANGE := 18.0
 const FACING_FRONT := 0
@@ -34,6 +49,12 @@ const ANGEL_HOVER_BOB := 0.07
 const KNIGHT_VISUAL_HEIGHT := 2.05
 const KNIGHT_PROXY_BASE_HEIGHT := 1.72
 const KNIGHT_LIFE_BAR_HEIGHT := 2.42
+const HUMAN_WARRIOR_VISUAL_HEIGHT := 2.05
+const HUMAN_WARRIOR_PROXY_BASE_HEIGHT := 1.72
+const HUMAN_WARRIOR_LIFE_BAR_HEIGHT := 2.42
+const GIANT_VISUAL_HEIGHT := 4.85
+const GIANT_PROXY_BASE_HEIGHT := 3.55
+const GIANT_LIFE_BAR_HEIGHT := 5.25
 const ANGEL_STATUS_FX_COLOR := Color(0.72, 0.9, 1.0, 1.0)
 const ANGEL_STATUS_FX_EMISSION := 5.8
 const ANGEL_STATUS_FX_SCALE := 0.62
@@ -48,6 +69,8 @@ var speed := 3.1
 var damage := 10
 var xp_reward := 28
 var gold_reward := 8
+var enemy_level := 1
+var elite_enemy := false
 var attack_timer := 0.0
 var alive := true
 var _wing_time: float = 0.0
@@ -83,33 +106,58 @@ func _ready() -> void:
 
 func configure(target_player: Node3D, enemy_level: int, elite: bool = false, kind: StringName = ENEMY_KIND_ANGEL) -> void:
 	player = target_player
+	self.enemy_level = enemy_level
+	elite_enemy = elite
 	enemy_kind = kind
 	max_life = 38 + enemy_level * 10
 	life = max_life
 	damage = 8 + enemy_level * 2
 	speed = 2.8 + minf(float(enemy_level) * 0.12, 1.2)
-	xp_reward = 24 + enemy_level * 8
+	xp_reward = ProgressionConfigScript.enemy_xp(enemy_level)
 	gold_reward = 6 + enemy_level * 3
 	if enemy_kind == ENEMY_KIND_SKELETON:
 		max_life = int(float(max_life) * 0.82)
 		life = max_life
 		damage = maxi(damage - 2, 1)
 		speed += 0.55
-		xp_reward += 4
 	elif enemy_kind == ENEMY_KIND_CLERIC:
 		max_life = int(float(max_life) * 1.28)
 		life = max_life
 		damage += 7
 		speed = 0.0
-		xp_reward += 16
 		gold_reward += 8
+	elif enemy_kind == ENEMY_KIND_CENTAUR:
+		max_life = int(float(max_life) * 1.18)
+		life = max_life
+		damage += 5
+		speed += 0.35
+		gold_reward += 6
+	elif enemy_kind == ENEMY_KIND_HUMAN_WARRIOR:
+		max_life = int(float(max_life) * 1.12)
+		life = max_life
+		damage += 4
+		speed += 0.18
+		gold_reward += 5
+	elif enemy_kind == ENEMY_KIND_GIANT:
+		max_life = int(float(max_life) * 5.4)
+		life = max_life
+		damage += 22
+		speed = 1.75
+		xp_reward = ProgressionConfigScript.enemy_xp(enemy_level, ProgressionConfigScript.ENEMY_XP_BOSS)
+		gold_reward += 80
+		scale = Vector3.ONE * 1.28
 	if elite:
 		max_life *= 2
 		life = max_life
 		damage += 8
-		xp_reward *= 2
+		xp_reward = ProgressionConfigScript.enemy_xp(enemy_level, ProgressionConfigScript.ENEMY_XP_ELITE)
 		gold_reward *= 3
 		scale = Vector3.ONE * 1.25
+		if enemy_kind == ENEMY_KIND_CENTAUR:
+			max_life = int(float(max_life) * 1.35)
+			life = max_life
+			damage += 8
+			scale = Vector3.ONE * 1.62
 	_make_random_status_fx(elite)
 
 func _physics_process(delta: float) -> void:
@@ -127,6 +175,9 @@ func _physics_process(delta: float) -> void:
 	if enemy_kind == ENEMY_KIND_CLERIC:
 		_physics_process_cleric(delta, offset, distance)
 		return
+	if enemy_kind == ENEMY_KIND_CENTAUR:
+		_physics_process_centaur(delta, offset, distance)
+		return
 
 	if not _player_noticed:
 		velocity.x = move_toward(velocity.x, 0.0, speed)
@@ -135,7 +186,7 @@ func _physics_process(delta: float) -> void:
 		var direction := offset.normalized()
 		velocity.x = direction.x * speed
 		velocity.z = direction.z * speed
-		if enemy_kind == ENEMY_KIND_SKELETON or enemy_kind == ENEMY_KIND_KNIGHT:
+		if enemy_kind == ENEMY_KIND_SKELETON or enemy_kind == ENEMY_KIND_KNIGHT or enemy_kind == ENEMY_KIND_HUMAN_WARRIOR or enemy_kind == ENEMY_KIND_GIANT:
 			_visual_root.rotation.y = atan2(velocity.x, velocity.z)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, speed)
@@ -154,10 +205,44 @@ func _physics_process(delta: float) -> void:
 			_update_angel_visual_facing(Vector2(velocity.x, velocity.z).normalized())
 		_face_angel_visuals_to_camera()
 		_animate_angel_hover()
-	elif enemy_kind == ENEMY_KIND_KNIGHT:
+	elif enemy_kind == ENEMY_KIND_KNIGHT or enemy_kind == ENEMY_KIND_HUMAN_WARRIOR or enemy_kind == ENEMY_KIND_GIANT:
 		_animate_knight(delta)
 	_animate_wings(delta)
 	_animate_skeleton(delta)
+	_animate_status_fx(delta)
+	_animate_lightning_bolts(delta)
+
+func _physics_process_centaur(delta: float, offset: Vector3, distance: float) -> void:
+	if not is_on_floor():
+		velocity.y -= GRAVITY * delta
+	else:
+		velocity.y = -0.1
+
+	if offset.length_squared() > 0.001 and _visual_root != null:
+		_visual_root.rotation.y = atan2(offset.x, offset.z)
+
+	var can_see := distance <= CENTAUR_SIGHT_RANGE and _has_clear_sight_to_player()
+	if can_see:
+		_player_noticed = true
+
+	if not _player_noticed:
+		velocity.x = move_toward(velocity.x, 0.0, speed)
+		velocity.z = move_toward(velocity.z, 0.0, speed)
+	else:
+		var direction := offset.normalized()
+		var movement := Vector3.ZERO
+		if distance > CENTAUR_IDEAL_RANGE + 1.8:
+			movement = direction
+		elif distance < CENTAUR_IDEAL_RANGE - 1.5:
+			movement = -direction
+		velocity.x = movement.x * speed
+		velocity.z = movement.z * speed
+		if can_see and attack_timer <= 0.0:
+			_shoot_lightning_vortex(direction)
+			attack_timer = CENTAUR_ATTACK_INTERVAL
+
+	move_and_slide()
+	_animate_centaur(delta)
 	_animate_status_fx(delta)
 	_animate_lightning_bolts(delta)
 
@@ -262,6 +347,17 @@ func _has_clear_sight_to_player() -> bool:
 func _lightning_start_position() -> Vector3:
 	return global_position + Vector3(0.0, 1.72, 0.0)
 
+func _shoot_lightning_vortex(direction: Vector3) -> void:
+	var parent := get_parent() as Node3D
+	if parent == null or player == null:
+		return
+	var vortex: SISLightningVortex = LightningVortexScript.new() as SISLightningVortex
+	var target := player.global_position
+	target.y = global_position.y
+	vortex.configure(target, direction, CENTAUR_VORTEX_SPEED, damage)
+	parent.add_child(vortex)
+	_make_lightning_bolt(global_position + Vector3(0.0, 1.6, 0.0), target + Vector3(0.0, 2.85, 0.0))
+
 func _make_collision() -> void:
 	var collider: CollisionShape3D = CollisionShape3D.new()
 	var capsule: CapsuleShape3D = CapsuleShape3D.new()
@@ -299,6 +395,15 @@ func _make_visuals() -> void:
 		return
 	if enemy_kind == ENEMY_KIND_CLERIC:
 		_make_cleric_visuals()
+		return
+	if enemy_kind == ENEMY_KIND_CENTAUR:
+		_make_centaur_visuals()
+		return
+	if enemy_kind == ENEMY_KIND_HUMAN_WARRIOR:
+		_make_human_warrior_visuals()
+		return
+	if enemy_kind == ENEMY_KIND_GIANT:
+		_make_giant_visuals()
 		return
 
 	_visual_root.position.y = ANGEL_HOVER_HEIGHT
@@ -377,6 +482,115 @@ func _make_cleric_visuals() -> void:
 	_life_bar.material_override = _material(Color(0.88, 0.08, 0.08))
 	add_child(_life_bar)
 
+func _make_centaur_visuals() -> void:
+	_visual_root.name = "CentaurVisualRoot"
+	add_child(_make_centaur_shadow())
+
+	var model_loaded := false
+	if ResourceLoader.exists(CENTAUR_MODEL_PATH):
+		var scene := load(CENTAUR_MODEL_PATH) as PackedScene
+		if scene != null:
+			var model := scene.instantiate() as Node3D
+			if model != null:
+				model.name = "CentaurModel"
+				_visual_root.add_child(model)
+				_fit_visual_node(model, CENTAUR_VISUAL_HEIGHT)
+				_play_first_model_animation(model)
+				model_loaded = true
+
+	if not model_loaded:
+		_make_centaur_proxy_visuals()
+		_visual_root.scale = Vector3.ONE * (CENTAUR_VISUAL_HEIGHT / CENTAUR_PROXY_BASE_HEIGHT)
+
+	_life_bar = MeshInstance3D.new()
+	var bar_mesh: BoxMesh = BoxMesh.new()
+	bar_mesh.size = Vector3(0.95, 0.08, 0.06)
+	_life_bar.mesh = bar_mesh
+	_life_bar.position = Vector3(0.0, CENTAUR_LIFE_BAR_HEIGHT, 0.0)
+	_life_bar.material_override = _material(Color(0.88, 0.08, 0.08))
+	add_child(_life_bar)
+
+func _make_human_warrior_visuals() -> void:
+	_visual_root.name = "HumanWarriorVisualRoot"
+	add_child(_make_knight_shadow())
+
+	var model_loaded := false
+	if ResourceLoader.exists(HUMAN_WARRIOR_MODEL_PATH):
+		var scene := load(HUMAN_WARRIOR_MODEL_PATH) as PackedScene
+		if scene != null:
+			var model := scene.instantiate() as Node3D
+			if model != null:
+				model.name = "HumanWarriorModel"
+				_visual_root.add_child(model)
+				_fit_visual_node(model, HUMAN_WARRIOR_VISUAL_HEIGHT)
+				_play_first_model_animation(model)
+				model_loaded = true
+
+	if not model_loaded:
+		_make_knight_proxy_visuals()
+		_visual_root.scale = Vector3.ONE * (HUMAN_WARRIOR_VISUAL_HEIGHT / HUMAN_WARRIOR_PROXY_BASE_HEIGHT)
+
+	_life_bar = MeshInstance3D.new()
+	var bar_mesh: BoxMesh = BoxMesh.new()
+	bar_mesh.size = Vector3(0.9, 0.08, 0.06)
+	_life_bar.mesh = bar_mesh
+	_life_bar.position = Vector3(0.0, HUMAN_WARRIOR_LIFE_BAR_HEIGHT, 0.0)
+	_life_bar.material_override = _material(Color(0.88, 0.08, 0.08))
+	add_child(_life_bar)
+
+func _make_giant_visuals() -> void:
+	_visual_root.name = "GiantVisualRoot"
+	add_child(_make_giant_shadow())
+
+	var model_loaded := false
+	if ResourceLoader.exists(GIANT_MODEL_PATH):
+		var scene := load(GIANT_MODEL_PATH) as PackedScene
+		if scene != null:
+			var model := scene.instantiate() as Node3D
+			if model != null:
+				model.name = "GiantModel"
+				_visual_root.add_child(model)
+				_fit_visual_node(model, GIANT_VISUAL_HEIGHT)
+				_play_first_model_animation(model)
+				model_loaded = true
+
+	if not model_loaded:
+		_make_giant_proxy_visuals()
+		_visual_root.scale = Vector3.ONE * (GIANT_VISUAL_HEIGHT / GIANT_PROXY_BASE_HEIGHT)
+
+	_life_bar = MeshInstance3D.new()
+	var bar_mesh: BoxMesh = BoxMesh.new()
+	bar_mesh.size = Vector3(1.4, 0.1, 0.08)
+	_life_bar.mesh = bar_mesh
+	_life_bar.position = Vector3(0.0, GIANT_LIFE_BAR_HEIGHT, 0.0)
+	_life_bar.material_override = _material(Color(0.88, 0.08, 0.08))
+	add_child(_life_bar)
+
+func _make_centaur_shadow() -> MeshInstance3D:
+	var shadow: MeshInstance3D = MeshInstance3D.new()
+	shadow.name = "CentaurModelShadow"
+	var mesh: CylinderMesh = CylinderMesh.new()
+	mesh.top_radius = 0.78
+	mesh.bottom_radius = 0.78
+	mesh.height = 0.01
+	mesh.radial_segments = 32
+	shadow.mesh = mesh
+	shadow.position = Vector3(0.0, 0.016, 0.0)
+	shadow.scale = Vector3(1.45, 1.0, 0.72)
+	shadow.material_override = _transparent_material(Color(0.0, 0.0, 0.0, 0.34))
+	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return shadow
+
+func _make_centaur_proxy_visuals() -> void:
+	var hide := _material(Color(0.32, 0.18, 0.1), Color.BLACK, 0.0)
+	var skin := _material(Color(0.62, 0.46, 0.32), Color.BLACK, 0.0)
+	var cloth := _material(Color(0.18, 0.28, 0.14), Color(0.04, 0.12, 0.04), 0.05)
+	_visual_root.add_child(_make_bone_box(Vector3(0.88, 0.38, 0.32), Vector3(0.0, 0.72, 0.0), hide))
+	_visual_root.add_child(_make_bone_box(Vector3(0.34, 0.72, 0.24), Vector3(0.0, 1.24, 0.0), cloth))
+	_visual_root.add_child(_make_bone_box(Vector3(0.28, 0.28, 0.24), Vector3(0.0, 1.76, 0.0), skin))
+	for x in [-0.32, -0.12, 0.12, 0.32]:
+		_visual_root.add_child(_make_bone_box(Vector3(0.1, 0.62, 0.1), Vector3(x, 0.3, 0.0), hide))
+
 func _make_cleric_shadow() -> MeshInstance3D:
 	var shadow: MeshInstance3D = MeshInstance3D.new()
 	shadow.name = "ClericModelShadow"
@@ -426,6 +640,33 @@ func _make_knight_proxy_visuals() -> void:
 	_visual_root.add_child(_make_bone_box(Vector3(0.36, 0.18, 0.08), Vector3(0.0, 1.18, 0.15), red))
 	_visual_root.add_child(_make_bone_box(Vector3(0.1, 0.76, 0.1), Vector3(-0.2, 0.48, 0.0), armor))
 	_visual_root.add_child(_make_bone_box(Vector3(0.1, 0.76, 0.1), Vector3(0.2, 0.48, 0.0), armor))
+
+func _make_giant_shadow() -> MeshInstance3D:
+	var shadow: MeshInstance3D = MeshInstance3D.new()
+	shadow.name = "GiantModelShadow"
+	var mesh: CylinderMesh = CylinderMesh.new()
+	mesh.top_radius = 1.05
+	mesh.bottom_radius = 1.05
+	mesh.height = 0.01
+	mesh.radial_segments = 40
+	shadow.mesh = mesh
+	shadow.position = Vector3(0.0, 0.016, 0.0)
+	shadow.scale = Vector3(1.18, 1.0, 0.78)
+	shadow.material_override = _transparent_material(Color(0.0, 0.0, 0.0, 0.38))
+	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return shadow
+
+func _make_giant_proxy_visuals() -> void:
+	var skin := _material(Color(0.54, 0.42, 0.32), Color(0.12, 0.06, 0.025), 0.04)
+	var hide := _material(Color(0.22, 0.13, 0.08), Color(0.05, 0.02, 0.01), 0.03)
+	var iron := _material(Color(0.32, 0.32, 0.34), Color(0.08, 0.07, 0.06), 0.16)
+	_visual_root.add_child(_make_bone_box(Vector3(0.95, 1.45, 0.48), Vector3(0.0, 1.72, 0.0), skin))
+	_visual_root.add_child(_make_bone_box(Vector3(1.08, 0.24, 0.12), Vector3(0.0, 2.15, 0.32), hide))
+	_visual_root.add_child(_make_bone_box(Vector3(0.62, 0.52, 0.48), Vector3(0.0, 2.78, 0.0), skin))
+	_visual_root.add_child(_make_bone_box(Vector3(0.24, 1.2, 0.22), Vector3(-0.58, 1.55, 0.0), skin))
+	_visual_root.add_child(_make_bone_box(Vector3(0.24, 1.2, 0.22), Vector3(0.58, 1.55, 0.0), skin))
+	_visual_root.add_child(_make_bone_box(Vector3(0.28, 1.35, 0.24), Vector3(-0.28, 0.58, 0.0), iron))
+	_visual_root.add_child(_make_bone_box(Vector3(0.28, 1.35, 0.24), Vector3(0.28, 0.58, 0.0), iron))
 
 func _fit_visual_node(model: Node3D, target_height: float) -> void:
 	model.force_update_transform()
@@ -728,6 +969,14 @@ func _animate_cleric(delta: float, casting: bool) -> void:
 		cast_lean = sin(_cleric_time * 8.0) * 2.4
 	_visual_root.position.y = sin(_cleric_time * 2.2) * 0.018
 	_visual_root.rotation_degrees.x = cast_lean
+
+func _animate_centaur(delta: float) -> void:
+	if _visual_root == null:
+		return
+	var movement_ratio := clampf(Vector2(velocity.x, velocity.z).length() / maxf(speed, 0.1), 0.0, 1.0)
+	_knight_time += delta * (2.2 + movement_ratio * 8.0)
+	_visual_root.position.y = sin(_knight_time * 2.0) * 0.035 * movement_ratio
+	_visual_root.rotation_degrees.z = sin(_knight_time) * 2.0 * movement_ratio
 
 func _animate_status_fx(delta: float) -> void:
 	if _status_fx == null:

@@ -6,11 +6,12 @@ const DEMON_LEFT_WING_TEXTURE: Texture2D = preload("res://assets/images/demon/de
 const DEMON_RIGHT_WING_TEXTURE: Texture2D = preload("res://assets/images/demon/demon-right-wing.png")
 const DEMON_FLAME_TEXTURE: Texture2D = preload("res://assets/images/effects/firestorm-flame.png")
 const DEMON_BODY_BACK_PATH := "res://assets/images/demon/demon-back.png"
+const ProgressionConfigScript := preload("res://scripts/ProgressionConfig.gd")
 const FLAME_DISC_TEXTURE_SIZE := 72
 
 signal stats_changed(stats: Dictionary)
 signal died
-signal firestorm_requested(target_position: Vector3)
+signal attack_spell_requested(target_position: Vector3)
 signal damaged(amount: int)
 
 const MOVE_SPEED := 7.0
@@ -28,6 +29,58 @@ const IDLE_WING_FLAP := 10.0
 const IDLE_WING_LIFT := 3.4
 const IDLE_WING_FOLD := 3.2
 const POSSESSION_FLASH_DURATION := 2.6
+const SKILL_TREE_NODE_KEYS := [
+	"damage", "radius", "cooldown",
+	"inf_1", "inf_2", "inf_3", "inf_major", "inf_fire_1", "inf_ice_1", "inf_lightning_1",
+	"mys_1", "mys_2", "mys_3", "mys_major", "mys_aoe_1", "mys_cd_1", "mys_chain_1",
+	"soul_1", "soul_2", "soul_3", "soul_major", "soul_lifesteal_1", "soul_shield_1", "soul_regen_1",
+	"cur_1", "cur_2", "cur_3", "cur_major", "cur_dot_1", "cur_buff_1", "cur_control_1",
+	"bridge_inf_cur", "bridge_mys_soul",
+	"whisper_1", "whisper_2", "whisper_3", "whisper_4"
+]
+const SPELL_GROUP_CATEGORY_BY_ID := {
+	"fire_storm": "attack",
+	"absolute_zero": "attack",
+	"abyssal_blade": "attack",
+	"call_from_beyond": "attack",
+	"electricity_vortex": "attack",
+	"icesmash": "attack",
+	"soul_drain": "attack",
+	"demonic_frenzy": "buff",
+	"killing_radius": "buff",
+	"power_of_underworld": "buff",
+	"void_infusion": "buff",
+	"curse_of_laziness": "debuff",
+	"mark_of_weakness": "debuff",
+	"slowly_we_rot": "debuff",
+	"armor_of_undead": "defense",
+	"eclipse_shield": "defense",
+	"titanium": "defense",
+	"reincarnation": "healing",
+	"soul_harvest": "healing"
+}
+const SPELL_ID_TO_DISPLAY_NAME := {
+	"fire_storm": "Firestorm",
+	"absolute_zero": "Absolute Zero",
+	"abyssal_blade": "Abyssal Blade",
+	"call_from_beyond": "Call From The Beyond",
+	"electricity_vortex": "Electricity Vortex",
+	"icesmash": "Ice Smash",
+	"soul_drain": "Soul Drain",
+	"demonic_frenzy": "Demonic Frenzy",
+	"killing_radius": "Killing Radius",
+	"power_of_underworld": "Power of the Underworld",
+	"void_infusion": "Void Infusion",
+	"curse_of_laziness": "Curse of Laziness",
+	"mark_of_weakness": "Mark of Weakness",
+	"slowly_we_rot": "Slowly We Rot",
+	"armor_of_undead": "Armor of the Undead",
+	"eclipse_shield": "Eclipse Shield",
+	"titanium": "Titanium",
+	"reincarnation": "Reincarnation",
+	"soul_harvest": "Soul Harvest"
+}
+const DEATH_XP_LOSS_RATIO := 0.10
 
 var max_life := 120
 var life := 120
@@ -42,8 +95,9 @@ var shield := 0
 var alive := true
 var move_target: Vector3
 var has_move_target := false
-var learned_spells: Array[String] = []
+var learned_spells: Array[String] = ["fire_storm"]
 var unlocked_skill_nodes: Array[String] = []
+var active_spell_slots := {"attack": "fire_storm"}
 var _ignore_mouse_until_released := false
 var _attacks_enabled := true
 var _mouse_block_check: Callable
@@ -86,9 +140,22 @@ var _socket_damage_multiplier := 1.0
 var _socket_move_speed_multiplier := 1.0
 var _socket_cooldown_reduction := 0.0
 var _socket_gold_multiplier := 1.0
+var _socket_attack_damage_multiplier := 1.0
+var _socket_attack_radius_bonus := 0.0
+var _socket_healing_rate_multiplier := 1.0
+var _socket_loot_luck_bonus := 0.0
+var _socket_attack_effect_multiplier := 1.0
+var _socket_beyond_effect_multiplier := 1.0
+var _socket_defense_effect_multiplier := 1.0
+var _socket_flame_effect_multiplier := 1.0
+var _socket_ice_effect_multiplier := 1.0
+var _socket_electricity_effect_multiplier := 1.0
+var _socket_summon_slots_bonus := 0
+var _max_life_penalty := 0
 
 func _ready() -> void:
 	name = "Player"
+	_sync_progression_stats(false)
 	move_target = global_position
 	_load_optional_textures()
 	_make_collision()
@@ -119,10 +186,12 @@ func get_stats() -> Dictionary:
 		"gold": gold,
 		"diamonds": diamonds,
 		"learned_spells": learned_spells.duplicate(),
+		"active_spell_slots": active_spell_slots.duplicate(true),
 		"unlocked_skill_nodes": unlocked_skill_nodes.duplicate(),
 		"firestorm_cooldown": firestorm_cooldown,
 		"shield": shield,
 		"damage_multiplier": _damage_multiplier,
+		"active_attack_spell_id": get_active_attack_spell_id(),
 		"active_attack_spell": get_active_attack_spell_name(),
 		"active_attack_damage_min": get_active_attack_spell_damage(),
 		"active_attack_damage_max": get_active_attack_spell_damage(),
@@ -130,13 +199,24 @@ func get_stats() -> Dictionary:
 		"socket_damage_multiplier": _socket_damage_multiplier,
 		"socket_move_speed_multiplier": _socket_move_speed_multiplier,
 		"socket_cooldown_reduction": _socket_cooldown_reduction,
-		"socket_gold_multiplier": _socket_gold_multiplier
+		"socket_gold_multiplier": _socket_gold_multiplier,
+		"socket_attack_damage_multiplier": _socket_attack_damage_multiplier,
+		"socket_attack_radius_bonus": _socket_attack_radius_bonus,
+		"socket_healing_rate_multiplier": _socket_healing_rate_multiplier,
+		"socket_loot_luck_bonus": _socket_loot_luck_bonus,
+		"socket_attack_effect_multiplier": _socket_attack_effect_multiplier,
+		"socket_beyond_effect_multiplier": _socket_beyond_effect_multiplier,
+		"socket_defense_effect_multiplier": _socket_defense_effect_multiplier,
+		"socket_flame_effect_multiplier": _socket_flame_effect_multiplier,
+		"socket_ice_effect_multiplier": _socket_ice_effect_multiplier,
+		"socket_electricity_effect_multiplier": _socket_electricity_effect_multiplier,
+		"socket_summon_slots_bonus": _socket_summon_slots_bonus
 	}
 
 func take_damage(amount: int) -> void:
 	if not alive:
 		return
-	var remaining_damage := amount
+	var remaining_damage := maxi(1, int(round(float(amount) * get_skill_damage_taken_multiplier())))
 	if shield > 0:
 		var absorbed := mini(shield, remaining_damage)
 		shield -= absorbed
@@ -147,6 +227,7 @@ func take_damage(amount: int) -> void:
 	stats_changed.emit(get_stats())
 	if life <= 0:
 		alive = false
+		_apply_death_xp_loss()
 		died.emit()
 
 func resurrect_at(spawn_position: Vector3) -> void:
@@ -173,18 +254,31 @@ func teleport_to(target_position: Vector3) -> void:
 	stats_changed.emit(get_stats())
 
 func gain_xp(amount: int) -> bool:
+	if level >= ProgressionConfigScript.MAX_PLAYER_LEVEL:
+		xp = 0
+		xp_to_next = 0
+		stats_changed.emit(get_stats())
+		return false
 	xp += amount
 	var leveled := false
-	while xp >= xp_to_next:
+	while xp_to_next > 0 and xp >= xp_to_next and level < ProgressionConfigScript.MAX_PLAYER_LEVEL:
 		xp -= xp_to_next
 		level += 1
 		skill_points += 1
-		xp_to_next = int(float(xp_to_next) * 1.35) + 35
-		max_life += 18
-		life = max_life
+		_sync_progression_stats(true)
 		leveled = true
+	if level >= ProgressionConfigScript.MAX_PLAYER_LEVEL:
+		xp = 0
+		xp_to_next = 0
 	stats_changed.emit(get_stats())
 	return leveled
+
+func _apply_death_xp_loss() -> void:
+	if xp <= 0:
+		return
+	var xp_loss := mini(xp, maxi(1, int(ceil(float(xp) * DEATH_XP_LOSS_RATIO))))
+	xp -= xp_loss
+	stats_changed.emit(get_stats())
 
 func add_gold(amount: int) -> void:
 	gold += amount
@@ -212,14 +306,35 @@ func learn_spell(spell_id: String) -> bool:
 	if learned_spells.has(spell_id):
 		return false
 	learned_spells.append(spell_id)
+	var category := _spell_category_for_id(spell_id)
+	if category != "attack" and not active_spell_slots.has(category):
+		active_spell_slots[category] = spell_id
 	stats_changed.emit(get_stats())
 	return true
 
 func has_spell(spell_id: String) -> bool:
 	return learned_spells.has(spell_id)
 
+func set_active_spell(category: String, spell_id: String) -> bool:
+	var clean_category := category.strip_edges().to_lower()
+	var clean_spell_id := spell_id.strip_edges()
+	if clean_category.is_empty() or clean_spell_id.is_empty():
+		return false
+	if _spell_category_for_id(clean_spell_id) != clean_category:
+		return false
+	if clean_spell_id != "fire_storm" and not learned_spells.has(clean_spell_id):
+		return false
+	if String(active_spell_slots.get(clean_category, "")) == clean_spell_id:
+		return false
+	active_spell_slots[clean_category] = clean_spell_id
+	stats_changed.emit(get_stats())
+	return true
+
+func get_active_attack_spell_id() -> String:
+	return String(active_spell_slots.get("attack", "fire_storm"))
+
 func unlock_skill_node(node_key: String) -> bool:
-	if node_key not in ["damage", "radius", "cooldown"]:
+	if node_key not in SKILL_TREE_NODE_KEYS:
 		return false
 	if unlocked_skill_nodes.has(node_key):
 		return false
@@ -235,11 +350,13 @@ func heal_full() -> void:
 	stats_changed.emit(get_stats())
 
 func heal(amount: int) -> void:
-	life = mini(life + amount, max_life)
+	var scaled_amount := maxi(1, int(round(float(amount) * get_skill_healing_received_multiplier())))
+	life = mini(life + scaled_amount, max_life)
 	stats_changed.emit(get_stats())
 
 func reduce_max_life(amount: int) -> void:
-	max_life = maxi(max_life - amount, 35)
+	_max_life_penalty += maxi(amount, 0)
+	max_life = _progression_max_life()
 	life = mini(life, max_life)
 	stats_changed.emit(get_stats())
 
@@ -247,7 +364,7 @@ func reduce_max_life_percent(percent: float) -> void:
 	reduce_max_life(maxi(1, int(round(float(max_life) * percent))))
 
 func add_shield(amount: int) -> void:
-	shield = maxi(shield, amount)
+	shield = maxi(shield, int(round(float(amount) * _socket_defense_effect_multiplier)))
 	stats_changed.emit(get_stats())
 
 func apply_timed_damage_multiplier(multiplier: float, duration: float) -> void:
@@ -269,10 +386,24 @@ func set_faded_diamond_bonuses(bonuses: Dictionary) -> void:
 	_socket_move_speed_multiplier = 1.0 + maxf(0.0, float(bonuses.get("move_speed_bonus", 0.0)))
 	_socket_cooldown_reduction = maxf(0.0, float(bonuses.get("cooldown_reduction", 0.0)))
 	_socket_gold_multiplier = 1.0 + maxf(0.0, float(bonuses.get("gold_gain_bonus", 0.0)))
+	_socket_attack_damage_multiplier = 1.0 + maxf(0.0, float(bonuses.get("attack_damage_bonus", 0.0)))
+	_socket_attack_radius_bonus = maxf(0.0, float(bonuses.get("attack_radius_bonus", 0.0)))
+	_socket_healing_rate_multiplier = 1.0 + maxf(0.0, float(bonuses.get("healing_rate_bonus", 0.0)))
+	_socket_loot_luck_bonus = maxf(0.0, float(bonuses.get("loot_luck_bonus", 0.0)))
+	_socket_attack_effect_multiplier = 1.0 + maxf(0.0, float(bonuses.get("attack_effect_bonus", 0.0)))
+	_socket_beyond_effect_multiplier = 1.0 + maxf(0.0, float(bonuses.get("beyond_effect_bonus", 0.0)))
+	_socket_defense_effect_multiplier = 1.0 + maxf(0.0, float(bonuses.get("defense_effect_bonus", 0.0)))
+	_socket_flame_effect_multiplier = 1.0 + maxf(0.0, float(bonuses.get("flame_effect_bonus", 0.0)))
+	_socket_ice_effect_multiplier = 1.0 + maxf(0.0, float(bonuses.get("ice_effect_bonus", 0.0)))
+	_socket_electricity_effect_multiplier = 1.0 + maxf(0.0, float(bonuses.get("electricity_effect_bonus", 0.0)))
+	_socket_summon_slots_bonus = maxi(0, int(bonuses.get("summon_slots_bonus", 0)))
 	stats_changed.emit(get_stats())
 
 func get_gold_gain_multiplier() -> float:
 	return _socket_gold_multiplier
+
+func get_socket_loot_luck_bonus() -> float:
+	return _socket_loot_luck_bonus
 
 func enable_hunger_unbound() -> void:
 	_hunger_unbound = true
@@ -282,6 +413,11 @@ func enable_hunger_unbound() -> void:
 func notify_kill() -> void:
 	if _lifesteal_timer > 0.0 and _lifesteal_ratio > 0.0:
 		heal(maxi(1, int(round(float(max_life) * 0.08 * _lifesteal_ratio))))
+	var skill_heal_ratio := get_skill_heal_on_kill_ratio()
+	if skill_heal_ratio > 0.0:
+		heal(maxi(1, int(round(float(max_life) * skill_heal_ratio))))
+	if unlocked_skill_nodes.has("soul_shield_1"):
+		add_shield(maxi(2, int(round(float(max_life) * 0.025))))
 	if _hunger_unbound:
 		_hunger_stacks = mini(_hunger_stacks + 1, 6)
 		_hunger_timer = 5.0
@@ -300,35 +436,216 @@ func flash_possession_red() -> void:
 func get_damage_multiplier() -> float:
 	return _damage_multiplier
 
+func get_socket_damage_multiplier() -> float:
+	return _socket_damage_multiplier
+
+func get_socket_attack_damage_multiplier() -> float:
+	return _socket_attack_damage_multiplier
+
+func get_socket_attack_radius_bonus() -> float:
+	return _socket_attack_radius_bonus
+
+func get_socket_summon_slots_bonus() -> int:
+	return _socket_summon_slots_bonus
+
+func get_socket_defense_effect_multiplier() -> float:
+	return _socket_defense_effect_multiplier
+
+func get_socket_spell_effect_multiplier(spell_id: String) -> float:
+	var multiplier := _socket_attack_effect_multiplier
+	var theme := _spell_theme_for_id(spell_id)
+	match theme:
+		"Beyond":
+			multiplier *= _socket_beyond_effect_multiplier
+		"Flame":
+			multiplier *= _socket_flame_effect_multiplier
+		"Ice":
+			multiplier *= _socket_ice_effect_multiplier
+		"Electricity":
+			multiplier *= _socket_electricity_effect_multiplier
+	return multiplier
+
 func get_skill_damage_multiplier() -> float:
+	var bonus := 0.0
+	for node_key in unlocked_skill_nodes:
+		match node_key:
+			"damage":
+				bonus += 0.15
+			"inf_1":
+				bonus += 0.06
+			"inf_2":
+				bonus += 0.08
+			"inf_3":
+				bonus += 0.10
+			"inf_major":
+				bonus += 0.15
+			"mys_chain_1":
+				bonus += 0.05
+			"cur_1":
+				bonus += 0.04
+			"cur_2":
+				bonus += 0.05
+			"cur_3":
+				bonus += 0.06
+			"cur_major":
+				bonus += 0.08
+			"cur_dot_1":
+				bonus += 0.04
+			"cur_buff_1":
+				bonus += 0.05
+			"bridge_inf_cur":
+				bonus += 0.07
+			"whisper_3":
+				bonus += 0.10
 	if unlocked_skill_nodes.has("damage"):
-		return 1.15
-	return 1.0
+		return 1.0 + bonus
+	return 1.0 + bonus
 
 func get_skill_radius_bonus() -> float:
+	var bonus := 0.0
+	for node_key in unlocked_skill_nodes:
+		match node_key:
+			"radius":
+				bonus += 0.9
+			"mys_1":
+				bonus += 0.2
+			"mys_2":
+				bonus += 0.25
+			"mys_major":
+				bonus += 0.45
+			"mys_aoe_1":
+				bonus += 0.45
+			"bridge_mys_soul":
+				bonus += 0.2
 	if unlocked_skill_nodes.has("radius"):
-		return 0.9
-	return 0.0
+		return bonus
+	return bonus
 
 func get_skill_cooldown_reduction() -> float:
+	var reduction := 0.0
+	for node_key in unlocked_skill_nodes:
+		match node_key:
+			"cooldown":
+				reduction += 0.4
+			"mys_1":
+				reduction += 0.05
+			"mys_3":
+				reduction += 0.15
+			"mys_major":
+				reduction += 0.15
+			"mys_cd_1":
+				reduction += 0.25
+			"cur_major":
+				reduction += 0.1
+			"cur_control_1":
+				reduction += 0.05
+			"whisper_2":
+				reduction += 0.15
 	if unlocked_skill_nodes.has("cooldown"):
-		return 0.4
-	return 0.0
+		return reduction
+	return reduction
+
+func get_skill_damage_taken_multiplier() -> float:
+	var reduction := 0.0
+	if unlocked_skill_nodes.has("soul_1"):
+		reduction += 0.03
+	if unlocked_skill_nodes.has("soul_3"):
+		reduction += 0.05
+	return clampf(1.0 - reduction, 0.72, 1.0)
+
+func get_skill_healing_received_multiplier() -> float:
+	var bonus := 0.0
+	if unlocked_skill_nodes.has("soul_1"):
+		bonus += 0.05
+	if unlocked_skill_nodes.has("soul_2"):
+		bonus += 0.10
+	if unlocked_skill_nodes.has("soul_regen_1"):
+		bonus += 0.12
+	if unlocked_skill_nodes.has("bridge_mys_soul"):
+		bonus += 0.06
+	return 1.0 + bonus
+
+func get_skill_heal_on_kill_ratio() -> float:
+	var ratio := 0.0
+	if unlocked_skill_nodes.has("soul_major"):
+		ratio += 0.04
+	if unlocked_skill_nodes.has("soul_lifesteal_1"):
+		ratio += 0.03
+	if unlocked_skill_nodes.has("whisper_4"):
+		ratio += 0.05
+	return ratio
+
+func get_skill_spell_theme_multiplier(spell_id: String) -> float:
+	var multiplier := 1.0
+	var theme := _spell_theme_for_id(spell_id)
+	match theme:
+		"Flame":
+			if unlocked_skill_nodes.has("inf_fire_1"):
+				multiplier += 0.10
+		"Ice":
+			if unlocked_skill_nodes.has("inf_ice_1"):
+				multiplier += 0.10
+		"Electricity":
+			if unlocked_skill_nodes.has("inf_lightning_1"):
+				multiplier += 0.10
+		"Beyond":
+			if unlocked_skill_nodes.has("whisper_1"):
+				multiplier += 0.10
+	return multiplier
 
 func get_active_attack_spell_name() -> String:
-	return "Firestorm"
+	return _spell_display_name(get_active_attack_spell_id())
 
 func get_active_attack_spell_damage() -> int:
-	var total_damage := 28 + level * 7
+	var active_spell_id := get_active_attack_spell_id()
+	var total_damage := ProgressionConfigScript.player_damage(level)
+	match active_spell_id:
+		"icesmash":
+			total_damage = int(round(float(total_damage) * 2.35))
 	total_damage = int(round(float(total_damage) * _damage_multiplier))
 	total_damage = int(round(float(total_damage) * _socket_damage_multiplier))
-	if has_spell("fire_storm"):
+	total_damage = int(round(float(total_damage) * _socket_attack_damage_multiplier))
+	total_damage = int(round(float(total_damage) * get_socket_spell_effect_multiplier(active_spell_id)))
+	total_damage = int(round(float(total_damage) * get_skill_spell_theme_multiplier(active_spell_id)))
+	if active_spell_id == "fire_storm" and has_spell("fire_storm"):
 		total_damage = int(round(float(total_damage) * 1.25))
 	total_damage = int(round(float(total_damage) * get_skill_damage_multiplier()))
 	return total_damage
 
 func get_active_attack_spell_cooldown_duration() -> float:
 	return _firestorm_cooldown_duration()
+
+func _sync_progression_stats(heal_to_full: bool) -> void:
+	xp_to_next = ProgressionConfigScript.xp_to_next(level)
+	max_life = _progression_max_life()
+	if heal_to_full:
+		life = max_life
+	else:
+		life = mini(life, max_life)
+
+func _progression_max_life() -> int:
+	return maxi(35, ProgressionConfigScript.player_hp(level) - _max_life_penalty)
+
+func _spell_category_for_id(spell_id: String) -> String:
+	if SPELL_GROUP_CATEGORY_BY_ID.has(spell_id):
+		return String(SPELL_GROUP_CATEGORY_BY_ID[spell_id])
+	return "attack"
+
+func _spell_display_name(spell_id: String) -> String:
+	if SPELL_ID_TO_DISPLAY_NAME.has(spell_id):
+		return String(SPELL_ID_TO_DISPLAY_NAME[spell_id])
+	return spell_id.replace("_", " ").capitalize()
+
+func _spell_theme_for_id(spell_id: String) -> String:
+	match spell_id:
+		"fire_storm", "wide_flame":
+			return "Flame"
+		"absolute_zero", "icesmash", "killing_radius", "curse_of_laziness", "titanium":
+			return "Ice"
+		"electricity_vortex", "mark_of_weakness", "reincarnation":
+			return "Electricity"
+		_:
+			return "Beyond"
 
 func set_move_target(target: Vector3) -> void:
 	move_target = target
@@ -400,8 +717,8 @@ func _handle_input() -> void:
 		var mouse_target: Variant = _mouse_ground_position()
 		if mouse_target is Vector3:
 			cast_target = mouse_target
-		firestorm_requested.emit(cast_target)
-		firestorm_cooldown = _firestorm_cooldown_duration()
+		attack_spell_requested.emit(cast_target)
+		firestorm_cooldown = get_active_attack_spell_cooldown_duration()
 
 func _apply_movement(delta: float) -> void:
 	if has_move_target:
@@ -445,9 +762,12 @@ func _has_keyboard_movement() -> bool:
 
 func _handle_regen(delta: float) -> void:
 	_heal_timer += delta
-	if _heal_timer >= HEAL_INTERVAL:
+	var heal_interval := HEAL_INTERVAL / maxf(_socket_healing_rate_multiplier, 0.1)
+	if _heal_timer >= heal_interval:
 		_heal_timer = 0.0
-		life = mini(life + HEAL_AMOUNT, max_life)
+		var regen_amount := maxi(1, int(round(float(HEAL_AMOUNT) * get_skill_healing_received_multiplier())))
+		life = mini(life + regen_amount, max_life)
+		stats_changed.emit(get_stats())
 
 func _update_cooldowns(delta: float) -> void:
 	firestorm_cooldown = maxf(firestorm_cooldown - delta, 0.0)
@@ -487,6 +807,9 @@ func _is_mouse_blocked_by_ui() -> bool:
 
 func _firestorm_cooldown_duration() -> float:
 	var cooldown := 4.5
+	match get_active_attack_spell_id():
+		"icesmash":
+			cooldown = 3.4
 	if has_spell("quickened_ritual"):
 		cooldown = 3.2
 	cooldown = maxf(0.8, cooldown - get_skill_cooldown_reduction() - _socket_cooldown_reduction)

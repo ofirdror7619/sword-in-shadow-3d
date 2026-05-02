@@ -1,0 +1,29 @@
+MISSION talk_with_aldric
+TITLE Talk with Aldric
+OBJECTIVE talk_to_npc:aldric
+DIALOGUE_FILE velmora/aldric-first-encounter.txt
+ON_COMPLETE add_relic:teleport_device
+ON_COMPLETE add_map:world-map-first-velmora.png
+ON_COMPLETE unlock_mission:talk_with_Syra
+
+MISSION talk_with_Syra
+TITLE Talk with Syra
+OBJECTIVE talk_to_npc:Syra
+DIALOGUE_FILE velmora/syra-first-encounter.txt
+LOCKED true
+ON_COMPLETE unlock_mission:talk_with_Zethyr
+
+MISSION talk_with_Zethyr
+TITLE Talk with Zethyr
+OBJECTIVE talk_to_npc:Zethyr
+DIALOGUE_FILE velmora/zethyr-first-encounter.txt
+LOCKED true
+ON_COMPLETE unlock_mission:use_teleport_device
+
+MISSION use_teleport_device
+TITLE Use the Teleport Device to return to the Black Vault
+OBJECTIVE teleport_to:black_vault
+LOCKED true
+ON_COMPLETE unlock_mission:talk_to_Torren_Blackwell
+ON_COMPLETE unlock_area_mission:black_vault:return_to_velmora_with_teleport
+NEXT_MISSION_FILE velmora:velmora-after-first-teleport.txt

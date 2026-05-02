@@ -10,6 +10,7 @@ const MISSIONS_ROOT := "res://missions"
 var _completed_by_area: Dictionary = {}
 var _unlocked_by_area: Dictionary = {}
 var _missions_by_area: Dictionary = {}
+var _mission_file_by_area: Dictionary = {}
 var _current_area := ""
 
 func set_area(area: String) -> void:
@@ -52,6 +53,30 @@ func complete_mission(area: String, mission_id: String) -> bool:
 	missions_changed.emit(area, get_active_missions(area))
 	return true
 
+func unlock_mission(area: String, mission_id: String) -> bool:
+	if area.is_empty() or mission_id.is_empty():
+		return false
+	var was_unlocked := _is_unlocked(area, mission_id)
+	_unlock_mission(area, mission_id)
+	if not was_unlocked:
+		missions_changed.emit(area, get_active_missions(area))
+	return not was_unlocked
+
+func set_area_mission_file(area: String, mission_file: String) -> bool:
+	var clean_area := area.strip_edges()
+	var clean_file := mission_file.strip_edges()
+	if clean_area.is_empty() or clean_file.is_empty():
+		return false
+	var path := _resolve_mission_file_path(clean_file)
+	if path.is_empty() or not FileAccess.file_exists(path):
+		push_warning("Missing next mission file for %s: %s" % [clean_area, clean_file])
+		return false
+	_mission_file_by_area[clean_area] = path
+	_missions_by_area.erase(clean_area)
+	if clean_area == _current_area:
+		reload_area(clean_area)
+	return true
+
 func complete_matching(area: String, event_key: String, context: Dictionary = {}) -> Array[Dictionary]:
 	var completed: Array[Dictionary] = []
 	for mission in get_active_missions(area):
@@ -60,6 +85,13 @@ func complete_matching(area: String, event_key: String, context: Dictionary = {}
 			if complete_mission(area, mission_id):
 				completed.append(mission.duplicate(true))
 	return completed
+
+func get_active_matching_missions(area: String, event_key: String, context: Dictionary = {}) -> Array[Dictionary]:
+	var matches: Array[Dictionary] = []
+	for mission in get_active_missions(area):
+		if _mission_matches_event(mission, event_key, context):
+			matches.append(mission.duplicate(true))
+	return matches
 
 func _missions_for_area(area: String) -> Array[Dictionary]:
 	if area.is_empty():
@@ -70,7 +102,7 @@ func _missions_for_area(area: String) -> Array[Dictionary]:
 
 func _load_area_missions(area: String) -> Array[Dictionary]:
 	var missions: Array[Dictionary] = []
-	var path := "%s/%s.txt" % [MISSIONS_ROOT, area]
+	var path := _mission_file_path_for_area(area)
 	if not FileAccess.file_exists(path):
 		return missions
 	var file := FileAccess.open(path, FileAccess.READ)
@@ -102,6 +134,11 @@ func _load_area_missions(area: String) -> Array[Dictionary]:
 					"objective": "",
 					"objective_type": "",
 					"objective_target": "",
+					"dialogue_file": "",
+					"given": [],
+					"giver_npc_id": "",
+					"giver_npc_name": "",
+					"incomplete_replies_file": "",
 					"on_complete": [],
 					"locked": false
 				}
@@ -119,6 +156,30 @@ func _load_area_missions(area: String) -> Array[Dictionary]:
 				current["objective"] = value
 				current["objective_type"] = String(objective.get("type", ""))
 				current["objective_target"] = String(objective.get("target", ""))
+			"DIALOGUE_FILE", "USING_DIALOGUE", "DIALOGUE":
+				if current.is_empty():
+					push_warning("%s before MISSION in %s: %s" % [key, path, line])
+					continue
+				current["dialogue_file"] = value
+			"GIVEN", "GIVE", "GIVES":
+				if current.is_empty():
+					push_warning("%s before MISSION in %s: %s" % [key, path, line])
+					continue
+				var given: Array = current.get("given", [])
+				given.append(_parse_typed_value(value))
+				current["given"] = given
+			"GIVER_NPC", "MISSION_GIVER", "GIVEN_BY":
+				if current.is_empty():
+					push_warning("%s before MISSION in %s: %s" % [key, path, line])
+					continue
+				var giver := _parse_named_npc(value)
+				current["giver_npc_id"] = String(giver.get("id", ""))
+				current["giver_npc_name"] = String(giver.get("name", ""))
+			"INCOMPLETE_REPLIES_FILE", "UNFINISHED_REPLIES_FILE", "REMINDER_FILE":
+				if current.is_empty():
+					push_warning("%s before MISSION in %s: %s" % [key, path, line])
+					continue
+				current["incomplete_replies_file"] = value
 			"ON_COMPLETE":
 				if current.is_empty():
 					push_warning("ON_COMPLETE before MISSION in %s: %s" % [path, line])
@@ -126,6 +187,16 @@ func _load_area_missions(area: String) -> Array[Dictionary]:
 				var actions: Array = current.get("on_complete", [])
 				actions.append(_parse_typed_value(value))
 				current["on_complete"] = actions
+			"NEXT_MISSION_FILE":
+				if current.is_empty():
+					push_warning("NEXT_MISSION_FILE before MISSION in %s: %s" % [path, line])
+					continue
+				var next_actions: Array = current.get("on_complete", [])
+				next_actions.append({
+					"type": "set_area_mission_file",
+					"target": value
+				})
+				current["on_complete"] = next_actions
 			"LOCKED":
 				if current.is_empty():
 					push_warning("LOCKED before MISSION in %s: %s" % [path, line])
@@ -135,6 +206,44 @@ func _load_area_missions(area: String) -> Array[Dictionary]:
 				push_warning("Unknown mission directive in %s: %s" % [path, line])
 	_append_mission_if_valid(missions, current, path)
 	return missions
+
+func _mission_file_path_for_area(area: String) -> String:
+	if _mission_file_by_area.has(area):
+		var override_path := _resolve_mission_file_path(String(_mission_file_by_area[area]))
+		if not override_path.is_empty() and FileAccess.file_exists(override_path):
+			return override_path
+	var area_slug := area.replace("_", "-")
+	var candidate_names := [
+		"%s.txt" % area,
+		"%s-first.txt" % area,
+		"%s.txt" % area_slug,
+		"%s-first.txt" % area_slug,
+		"the-%s.txt" % area_slug
+	]
+	for candidate_name in candidate_names:
+		var candidate_path := "%s/%s" % [MISSIONS_ROOT, candidate_name]
+		if FileAccess.file_exists(candidate_path):
+			return candidate_path
+	return "%s/%s.txt" % [MISSIONS_ROOT, area]
+
+func _resolve_mission_file_path(mission_file: String) -> String:
+	var clean_file := mission_file.strip_edges().replace("\\", "/")
+	if clean_file.is_empty():
+		return ""
+	var candidates: Array[String] = [clean_file]
+	if clean_file.get_extension().is_empty():
+		candidates.append("%s.txt" % clean_file)
+	elif clean_file.get_extension().to_lower() != "txt":
+		candidates.append("%s.txt" % clean_file.get_basename())
+	for candidate in candidates:
+		var path := candidate
+		if not path.begins_with("res://"):
+			if path.begins_with("missions/"):
+				path = path.trim_prefix("missions/")
+			path = "%s/%s" % [MISSIONS_ROOT, path]
+		if FileAccess.file_exists(path):
+			return path
+	return ""
 
 func _append_mission_if_valid(missions: Array[Dictionary], mission: Dictionary, path: String) -> void:
 	if mission.is_empty():
@@ -185,6 +294,19 @@ func _parse_typed_value(value: String) -> Dictionary:
 		"target": value.substr(separator + 1).strip_edges()
 	}
 
+func _parse_named_npc(value: String) -> Dictionary:
+	var clean_value := value.strip_edges()
+	var separator := clean_value.find(":")
+	if separator < 0:
+		return {
+			"id": clean_value,
+			"name": clean_value.replace("_", " ")
+		}
+	return {
+		"id": clean_value.substr(0, separator).strip_edges(),
+		"name": clean_value.substr(separator + 1).strip_edges()
+	}
+
 func _parse_bool(value: String) -> bool:
 	var normalized := value.strip_edges().to_lower()
 	return normalized in ["true", "yes", "1", "on", "locked"]
@@ -205,6 +327,8 @@ func _mission_matches_event(mission: Dictionary, event_key: String, context: Dic
 		event_type = "talk_to_npc"
 	elif event_type == "use_teleport_device":
 		event_type = "use_relic"
+	if event_type == "kill":
+		return _mission_matches_kill_objective(objective_type, context)
 	if objective_type != event_type:
 		return false
 	var objective_target := _normalize_mission_key(String(mission.get("objective_target", "")))
@@ -215,13 +339,52 @@ func _mission_matches_event(mission: Dictionary, event_key: String, context: Dic
 
 func _event_target_candidates(event_key: String, context: Dictionary) -> Array[String]:
 	var candidates: Array[String] = []
-	for key in ["target", "npc_id", "npc_name", "vendor_id", "relic_id", "item_id"]:
+	for key in ["target", "npc_id", "npc_name", "vendor_id", "relic_id", "item_id", "destination_id"]:
 		var value := _normalize_mission_key(String(context.get(key, "")))
 		if not value.is_empty() and not candidates.has(value):
 			candidates.append(value)
 	if event_key.strip_edges().to_lower() == "use_teleport_device" and not candidates.has("teleport_device"):
 		candidates.append("teleport_device")
 	return candidates
+
+func _mission_matches_kill_objective(objective_type: String, context: Dictionary) -> bool:
+	if objective_type.begins_with("kill_all_"):
+		return _mission_matches_kill_all_objective(objective_type, context)
+	if not objective_type.begins_with("kill_"):
+		return false
+	var objective_body := objective_type.trim_prefix("kill_")
+	var area_split := objective_body.split("_in_", false, 1)
+	var count_part := String(area_split[0])
+	if area_split.size() > 1:
+		var objective_area := _normalize_mission_key(String(area_split[1]))
+		var current_area := _normalize_mission_key(String(context.get("area", "")))
+		if not objective_area.is_empty() and current_area != objective_area:
+			return false
+	var target_kills := 0
+	if count_part.contains("_out_of_"):
+		target_kills = int(count_part.get_slice("_out_of_", 0))
+	else:
+		target_kills = int(count_part)
+	if target_kills <= 0:
+		target_kills = int(context.get("required", 0))
+	return int(context.get("kills", 0)) >= target_kills
+
+func _mission_matches_kill_all_objective(objective_type: String, context: Dictionary) -> bool:
+	var objective_body := objective_type.trim_prefix("kill_all_")
+	var area_split := objective_body.split("_in_", false, 1)
+	if area_split.size() < 2:
+		return false
+	var raw_target_kind := _normalize_mission_key(String(area_split[0]))
+	var target_kind := raw_target_kind.trim_suffix("s")
+	var objective_area := _normalize_mission_key(String(area_split[1]))
+	var current_area := _normalize_mission_key(String(context.get("area", "")))
+	var killed_kind := _normalize_mission_key(String(context.get("enemy_kind", ""))).trim_suffix("s")
+	if not objective_area.is_empty() and current_area != objective_area:
+		return false
+	var accepts_any_enemy := raw_target_kind in ["enemies", "enemy", "hostiles", "hostile"]
+	if not accepts_any_enemy and not target_kind.is_empty() and killed_kind != target_kind:
+		return false
+	return int(context.get("remaining", 1)) <= 0
 
 func _normalize_mission_key(value: String) -> String:
 	return value.strip_edges().to_lower().replace(" ", "_").replace("-", "_")
@@ -235,6 +398,18 @@ func _run_complete_actions(area: String, mission: Dictionary) -> void:
 		var action_type := String(action.get("type", "")).to_lower()
 		if action_type == "unlock_mission":
 			_unlock_mission(area, String(action.get("target", "")))
+		elif action_type == "unlock_area_mission":
+			var target := String(action.get("target", "")).strip_edges()
+			var parts := target.split(":", false, 1)
+			if parts.size() == 2:
+				_unlock_mission(String(parts[0]).strip_edges(), String(parts[1]).strip_edges())
+		elif action_type == "set_mission_file" or action_type == "set_area_mission_file" or action_type == "next_mission_file":
+			var target := String(action.get("target", "")).strip_edges()
+			var parts := target.split(":", false, 1)
+			if parts.size() == 2:
+				set_area_mission_file(String(parts[0]).strip_edges(), String(parts[1]).strip_edges())
+			else:
+				set_area_mission_file(area, target)
 		mission_action_requested.emit(area, action, mission.duplicate(true))
 
 func _completed_array_for_area(area: String) -> Array:

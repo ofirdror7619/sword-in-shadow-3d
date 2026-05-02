@@ -8,20 +8,29 @@ const PALETTE_TEXT_DIM := Color(0.7, 0.62, 0.52)
 const PALETTE_PANEL := Color(0.055, 0.022, 0.026, 0.97)
 const PALETTE_PANEL_DARK := Color(0.018, 0.009, 0.012, 0.98)
 const PALETTE_GOLD := Color(1.0, 0.72, 0.35, 1.0)
-const MIN_ZOOM := 0.72
-const MAX_ZOOM := 1.8
-const BASE_BRANCH_RADIUS := 176.0
+const MIN_ZOOM := 0.2
+const MAX_ZOOM := 2.15
+const DEFAULT_ZOOM := 0.36
+const WHEEL_ZOOM_STEP := 1.14
+const BASE_BRANCH_RADIUS := 600.0
 const CORE_RADIUS := 40.0
 const TOOLTIP_SIZE := Vector2(292.0, 188.0)
+const FIT_PADDING := Vector2(120.0, 96.0)
 
 const BRANCH_COLORS := {
 	"core": Color(0.86, 0.1, 0.16, 1.0),
-	"offense": Color(1.0, 0.33, 0.12, 1.0),
-	"defense": Color(0.62, 0.66, 0.72, 1.0),
-	"buff": Color(0.66, 0.26, 0.84, 1.0),
-	"heal": Color(0.34, 0.86, 0.46, 1.0),
-	"debuff": Color(0.46, 0.74, 0.26, 1.0),
-	"synergy": Color(0.95, 0.62, 0.16, 1.0)
+	"infernal": Color(1.0, 0.24, 0.08, 1.0),
+	"mysterious": Color(0.34, 0.42, 1.0, 1.0),
+	"soul": Color(0.18, 0.78, 0.42, 1.0),
+	"cursed": Color(0.92, 0.72, 0.16, 1.0),
+	"whisper": Color(0.9, 0.9, 0.86, 1.0),
+	"bridge": Color(0.95, 0.42, 0.82, 1.0)
+}
+
+const LEGACY_SKILL_NODE_ALIASES := {
+	"damage": "inf_2",
+	"radius": "mys_aoe_1",
+	"cooldown": "mys_cd_1"
 }
 
 const RITUAL_NODES := [
@@ -38,152 +47,432 @@ const RITUAL_NODES := [
 		"stats": ["Center of your sigil web", "Visual corruption reacts over time"]
 	},
 	{
-		"id": "cleave_edge",
-		"label": "Cleave Edge",
+		"id": "inf_1",
+		"label": "Infernal Spark",
 		"type": "attack",
-		"branch": "offense",
-		"position": Vector2(-78.0, -46.0),
-		"radius": 18.0,
+		"branch": "infernal",
+		"position": Vector2(-150.0, 0.0),
+		"radius": 16.0,
 		"requires": ["core"],
-		"gameplay_key": "",
-		"description": "An intermediate shadow technique.",
-		"stats": ["Tier-2 offense node", "Leads to Abyssal Blade"]
+		"gameplay_key": "inf_1",
+		"description": "Begin the violent arm of the sigil.",
+		"stats": ["Attack damage +6%", "Leads toward elemental brutality"]
 	},
 	{
-		"id": "damage",
-		"label": "Abyssal Blade",
+		"id": "inf_2",
+		"label": "Cruel Heat",
 		"type": "attack",
-		"branch": "offense",
-		"position": Vector2(-156.0, -92.0),
-		"radius": 24.0,
-		"requires": ["core"],
-		"gameplay_key": "damage",
-		"description": "Slash enemies with shadow force.",
-		"stats": ["Damage multiplier +15%", "Scales with base spell damage"]
+		"branch": "infernal",
+		"position": Vector2(-300.0, -50.0),
+		"radius": 17.0,
+		"requires": ["inf_1"],
+		"gameplay_key": "inf_2",
+		"description": "Force every spell to hit harder.",
+		"stats": ["Attack damage +8%", "Legacy damage node maps here"]
 	},
 	{
-		"id": "warding_glyph",
-		"label": "Warding Glyph",
-		"type": "defense",
-		"branch": "defense",
-		"position": Vector2(78.0, -48.0),
+		"id": "inf_3",
+		"label": "Overkill Rite",
+		"type": "attack",
+		"branch": "infernal",
+		"position": Vector2(-450.0, -20.0),
 		"radius": 18.0,
-		"requires": ["core"],
-		"gameplay_key": "",
-		"description": "An intermediate warding sigil.",
-		"stats": ["Tier-2 defense node", "Leads to Veil Ward"]
+		"requires": ["inf_2"],
+		"gameplay_key": "inf_3",
+		"description": "The tree starts to prefer louder answers.",
+		"stats": ["Attack damage +10%", "Unlocks Infernal bridges and Whisper"]
 	},
 	{
-		"id": "radius",
-		"label": "Veil Ward",
-		"type": "defense",
-		"branch": "defense",
-		"position": Vector2(158.0, -96.0),
-		"radius": 24.0,
-		"requires": ["core"],
-		"gameplay_key": "radius",
-		"description": "Expand your protection circle and spell reach.",
-		"stats": ["Firestorm radius bonus +0.9", "Improves zone control"]
-	},
-	{
-		"id": "spell_rhythm",
-		"label": "Spell Rhythm",
-		"type": "buff",
-		"branch": "buff",
-		"position": Vector2(0.0, 84.0),
-		"radius": 18.0,
-		"requires": ["core"],
-		"gameplay_key": "",
-		"description": "Synchronize your spell cadence.",
-		"stats": ["Tier-2 cooldown node", "Leads to Quickened Ritual"]
-	},
-	{
-		"id": "cooldown",
-		"label": "Quickened Ritual",
-		"type": "buff",
-		"branch": "buff",
-		"position": Vector2(0.0, 168.0),
-		"radius": 24.0,
-		"requires": ["core"],
-		"gameplay_key": "cooldown",
-		"description": "Tighten casting rhythm through blood-time bends.",
-		"stats": ["Cooldown reduction -0.4s", "Stacks with spell upgrades"]
-	},
-	{
-		"id": "soul_echo",
-		"label": "Soul Echo",
-		"type": "debuff",
-		"branch": "debuff",
-		"position": Vector2(-85.0, 50.0),
-		"radius": 18.0,
-		"requires": ["core"],
-		"gameplay_key": "",
-		"description": "Resonate with departed souls.",
-		"stats": ["Tier-2 debuff node", "Prepares deeper curses"]
-	},
-	{
-		"id": "soul_rot",
-		"label": "Soul Rot",
-		"type": "debuff",
-		"branch": "debuff",
-		"position": Vector2(-172.0, 80.0),
-		"radius": 20.0,
-		"requires": ["core"],
-		"gameplay_key": "",
-		"description": "A dormant debuff branch waiting to awaken.",
-		"stats": ["Preview node", "Planned for future builds"]
-	},
-	{
-		"id": "lifeweave",
-		"label": "Lifeweave",
-		"type": "healing",
-		"branch": "heal",
-		"position": Vector2(85.0, 50.0),
-		"radius": 18.0,
-		"requires": ["core"],
-		"gameplay_key": "",
-		"description": "Weave vital threads of protection.",
-		"stats": ["Tier-2 healing node", "Channels life force"]
-	},
-	{
-		"id": "blood_mend",
-		"label": "Blood Mend",
-		"type": "healing",
-		"branch": "heal",
-		"position": Vector2(170.0, 82.0),
-		"radius": 20.0,
-		"requires": ["core"],
-		"gameplay_key": "",
-		"description": "A dormant healing branch awaiting future rites.",
-		"stats": ["Preview node", "Planned for future builds"]
-	},
-	{
-		"id": "stormblood_pact",
-		"label": "Stormblood Pact",
-		"type": "synergy",
-		"branch": "synergy",
-		"position": Vector2(0.0, -176.0),
+		"id": "inf_major",
+		"label": "Infernal Might",
+		"type": "major",
+		"branch": "infernal",
+		"position": Vector2(-600.0, 0.0),
 		"radius": 26.0,
-		"requires": ["damage", "radius"],
-		"gameplay_key": "",
-		"description": "Fire and ward rites converge into a dual sigil.",
-		"stats": ["Synergy node", "Unlocks when both paths converge"]
+		"requires": ["inf_3"],
+		"gameplay_key": "inf_major",
+		"description": "If it moves, kill it louder.",
+		"stats": ["Attack damage +15%", "Major Infernal node"]
+	},
+	{
+		"id": "inf_fire_1",
+		"label": "Fire Hunger",
+		"type": "attack",
+		"branch": "infernal",
+		"position": Vector2(-720.0, -115.0),
+		"radius": 16.0,
+		"requires": ["inf_major"],
+		"gameplay_key": "inf_fire_1",
+		"description": "Flame spells drink deeper.",
+		"stats": ["Flame damage +10%", "Improves Firestorm"]
+	},
+	{
+		"id": "inf_ice_1",
+		"label": "Cold Violence",
+		"type": "attack",
+		"branch": "infernal",
+		"position": Vector2(-755.0, 5.0),
+		"radius": 16.0,
+		"requires": ["inf_major"],
+		"gameplay_key": "inf_ice_1",
+		"description": "Ice spells land with crushing intent.",
+		"stats": ["Ice damage +10%", "Improves Icesmash"]
+	},
+	{
+		"id": "inf_lightning_1",
+		"label": "Storm Teeth",
+		"type": "attack",
+		"branch": "infernal",
+		"position": Vector2(-720.0, 125.0),
+		"radius": 16.0,
+		"requires": ["inf_major"],
+		"gameplay_key": "inf_lightning_1",
+		"description": "Electricity spells bite twice in spirit.",
+		"stats": ["Electricity damage +10%", "Improves Electricity Vortex"]
+	},
+	{
+		"id": "mys_1",
+		"label": "Mysterious Arts",
+		"type": "utility",
+		"branch": "mysterious",
+		"position": Vector2(0.0, -150.0),
+		"radius": 16.0,
+		"requires": ["core"],
+		"gameplay_key": "mys_1",
+		"description": "Shape space before the fight understands you.",
+		"stats": ["Attack radius +0.2", "Cooldown reduction -0.05s"]
+	},
+	{
+		"id": "mys_2",
+		"label": "Wide Geometry",
+		"type": "utility",
+		"branch": "mysterious",
+		"position": Vector2(50.0, -300.0),
+		"radius": 17.0,
+		"requires": ["mys_1"],
+		"gameplay_key": "mys_2",
+		"description": "Area spells learn a larger shape.",
+		"stats": ["Attack radius +0.25", "Unlocks Soul bridge"]
+	},
+	{
+		"id": "mys_3",
+		"label": "Quickened Pattern",
+		"type": "utility",
+		"branch": "mysterious",
+		"position": Vector2(0.0, -450.0),
+		"radius": 18.0,
+		"requires": ["mys_2"],
+		"gameplay_key": "mys_3",
+		"description": "The next spell arrives before fear recovers.",
+		"stats": ["Cooldown reduction -0.15s", "Unlocks Whisper"]
+	},
+	{
+		"id": "mys_major",
+		"label": "Arcane Geometry",
+		"type": "major",
+		"branch": "mysterious",
+		"position": Vector2(0.0, -600.0),
+		"radius": 26.0,
+		"requires": ["mys_3"],
+		"gameplay_key": "mys_major",
+		"description": "You do not fight. You decide when the fight ends.",
+		"stats": ["Attack radius +0.45", "Cooldown reduction -0.15s"]
+	},
+	{
+		"id": "mys_aoe_1",
+		"label": "Killing Radius",
+		"type": "utility",
+		"branch": "mysterious",
+		"position": Vector2(-120.0, -710.0),
+		"radius": 16.0,
+		"requires": ["mys_major"],
+		"gameplay_key": "mys_aoe_1",
+		"description": "The old radius rite, given a proper home.",
+		"stats": ["Attack radius +0.45", "Legacy radius node maps here"]
+	},
+	{
+		"id": "mys_cd_1",
+		"label": "Spell Rhythm",
+		"type": "utility",
+		"branch": "mysterious",
+		"position": Vector2(0.0, -760.0),
+		"radius": 16.0,
+		"requires": ["mys_major"],
+		"gameplay_key": "mys_cd_1",
+		"description": "Blood-time bends around your casting hand.",
+		"stats": ["Cooldown reduction -0.25s", "Legacy cooldown node maps here"]
+	},
+	{
+		"id": "mys_chain_1",
+		"label": "Chain Thought",
+		"type": "utility",
+		"branch": "mysterious",
+		"position": Vector2(120.0, -710.0),
+		"radius": 16.0,
+		"requires": ["mys_major"],
+		"gameplay_key": "mys_chain_1",
+		"description": "A future chain-effect socket hums here.",
+		"stats": ["Attack damage +5%", "Future chain effects anchor"]
+	},
+	{
+		"id": "soul_1",
+		"label": "Soul Preservation",
+		"type": "healing",
+		"branch": "soul",
+		"position": Vector2(0.0, 150.0),
+		"radius": 16.0,
+		"requires": ["core"],
+		"gameplay_key": "soul_1",
+		"description": "Survival becomes a method, not a hope.",
+		"stats": ["Damage taken -3%", "Healing received +5%"]
+	},
+	{
+		"id": "soul_2",
+		"label": "Life Thread",
+		"type": "healing",
+		"branch": "soul",
+		"position": Vector2(-50.0, 300.0),
+		"radius": 17.0,
+		"requires": ["soul_1"],
+		"gameplay_key": "soul_2",
+		"description": "Every recovery pulls harder.",
+		"stats": ["Healing received +10%", "Unlocks Mysterious bridge"]
+	},
+	{
+		"id": "soul_3",
+		"label": "Cold Survival",
+		"type": "healing",
+		"branch": "soul",
+		"position": Vector2(0.0, 450.0),
+		"radius": 18.0,
+		"requires": ["soul_2"],
+		"gameplay_key": "soul_3",
+		"description": "The body refuses to become evidence.",
+		"stats": ["Damage taken -5%", "Unlocks Whisper"]
+	},
+	{
+		"id": "soul_major",
+		"label": "Soul Harvest",
+		"type": "major",
+		"branch": "soul",
+		"position": Vector2(0.0, 600.0),
+		"radius": 26.0,
+		"requires": ["soul_3"],
+		"gameplay_key": "soul_major",
+		"description": "Why survive when you can feed?",
+		"stats": ["Heal 4% max life on kill", "Major Soul node"]
+	},
+	{
+		"id": "soul_lifesteal_1",
+		"label": "Red Feast",
+		"type": "healing",
+		"branch": "soul",
+		"position": Vector2(-125.0, 710.0),
+		"radius": 16.0,
+		"requires": ["soul_major"],
+		"gameplay_key": "soul_lifesteal_1",
+		"description": "Kills return a little of what they took.",
+		"stats": ["Heal 3% max life on kill", "Stacks with Soul Harvest"]
+	},
+	{
+		"id": "soul_shield_1",
+		"label": "Bone Aegis",
+		"type": "defense",
+		"branch": "soul",
+		"position": Vector2(0.0, 760.0),
+		"radius": 16.0,
+		"requires": ["soul_major"],
+		"gameplay_key": "soul_shield_1",
+		"description": "A kill leaves a thin shield behind.",
+		"stats": ["Small shield on kill", "Scales with max life"]
+	},
+	{
+		"id": "soul_regen_1",
+		"label": "Black Pulse",
+		"type": "healing",
+		"branch": "soul",
+		"position": Vector2(125.0, 710.0),
+		"radius": 16.0,
+		"requires": ["soul_major"],
+		"gameplay_key": "soul_regen_1",
+		"description": "Healing magic finds you faster.",
+		"stats": ["Healing received +12%", "Improves recovery effects"]
+	},
+	{
+		"id": "cur_1",
+		"label": "The Cursed",
+		"type": "debuff",
+		"branch": "cursed",
+		"position": Vector2(150.0, 0.0),
+		"radius": 16.0,
+		"requires": ["core"],
+		"gameplay_key": "cur_1",
+		"description": "Make sure they lose before you win.",
+		"stats": ["Attack damage +4%", "Buff/debuff branch"]
+	},
+	{
+		"id": "cur_2",
+		"label": "Weakness Mark",
+		"type": "debuff",
+		"branch": "cursed",
+		"position": Vector2(300.0, 50.0),
+		"radius": 17.0,
+		"requires": ["cur_1"],
+		"gameplay_key": "cur_2",
+		"description": "A curse that teaches enemies how to break.",
+		"stats": ["Attack damage +5%", "Unlocks Infernal bridge"]
+	},
+	{
+		"id": "cur_3",
+		"label": "Rot Logic",
+		"type": "debuff",
+		"branch": "cursed",
+		"position": Vector2(450.0, 0.0),
+		"radius": 18.0,
+		"requires": ["cur_2"],
+		"gameplay_key": "cur_3",
+		"description": "The curse keeps working after the spell ends.",
+		"stats": ["Attack damage +6%", "Unlocks Whisper"]
+	},
+	{
+		"id": "cur_major",
+		"label": "Deceit Engine",
+		"type": "major",
+		"branch": "cursed",
+		"position": Vector2(600.0, 0.0),
+		"radius": 26.0,
+		"requires": ["cur_3"],
+		"gameplay_key": "cur_major",
+		"description": "You do not need to win. They only need to fail.",
+		"stats": ["Attack damage +8%", "Cooldown reduction -0.1s"]
+	},
+	{
+		"id": "cur_dot_1",
+		"label": "Slow Decay",
+		"type": "debuff",
+		"branch": "cursed",
+		"position": Vector2(720.0, -115.0),
+		"radius": 16.0,
+		"requires": ["cur_major"],
+		"gameplay_key": "cur_dot_1",
+		"description": "A future damage-over-time anchor with a small bite now.",
+		"stats": ["Attack damage +4%", "Future DoT node"]
+	},
+	{
+		"id": "cur_buff_1",
+		"label": "Stolen Blessing",
+		"type": "buff",
+		"branch": "cursed",
+		"position": Vector2(755.0, 5.0),
+		"radius": 16.0,
+		"requires": ["cur_major"],
+		"gameplay_key": "cur_buff_1",
+		"description": "Your buffs carry an uglier edge.",
+		"stats": ["Attack damage +5%", "Future buff amplification"]
+	},
+	{
+		"id": "cur_control_1",
+		"label": "Cripple Will",
+		"type": "debuff",
+		"branch": "cursed",
+		"position": Vector2(720.0, 125.0),
+		"radius": 16.0,
+		"requires": ["cur_major"],
+		"gameplay_key": "cur_control_1",
+		"description": "Control effects will root here later.",
+		"stats": ["Cooldown reduction -0.05s", "Future enemy-control node"]
+	},
+	{
+		"id": "bridge_inf_cur",
+		"label": "Ashen Malice",
+		"type": "synergy",
+		"branch": "bridge",
+		"position": Vector2(-20.0, -250.0),
+		"radius": 18.0,
+		"requires": ["inf_3", "cur_2"],
+		"gameplay_key": "bridge_inf_cur",
+		"description": "Infernal force learns a cursed route.",
+		"stats": ["Attack damage +7%", "Hybrid build shortcut"]
+	},
+	{
+		"id": "bridge_mys_soul",
+		"label": "Quiet Renewal",
+		"type": "synergy",
+		"branch": "bridge",
+		"position": Vector2(-190.0, 225.0),
+		"radius": 18.0,
+		"requires": ["mys_2", "soul_2"],
+		"gameplay_key": "bridge_mys_soul",
+		"description": "Technique and survival fold into each other.",
+		"stats": ["Attack radius +0.2", "Healing received +6%"]
+	},
+	{
+		"id": "whisper_1",
+		"label": "Whisper: Ember",
+		"type": "whisper",
+		"branch": "whisper",
+		"position": Vector2(-500.0, -500.0),
+		"radius": 20.0,
+		"requires": ["inf_3"],
+		"gameplay_key": "whisper_1",
+		"min_corruption": 0.2,
+		"description": "Forbidden force leaks through Infernal scars.",
+		"stats": ["Beyond damage +10%", "Requires 20% corruption"]
+	},
+	{
+		"id": "whisper_2",
+		"label": "Whisper: Fold",
+		"type": "whisper",
+		"branch": "whisper",
+		"position": Vector2(500.0, -500.0),
+		"radius": 20.0,
+		"requires": ["mys_3"],
+		"gameplay_key": "whisper_2",
+		"min_corruption": 0.3,
+		"description": "The map between spells grows thin.",
+		"stats": ["Cooldown reduction -0.15s", "Requires 30% corruption"]
+	},
+	{
+		"id": "whisper_3",
+		"label": "Whisper: Crown",
+		"type": "whisper",
+		"branch": "whisper",
+		"position": Vector2(500.0, 500.0),
+		"radius": 20.0,
+		"requires": ["cur_3"],
+		"gameplay_key": "whisper_3",
+		"min_corruption": 0.45,
+		"description": "Power is given. Control is taken.",
+		"stats": ["Attack damage +10%", "Requires 45% corruption"]
+	},
+	{
+		"id": "whisper_4",
+		"label": "Whisper: Hunger",
+		"type": "whisper",
+		"branch": "whisper",
+		"position": Vector2(-500.0, 500.0),
+		"radius": 20.0,
+		"requires": ["soul_3"],
+		"gameplay_key": "whisper_4",
+		"min_corruption": 0.6,
+		"description": "The bargain learns where your life is kept.",
+		"stats": ["Heal 5% max life on kill", "Requires 60% corruption"]
 	}
 ]
 
 const RITUAL_CONNECTIONS := [
-	["core", "cleave_edge"],
-	["cleave_edge", "damage"],
-	["core", "warding_glyph"],
-	["warding_glyph", "radius"],
-	["core", "spell_rhythm"],
-	["spell_rhythm", "cooldown"],
-	["core", "soul_echo"],
-	["soul_echo", "soul_rot"],
-	["core", "lifeweave"],
-	["lifeweave", "blood_mend"],
-	["damage", "stormblood_pact"],
-	["radius", "stormblood_pact"]
+	["core", "inf_1"], ["inf_1", "inf_2"], ["inf_2", "inf_3"], ["inf_3", "inf_major"],
+	["inf_major", "inf_fire_1"], ["inf_major", "inf_ice_1"], ["inf_major", "inf_lightning_1"],
+	["core", "mys_1"], ["mys_1", "mys_2"], ["mys_2", "mys_3"], ["mys_3", "mys_major"],
+	["mys_major", "mys_aoe_1"], ["mys_major", "mys_cd_1"], ["mys_major", "mys_chain_1"],
+	["core", "soul_1"], ["soul_1", "soul_2"], ["soul_2", "soul_3"], ["soul_3", "soul_major"],
+	["soul_major", "soul_lifesteal_1"], ["soul_major", "soul_shield_1"], ["soul_major", "soul_regen_1"],
+	["core", "cur_1"], ["cur_1", "cur_2"], ["cur_2", "cur_3"], ["cur_3", "cur_major"],
+	["cur_major", "cur_dot_1"], ["cur_major", "cur_buff_1"], ["cur_major", "cur_control_1"],
+	["inf_3", "bridge_inf_cur"], ["cur_2", "bridge_inf_cur"],
+	["mys_2", "bridge_mys_soul"], ["soul_2", "bridge_mys_soul"],
+	["inf_3", "whisper_1"], ["mys_3", "whisper_2"], ["cur_3", "whisper_3"], ["soul_3", "whisper_4"],
+	["whisper_1", "whisper_2"], ["whisper_2", "whisper_3"], ["whisper_3", "whisper_4"], ["whisper_4", "whisper_1"]
 ]
 
 var pulse := 0.0
@@ -197,7 +486,8 @@ var _unlocked_nodes := {
 var _corruption_ratio := 0.0
 var _selected_node_id := "core"
 var _hovered_node_id := ""
-var _zoom := 0.9
+var _zoom := DEFAULT_ZOOM
+var _auto_fit_applied := false
 var _pan_offset := Vector2.ZERO
 var _dragging := false
 var _drag_started_on_node := false
@@ -209,9 +499,11 @@ var _mouse_position := Vector2.ZERO
 func _ready() -> void:
 	custom_minimum_size = Vector2(0.0, 360.0)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	clip_contents = true
 	_mouse_position = get_local_mouse_position()
 
 func _process(delta: float) -> void:
+	_apply_initial_fit_if_needed()
 	pulse += delta
 	_mouse_position = get_local_mouse_position()
 	_hovered_node_id = _node_at_screen_position(_mouse_position)
@@ -222,17 +514,15 @@ func _gui_input(event: InputEvent) -> void:
 		var mouse_event := event as InputEventMouseButton
 		if mouse_event == null:
 			return
-		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP and mouse_event.pressed:
-			_adjust_zoom(1.08, mouse_event.position)
-			return
-		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN and mouse_event.pressed:
-			_adjust_zoom(1.0 / 1.08, mouse_event.position)
+		if mouse_event.pressed and _zoom_from_wheel(mouse_event.button_index, mouse_event.factor, mouse_event.position):
+			accept_event()
 			return
 		if mouse_event.button_index == MOUSE_BUTTON_LEFT:
 			if mouse_event.pressed:
 				_handle_left_press(mouse_event.position)
 			else:
 				_handle_left_release(mouse_event.position)
+			accept_event()
 			return
 	if event is InputEventMouseMotion:
 		var motion_event := event as InputEventMouseMotion
@@ -242,18 +532,38 @@ func _gui_input(event: InputEvent) -> void:
 		_hovered_node_id = _node_at_screen_position(motion_event.position)
 		if _dragging:
 			_pan_offset = _drag_start_pan + (motion_event.position - _drag_start_mouse)
+			accept_event()
 		queue_redraw()
+
+func handle_mouse_wheel(global_mouse_position: Vector2, button_index: int, factor: float) -> bool:
+	if not is_visible_in_tree():
+		return false
+	if not get_global_rect().has_point(global_mouse_position):
+		return false
+	var local_mouse_position := get_global_transform().affine_inverse() * global_mouse_position
+	return _zoom_from_wheel(button_index, factor, local_mouse_position)
+
+func _zoom_from_wheel(button_index: int, factor: float, mouse_position: Vector2) -> bool:
+	if button_index == MOUSE_BUTTON_WHEEL_UP:
+		_adjust_zoom(pow(WHEEL_ZOOM_STEP, maxf(factor, 1.0)), mouse_position)
+		return true
+	if button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		_adjust_zoom(1.0 / pow(WHEEL_ZOOM_STEP, maxf(factor, 1.0)), mouse_position)
+		return true
+	return false
 
 func set_skill_data(points: int, unlocked_nodes: Array) -> void:
 	_available_points = maxi(points, 0)
-	_unlocked_nodes["core"] = true
-	_unlocked_nodes["damage"] = false
-	_unlocked_nodes["radius"] = false
-	_unlocked_nodes["cooldown"] = false
+	_unlocked_nodes.clear()
+	for node in RITUAL_NODES:
+		var node_id := String(node.get("id", ""))
+		if not node_id.is_empty():
+			_unlocked_nodes[node_id] = node_id == "core"
 	for key_variant in unlocked_nodes:
 		var key := String(key_variant)
-		if _unlocked_nodes.has(key):
-			_unlocked_nodes[key] = true
+		var node_key := String(LEGACY_SKILL_NODE_ALIASES.get(key, key))
+		if _unlocked_nodes.has(node_key):
+			_unlocked_nodes[node_key] = true
 	if _selected_node_id.is_empty() or not _node_by_id(_selected_node_id).is_empty():
 		pass
 	else:
@@ -281,8 +591,10 @@ func _draw_background(tree_rect: Rect2) -> void:
 	var ring_color := Color(0.42, 0.08, 0.1, 0.32)
 	draw_arc(center, BASE_BRANCH_RADIUS * _zoom, 0.0, TAU, 128, ring_color, 2.0, true)
 	draw_arc(center, BASE_BRANCH_RADIUS * _zoom * 0.74, pulse * 0.18, TAU + pulse * 0.18, 128, Color(0.35, 0.08, 0.24, 0.36), 1.6, true)
-	_draw_left_string("Ritual Circle", Vector2(tree_rect.position.x + 12.0, tree_rect.position.y + 28.0), 17, Color(0.96, 0.78, 0.56, 0.95))
+	draw_arc(center, 707.0 * _zoom, -PI * 0.75, TAU - PI * 0.75, 128, Color(0.86, 0.86, 0.82, 0.18 + _corruption_ratio * 0.18), 1.4, true)
+	_draw_left_string("Shadow Constellation", Vector2(tree_rect.position.x + 12.0, tree_rect.position.y + 28.0), 17, Color(0.96, 0.78, 0.56, 0.95))
 	_draw_left_string("Skill Points: %s" % _available_points, Vector2(tree_rect.position.x + 12.0, tree_rect.position.y + 50.0), 14, Color(0.9, 0.74, 0.58, 0.9))
+	_draw_left_string("Whisper: %d%% corruption" % int(round(_corruption_ratio * 100.0)), Vector2(tree_rect.position.x + 12.0, tree_rect.position.y + 70.0), 13, Color(0.74, 0.72, 0.68, 0.82))
 
 func _draw_tree(tree_rect: Rect2) -> void:
 	for pair in RITUAL_CONNECTIONS:
@@ -383,7 +695,7 @@ func _draw_node(node: Dictionary, tree_rect: Rect2) -> void:
 	var label_alpha := _label_alpha_for_zoom()
 	if label_alpha > 0.01:
 		var label_color_with_alpha := Color(label_color.r, label_color.g, label_color.b, label_color.a * label_alpha)
-		_draw_centered_string(String(node["label"]), center + Vector2(0.0, radius + 18.0), 13, label_color_with_alpha)
+		_draw_centered_string(String(node["label"]), center + Vector2(0.0, radius + 18.0), _label_size_for_zoom(), label_color_with_alpha)
 
 func _draw_hover_panel(tree_rect: Rect2, node: Dictionary, mouse_position: Vector2) -> void:
 	var tooltip_position := mouse_position + Vector2(22.0, 16.0)
@@ -427,7 +739,7 @@ func _draw_hover_panel(tree_rect: Rect2, node: Dictionary, mouse_position: Vecto
 	y += 6.0
 	var stats: Array = node.get("stats", [])
 	for stat_variant in stats:
-		_draw_left_string("• %s" % String(stat_variant), Vector2(x, y), 12, Color(0.84, 0.74, 0.64, 0.85))
+		_draw_left_string("- %s" % String(stat_variant), Vector2(x, y), 12, Color(0.84, 0.74, 0.64, 0.85))
 		y += 15.0
 
 	y += 8.0
@@ -437,7 +749,10 @@ func _draw_hover_panel(tree_rect: Rect2, node: Dictionary, mouse_position: Vecto
 		hint = "Already unlocked"
 		hint_color = Color(0.95, 0.84, 0.66, 0.84)
 	elif not _is_unlockable_node(node):
-		hint = "Locked by prerequisites"
+		if _is_corruption_locked(node):
+			hint = "Needs %d%% corruption" % int(round(float(node.get("min_corruption", 0.0)) * 100.0))
+		else:
+			hint = "Locked by prerequisites"
 		hint_color = Color(0.72, 0.58, 0.44, 0.82)
 	elif _available_points <= 0:
 		hint = "Need skill points"
@@ -496,6 +811,38 @@ func _adjust_zoom(multiplier: float, mouse_position: Vector2) -> void:
 func _tree_rect() -> Rect2:
 	return Rect2(Vector2(8.0, 8.0), Vector2(maxf(size.x - 16.0, 260.0), maxf(size.y - 16.0, 250.0)))
 
+func _apply_initial_fit_if_needed() -> void:
+	if _auto_fit_applied:
+		return
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+	_zoom = _fit_zoom_for_current_size()
+	_pan_offset = Vector2.ZERO
+	_auto_fit_applied = true
+
+func _fit_zoom_for_current_size() -> float:
+	var bounds := _node_world_bounds()
+	if bounds.size.x <= 0.0 or bounds.size.y <= 0.0:
+		return DEFAULT_ZOOM
+	var usable_size := Vector2(maxf(size.x - FIT_PADDING.x, 260.0), maxf(size.y - FIT_PADDING.y, 250.0))
+	var zoom_x := usable_size.x / bounds.size.x
+	var zoom_y := usable_size.y / bounds.size.y
+	return clampf(minf(minf(zoom_x, zoom_y), DEFAULT_ZOOM), MIN_ZOOM, MAX_ZOOM)
+
+func _node_world_bounds() -> Rect2:
+	var bounds := Rect2()
+	var initialized := false
+	for node in RITUAL_NODES:
+		var center := Vector2(node["position"])
+		var radius := float(node.get("radius", 16.0)) + 44.0
+		var node_rect := Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
+		if initialized:
+			bounds = bounds.merge(node_rect)
+		else:
+			bounds = node_rect
+			initialized = true
+	return bounds
+
 func _world_to_screen(world: Vector2, tree_rect: Rect2) -> Vector2:
 	return tree_rect.get_center() + _pan_offset + world * _zoom
 
@@ -536,7 +883,7 @@ func _node_state(node: Dictionary) -> String:
 	if _is_node_unlocked(node_id):
 		return "unlocked"
 	if not _is_unlockable_node(node):
-		if _is_preview_node(node):
+		if _is_preview_node(node) or _is_corruption_locked(node):
 			return "sealed"
 		return "locked"
 	if _available_points > 0:
@@ -555,10 +902,16 @@ func _is_unlockable_node(node: Dictionary) -> bool:
 		return false
 	if _is_node_unlocked(node_id):
 		return false
+	if _is_corruption_locked(node):
+		return false
 	return _prerequisites_met(node_id)
 
 func _can_unlock(node: Dictionary) -> bool:
 	return _is_unlockable_node(node) and _available_points > 0
+
+func _is_corruption_locked(node: Dictionary) -> bool:
+	var required_corruption := float(node.get("min_corruption", 0.0))
+	return required_corruption > 0.0 and _corruption_ratio + 0.001 < required_corruption
 
 func _prerequisites_met(node_id: String) -> bool:
 	var node := _node_by_id(node_id)
@@ -615,13 +968,22 @@ func _draw_sigil_glyph(center: Vector2, radius: float, color: Color, branch_colo
 		draw_circle(center, maxf(radius * 0.14, 2.0), Color(color.r, color.g, color.b, 0.75))
 
 func _label_alpha_for_zoom() -> float:
-	if _zoom >= 0.95:
+	if _zoom >= 0.34:
 		return 1.0
-	if _zoom <= 0.72:
+	if _zoom <= 0.26:
 		return 0.0
-	var fade_range := 0.95 - 0.72
-	var fade_in := (_zoom - 0.72) / fade_range
+	var fade_range := 0.34 - 0.26
+	var fade_in := (_zoom - 0.26) / fade_range
 	return clampf(fade_in, 0.0, 1.0)
+
+func _label_size_for_zoom() -> int:
+	if _zoom >= 1.0:
+		return 17
+	if _zoom >= 0.72:
+		return 16
+	if _zoom >= 0.5:
+		return 15
+	return 13
 
 func _quadratic_bezier(a: Vector2, b: Vector2, c: Vector2, t: float) -> Vector2:
 	var u := 1.0 - t

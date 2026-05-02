@@ -1,0 +1,13 @@
+MISSION clear_hoofgrove_wilds
+TITLE Clear Hoofgrove Wilds from Centaurs and Warriors
+OBJECTIVE kill_all_enemies_in_hoofgrove_wilds
+GIVER_NPC Torren_Blackwell:Torren Blackwell
+REMINDER_FILE velmora/torren-blackwell-mission-unfinished.txt
+LOCKED true
+ON_COMPLETE unlock_mission:return_to_velmora_with_teleport
+
+MISSION return_to_velmora_with_teleport
+TITLE Talk to Torren Blackwell in Velmora
+OBJECTIVE teleport_to:velmora
+LOCKED true
+ON_COMPLETE unlock_area_mission:velmora:talk_to_torren_after_clearing_forest

@@ -1,6 +1,6 @@
 [gd_scene format=4 uid="uid://xw2rfre4dj8n"]
 
-[ext_resource type="Texture2D" path="res://assets/images/floor/castle-stone-floor.png" id="1_5k71p"]
+[ext_resource type="Texture2D" path="res://assets/images/floor/black-vault-stone-floor.png" id="1_5k71p"]
 [ext_resource type="Shader" path="res://assets/images/statusFX/shader/checker.gdshader" id="2_myj8n"]
 [ext_resource type="Material" uid="uid://gnpaaon1rqti" path="res://assets/images/statusFX/effects/overlay/shatter_overlay.tres" id="3_kerq4"]
 [ext_resource type="PackedScene" uid="uid://clu5eubrxgbj5" path="res://assets/images/statusFX/effects/status/vfx_status_shatter.tscn" id="18_562wp"]

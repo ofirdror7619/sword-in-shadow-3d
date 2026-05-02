@@ -1,91 +1,48 @@
 diamonds
-💎 Diamond List (balanced + game-ready)
-🔴 1. Diamond of Rush
+1. Diamond Of Rush (Color: Orange)
+bonus: increase movement speed
 
-Effect: -X% cooldown on abilities
-👉 Fast, aggressive playstyle
+2. diamond Of Focus (Color: Cyan)
+bonus: increase attack spells radius
 
-🔵 2. Diamond of Focus
+3. Diamond of Vitality (color: Emerald Green)
+bonus: faster healing rate
 
-Effect: +X% damage
-👉 Pure DPS
+4. Diamond of Fortune (color: Gold)
+bonus: increased luck in loot/gold drops
 
-🟢 3. Diamond of Vitality
+5. Diamond of Corruption (color: Deep Purple)
+bonus: increased effect to Beyond spells
 
-Effect: +X% max HP / life steal
-👉 Survivability
+6. Diamond of Echo (color: Neon Pink)
+bonus: increased attack spell effect 
 
-🟡 4. Diamond of Fortune
+7. Diamond of Void (color: Dark Indigo)
+bonus: +1 to summomned creaters
 
-Effect: +X% gold / loot drop
-👉 Farming build
+8. Diamond of Fury (color: Crimson Red)
+bonus: increased attack spells damage
 
-🟣 5. Diamond of Corruption
+9. Diamond of Guardian (color: Light Blue Tint)
+bonus: increased effect of defensive spells
 
-Effect: Attacks apply damage over time (shadow burn)
-👉 Fits your demon theme PERFECTLY
+10. Diamond of Flame Ring (color: Red-Orange Gradient)
+bonus: increased effect of flame spells 
 
-🔷 6. Diamond of Echo
+11. Diamond of Frostbind (color: Ice Blue)
+bonus: increased effect of ice spells 
 
-Effect: X% chance to repeat attack (double cast)
-👉 Feels AMAZING in gameplay
+12. Diamond of Storm (color: Blue + Yellow Sparks)
+bonus: increased effect of electricity spells 
 
-⚫ 7. Diamond of Void
+Don’t rely on color only — add micro VFX:
 
-Effect: Attacks pierce enemies
-👉 Great for crowd control
+⚡ Storm → tiny lightning flicker
+❄ Frost → subtle frost particles
+🔥 Flame → inner glow pulse
+🟣 Corruption → slow “breathing” aura
+🟠 Rush → slight motion blur shimmer
 
-🟠 8. Diamond of Fury
 
-Effect: Increase attack speed
-👉 Aggressive melee builds
-
-⚪ 9. Diamond of Guardian
-
-Effect: Temporary shield on hit / low HP
-👉 Defensive clutch mechanic
-
-🔥 10. Diamond of Flame Ring
-
-Effect: Expands your fire aura (fits your ring of flames idea 🔥)
-👉 This one is VERY on-brand
-
-❄️ 11. Diamond of Frostbind
-
-Effect: Chance to slow / freeze enemies
-👉 Control playstyle
-
-⚡ 12. Diamond of Storm
-
-Effect: Chain lightning between enemies
-👉 Visually satisfying + strong
-
-🧠 Advanced Mechanics (THIS is where it becomes 🔥🔥🔥)
-🧩 Synergies (super important)
-
-Example combos:
-
-🔴 Rush + 🟠 Fury → Berserker build
-🟣 Corruption + ⚫ Void → AOE DoT build
-🔵 Focus x8 → Glass cannon
-🟢 Vitality + ⚪ Guardian → Tank build
-💎 Socket Bonuses (INSANE potential)
-
-If player fills all 8:
-
-8 same color → Ultimate bonus
-Example: 8x Red → Cooldown almost zero (broken fast build)
-Mixed combos:
-4 red + 4 purple → unlock "Demon Overdrive"
-
-My recommendation (for your game)
-
-Use 4 core elements:
-
-🔥 Fire → damage / explosions
-❄️ Ice → control / freeze
-⚡ Lightning → speed / chain
-🟣 Void → manipulation / spread
-
-there are 5 levels for diamonds:
+diamond tiers:
 Faded → Whispering → Corrupted → Abyssal → Divine

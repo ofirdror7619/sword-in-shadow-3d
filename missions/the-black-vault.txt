@@ -1,0 +1,15 @@
+MISSION clear_black_vault
+TITLE Slay everyone in the Black Vault: %s/%s lives taken. Crack open their chests.
+OBJECTIVE kill_15_out_of_15_in_black_vault
+ON_COMPLETE unlock_mission:enter_the_portal_to_velmora
+
+MISSION enter_the_portal_to_velmora
+TITLE Enter The Portal
+OBJECTIVE enter_the_portal_in_the_black_vault
+LOCKED true
+NEXT_MISSION_FILE velmora:velmora-first.txt
+
+MISSION return_to_velmora_with_teleport
+TITLE Use the Teleport Device to return to Velmora
+OBJECTIVE teleport_to:velmora
+LOCKED true
