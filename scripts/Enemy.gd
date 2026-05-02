@@ -82,6 +82,8 @@ var _status_fx: Node3D
 var _status_fx_base_scale := Vector3.ONE
 var _status_fx_time: float = 0.0
 var _lightning_bolts: Array[Dictionary] = []
+var _chill_timer := 0.0
+var _chill_speed_multiplier := 1.0
 
 var _visual_root: Node3D
 var _life_bar: MeshInstance3D
@@ -114,18 +116,19 @@ func configure(target_player: Node3D, enemy_level: int, elite: bool = false, kin
 	damage = 8 + enemy_level * 2
 	speed = 2.8 + minf(float(enemy_level) * 0.12, 1.2)
 	xp_reward = ProgressionConfigScript.enemy_xp(enemy_level)
-	gold_reward = 6 + enemy_level * 3
+	gold_reward = 8 + enemy_level * 4
 	if enemy_kind == ENEMY_KIND_SKELETON:
 		max_life = int(float(max_life) * 0.82)
 		life = max_life
 		damage = maxi(damage - 2, 1)
 		speed += 0.55
+		gold_reward += 2
 	elif enemy_kind == ENEMY_KIND_CLERIC:
 		max_life = int(float(max_life) * 1.28)
 		life = max_life
 		damage += 7
 		speed = 0.0
-		gold_reward += 8
+		gold_reward += 10
 	elif enemy_kind == ENEMY_KIND_CENTAUR:
 		max_life = int(float(max_life) * 1.18)
 		life = max_life
@@ -144,7 +147,7 @@ func configure(target_player: Node3D, enemy_level: int, elite: bool = false, kin
 		damage += 22
 		speed = 1.75
 		xp_reward = ProgressionConfigScript.enemy_xp(enemy_level, ProgressionConfigScript.ENEMY_XP_BOSS)
-		gold_reward += 80
+		gold_reward += 115
 		scale = Vector3.ONE * 1.28
 	if elite:
 		max_life *= 2
@@ -164,9 +167,11 @@ func _physics_process(delta: float) -> void:
 	if not alive or player == null:
 		return
 	attack_timer = maxf(attack_timer - delta, 0.0)
+	_update_status_timers(delta)
 	var offset := player.global_position - global_position
 	offset.y = 0.0
 	var distance := offset.length()
+	var current_speed := _effective_speed()
 	if not _player_noticed and distance <= NOTICE_RANGE:
 		_player_noticed = true
 	elif _player_noticed and distance > LOSE_INTEREST_RANGE:
@@ -180,17 +185,17 @@ func _physics_process(delta: float) -> void:
 		return
 
 	if not _player_noticed:
-		velocity.x = move_toward(velocity.x, 0.0, speed)
-		velocity.z = move_toward(velocity.z, 0.0, speed)
+		velocity.x = move_toward(velocity.x, 0.0, current_speed)
+		velocity.z = move_toward(velocity.z, 0.0, current_speed)
 	elif distance > ATTACK_RANGE:
 		var direction := offset.normalized()
-		velocity.x = direction.x * speed
-		velocity.z = direction.z * speed
+		velocity.x = direction.x * current_speed
+		velocity.z = direction.z * current_speed
 		if enemy_kind == ENEMY_KIND_SKELETON or enemy_kind == ENEMY_KIND_KNIGHT or enemy_kind == ENEMY_KIND_HUMAN_WARRIOR or enemy_kind == ENEMY_KIND_GIANT:
 			_visual_root.rotation.y = atan2(velocity.x, velocity.z)
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, speed)
-		velocity.z = move_toward(velocity.z, 0.0, speed)
+		velocity.x = move_toward(velocity.x, 0.0, current_speed)
+		velocity.z = move_toward(velocity.z, 0.0, current_speed)
 		if attack_timer <= 0.0 and player.has_method("take_damage"):
 			player.take_damage(damage)
 			attack_timer = ATTACK_INTERVAL
@@ -213,6 +218,7 @@ func _physics_process(delta: float) -> void:
 	_animate_lightning_bolts(delta)
 
 func _physics_process_centaur(delta: float, offset: Vector3, distance: float) -> void:
+	var current_speed := _effective_speed()
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 	else:
@@ -226,8 +232,8 @@ func _physics_process_centaur(delta: float, offset: Vector3, distance: float) ->
 		_player_noticed = true
 
 	if not _player_noticed:
-		velocity.x = move_toward(velocity.x, 0.0, speed)
-		velocity.z = move_toward(velocity.z, 0.0, speed)
+		velocity.x = move_toward(velocity.x, 0.0, current_speed)
+		velocity.z = move_toward(velocity.z, 0.0, current_speed)
 	else:
 		var direction := offset.normalized()
 		var movement := Vector3.ZERO
@@ -235,8 +241,8 @@ func _physics_process_centaur(delta: float, offset: Vector3, distance: float) ->
 			movement = direction
 		elif distance < CENTAUR_IDEAL_RANGE - 1.5:
 			movement = -direction
-		velocity.x = movement.x * speed
-		velocity.z = movement.z * speed
+		velocity.x = movement.x * current_speed
+		velocity.z = movement.z * current_speed
 		if can_see and attack_timer <= 0.0:
 			_shoot_lightning_vortex(direction)
 			attack_timer = CENTAUR_ATTACK_INTERVAL
@@ -281,6 +287,23 @@ func take_damage(amount: int) -> void:
 		killed.emit(self)
 		_clear_lightning_bolts()
 		queue_free()
+
+func apply_chill(duration: float, speed_multiplier: float = 0.48) -> void:
+	if not alive:
+		return
+	_chill_timer = maxf(_chill_timer, duration)
+	_chill_speed_multiplier = minf(_chill_speed_multiplier, clampf(speed_multiplier, 0.15, 1.0))
+	_player_noticed = true
+
+func _update_status_timers(delta: float) -> void:
+	if _chill_timer <= 0.0:
+		return
+	_chill_timer = maxf(_chill_timer - delta, 0.0)
+	if _chill_timer <= 0.0:
+		_chill_speed_multiplier = 1.0
+
+func _effective_speed() -> float:
+	return speed * _chill_speed_multiplier
 
 func _update_life_bar() -> void:
 	if _life_bar == null:

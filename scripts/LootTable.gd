@@ -46,19 +46,19 @@ static func roll_enemy_loot(
 		"rarity": "common"
 	})
 
-	var diamond_chance := clampf(0.055 + toughness * 0.03 + float(player_level - 1) * 0.004 + loot_luck * 0.42, 0.03, 0.38)
+	var diamond_chance := clampf(0.075 + toughness * 0.035 + float(player_level - 1) * 0.0045 + loot_luck * 0.38, 0.04, 0.34)
 	if rng.randf() < diamond_chance:
 		var diamond_drop := _roll_diamond(rng, diamond_catalog, player_level, toughness, loot_luck)
 		if not diamond_drop.is_empty():
 			drops.append(diamond_drop)
 
-	var relic_chance := clampf(0.004 + toughness * 0.006 + loot_luck * 0.055, 0.0, 0.085)
+	var relic_chance := clampf(0.003 + toughness * 0.005 + loot_luck * 0.045, 0.0, 0.07)
 	if rng.randf() < relic_chance:
 		var relic_drop := _roll_relic(rng, relic_catalog)
 		if not relic_drop.is_empty():
 			drops.append(relic_drop)
 
-	var spell_chance := clampf(0.003 + toughness * 0.005 + float(player_level - 1) * 0.0015 + loot_luck * 0.045, 0.0, 0.07)
+	var spell_chance := clampf(0.002 + toughness * 0.004 + float(player_level - 1) * 0.0012 + loot_luck * 0.035, 0.0, 0.055)
 	if rng.randf() < spell_chance:
 		var spell_drop := _roll_spell(rng, player, spell_catalog)
 		if not spell_drop.is_empty():

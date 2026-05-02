@@ -16,7 +16,10 @@ LOCKED true
 ON_COMPLETE unlock_area_mission:hoofgrove_wilds:clear_hoofgrove_wilds
 
 MISSION talk_to_torren_after_clearing_forest
-TITLE Talk to Torren Blackwell in Velmora
+TITLE Return to Torren Blackwell for your Hoofgrove reward
 OBJECTIVE talk_to_npc:Torren_Blackwell
 DIALOGUE_FILE velmora/torren-blackwell-hoofgrove-complete.txt
 LOCKED true
+ON_COMPLETE add_gold:420
+ON_COMPLETE add_xp:140
+ON_COMPLETE add_diamond:faded_frostbind

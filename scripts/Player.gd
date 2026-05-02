@@ -6,6 +6,7 @@ const DEMON_LEFT_WING_TEXTURE: Texture2D = preload("res://assets/images/demon/de
 const DEMON_RIGHT_WING_TEXTURE: Texture2D = preload("res://assets/images/demon/demon-right-wing.png")
 const DEMON_FLAME_TEXTURE: Texture2D = preload("res://assets/images/effects/firestorm-flame.png")
 const DEMON_BODY_BACK_PATH := "res://assets/images/demon/demon-back.png"
+const LEVEL_UP_EFFECT_SCENE: PackedScene = preload("res://effects/LevelUpEffect.tscn")
 const ProgressionConfigScript := preload("res://scripts/ProgressionConfig.gd")
 const FLAME_DISC_TEXTURE_SIZE := 72
 
@@ -29,6 +30,7 @@ const IDLE_WING_FLAP := 10.0
 const IDLE_WING_LIFT := 3.4
 const IDLE_WING_FOLD := 3.2
 const POSSESSION_FLASH_DURATION := 2.6
+const LEVEL_UP_VISUAL_DURATION := 1.05
 const SKILL_TREE_NODE_KEYS := [
 	"damage", "radius", "cooldown",
 	"inf_1", "inf_2", "inf_3", "inf_major", "inf_fire_1", "inf_ice_1", "inf_lightning_1",
@@ -135,6 +137,7 @@ var _flame_particles: Array[GPUParticles3D] = []
 var _flame_glow_sprites: Array[Dictionary] = []
 var _flame_light: OmniLight3D
 var _flame_time: float = 0.0
+var _level_up_visual_timer := 0.0
 var _possession_flash_timer := 0.0
 var _socket_damage_multiplier := 1.0
 var _socket_move_speed_multiplier := 1.0
@@ -270,6 +273,8 @@ func gain_xp(amount: int) -> bool:
 	if level >= ProgressionConfigScript.MAX_PLAYER_LEVEL:
 		xp = 0
 		xp_to_next = 0
+	if leveled:
+		_play_level_up_vfx()
 	stats_changed.emit(get_stats())
 	return leveled
 
@@ -601,7 +606,7 @@ func get_active_attack_spell_damage() -> int:
 	var total_damage := ProgressionConfigScript.player_damage(level)
 	match active_spell_id:
 		"icesmash":
-			total_damage = int(round(float(total_damage) * 2.35))
+			total_damage = int(round(float(total_damage) * 3.15))
 	total_damage = int(round(float(total_damage) * _damage_multiplier))
 	total_damage = int(round(float(total_damage) * _socket_damage_multiplier))
 	total_damage = int(round(float(total_damage) * _socket_attack_damage_multiplier))
@@ -756,6 +761,7 @@ func _apply_movement(delta: float) -> void:
 	_animate_wings(delta)
 	_animate_flames(delta)
 	_update_possession_flash(delta)
+	_update_level_up_visual_boost(delta)
 
 func _has_keyboard_movement() -> bool:
 	return Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_D)
@@ -806,10 +812,10 @@ func _is_mouse_blocked_by_ui() -> bool:
 	return false
 
 func _firestorm_cooldown_duration() -> float:
-	var cooldown := 4.5
+	var cooldown := 4.2
 	match get_active_attack_spell_id():
 		"icesmash":
-			cooldown = 3.4
+			cooldown = 5.8
 	if has_spell("quickened_ritual"):
 		cooldown = 3.2
 	cooldown = maxf(0.8, cooldown - get_skill_cooldown_reduction() - _socket_cooldown_reduction)
@@ -1314,6 +1320,40 @@ func _apply_possession_flash_tint(intensity: float) -> void:
 	if _flame_light != null:
 		_flame_light.light_color = Color(1.0, 0.04 + 0.4 * (1.0 - intensity), 0.02)
 		_flame_light.light_energy = maxf(_flame_light.light_energy, 1.4 + intensity * 3.8)
+
+func _play_level_up_vfx() -> void:
+	_level_up_visual_timer = LEVEL_UP_VISUAL_DURATION
+	var fx := LEVEL_UP_EFFECT_SCENE.instantiate() as Node3D
+	if fx == null:
+		return
+	add_child(fx)
+	fx.position = Vector3.ZERO
+
+func _update_level_up_visual_boost(delta: float) -> void:
+	if _level_up_visual_timer <= 0.0:
+		return
+	var was_active := _level_up_visual_timer > 0.0
+	_level_up_visual_timer = maxf(_level_up_visual_timer - delta, 0.0)
+	var intensity := clampf(_level_up_visual_timer / LEVEL_UP_VISUAL_DURATION, 0.0, 1.0)
+	var glow_color := Color(1.0, 0.58, 0.08, 1.0)
+	var hot_body := Color(1.34, 0.78, 0.52, 1.0)
+	if _body_sprite != null:
+		_body_sprite.modulate = _base_body_modulate().lerp(hot_body, intensity)
+	if _left_wing_sprite != null:
+		_left_wing_sprite.modulate = _base_wing_modulate(-1).lerp(glow_color, intensity * 0.72)
+	if _right_wing_sprite != null:
+		_right_wing_sprite.modulate = _base_wing_modulate(1).lerp(glow_color, intensity * 0.72)
+	if _flame_light != null:
+		_flame_light.light_color = Color(1.0, 0.22 + 0.38 * intensity, 0.04)
+		_flame_light.light_energy = maxf(_flame_light.light_energy, 1.5 + intensity * 4.8)
+		_flame_light.omni_range = maxf(_flame_light.omni_range, 3.25 + intensity * 1.7)
+	if was_active and _level_up_visual_timer <= 0.0:
+		var current_facing := _visual_facing
+		_visual_facing = -1
+		_apply_visual_facing(current_facing)
+		if _flame_light != null:
+			_flame_light.light_color = Color(1.0, 0.44, 0.13)
+			_flame_light.omni_range = 3.25
 
 func _base_body_modulate() -> Color:
 	if _visual_facing == FACING_BACK and _body_back_texture == null:

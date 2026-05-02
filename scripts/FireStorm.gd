@@ -6,8 +6,9 @@ signal enemy_hit(enemy: Node3D, damage: int)
 const FIRESTORM_ART_SIZE := 256
 
 var radius := 5.0
-var duration := 2.9
-var strikes := 18
+var duration := 3.25
+var strikes := 16
+var impact_radius := 1.85
 var damage := 32
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -22,8 +23,8 @@ var _explosion_texture: Texture2D
 func configure(target_position: Vector3, enemies: Array[Node3D], skill_level: int) -> void:
 	global_position = target_position
 	_enemies = enemies
-	damage = 28 + skill_level * 7
-	strikes = 16 + skill_level * 2
+	damage = 22 + skill_level * 5
+	strikes = 14 + skill_level * 2
 
 func _ready() -> void:
 	_rng.randomize()
@@ -69,7 +70,7 @@ func _spawn_strike() -> void:
 
 func _apply_impact(impact: Vector3) -> void:
 	for enemy in _enemies:
-		if is_instance_valid(enemy) and enemy.global_position.distance_to(impact) <= 1.75:
+		if is_instance_valid(enemy) and enemy.global_position.distance_to(impact) <= impact_radius:
 			enemy_hit.emit(enemy, damage)
 
 func _make_marker() -> void:

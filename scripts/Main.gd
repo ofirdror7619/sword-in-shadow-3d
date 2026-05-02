@@ -106,6 +106,7 @@ const HOOFGROVE_HALF_SIZE := 48.0
 const HOOFGROVE_SPAWN_POSITION := Vector3(236.0, 0.1, 34.0)
 const HOOFGROVE_CENTAUR_COUNT := 9
 const HOOFGROVE_WARRIOR_COUNT := 4
+const HOOFGROVE_CLERIC_COUNT := 2
 const HOOFGROVE_GIANT_COUNT := 1
 const HOOFGROVE_CHEST_COUNT := 7
 const GLOVE_SOCKET_COUNT := 8
@@ -671,6 +672,25 @@ func _apply_mission_action(action: Dictionary) -> bool:
 		"add_spell", "learn_spell", "unlock_spell":
 			if _learn_spell_reward(target):
 				_say_whisper("Spell learned. %s" % _spell_display_name(target))
+				return true
+		"add_gold", "gold":
+			var gold_amount := maxi(0, int(target))
+			if gold_amount > 0 and player != null:
+				player.add_gold(gold_amount)
+				_say_whisper("Gold gained. %s" % gold_amount)
+				return true
+		"add_xp", "xp", "experience":
+			var xp_amount := maxi(0, int(target))
+			if xp_amount > 0 and player != null:
+				var leveled := player.gain_xp(xp_amount)
+				if leveled:
+					_say_whisper("Experience gained. %s. Stronger again." % xp_amount)
+				else:
+					_say_whisper("Experience gained. %s." % xp_amount)
+				return true
+		"add_diamond", "add_faded_diamond", "diamond":
+			if _add_diamond_reward(target):
+				_say_whisper("Diamond gained. %s" % _diamond_display_name(target))
 				return true
 		"unlock_area_mission":
 			var parts := target.split(":", false, 1)
@@ -3062,6 +3082,7 @@ func _cast_firestorm(target_position: Vector3) -> void:
 		storm.radius += 1.35
 		storm.strikes += 4
 	storm.radius *= player.get_socket_spell_effect_multiplier(player.get_active_attack_spell_id())
+	storm.impact_radius += minf(storm.radius * 0.055, 0.45)
 	storm.damage = player.get_active_attack_spell_damage()
 	storm.enemy_hit.connect(_on_firestorm_enemy_hit)
 	_say_whisper("Yes. Let the ceiling learn to burn.")
@@ -3079,8 +3100,13 @@ func _cast_icesmash(target_position: Vector3) -> void:
 	smash.impact_landed.connect(_on_icesmash_impact_landed)
 	_say_whisper("Good. Make the sky remember winter.")
 
-func _on_icesmash_impact_landed(_impact_position: Vector3, impact_radius: float) -> void:
+func _on_icesmash_impact_landed(impact_position: Vector3, impact_radius: float) -> void:
 	_shake_camera(ICE_SMASH_CAMERA_SHAKE_INTENSITY + impact_radius * 0.012, ICE_SMASH_CAMERA_SHAKE_DURATION)
+	for enemy in enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if enemy.global_position.distance_to(impact_position) <= impact_radius * 1.08 and enemy.has_method("apply_chill"):
+			enemy.call("apply_chill", 2.4, 0.42)
 
 func _cast_electricity_vortex(target_position: Vector3) -> void:
 	var vortex := LightningVortexScript.new()
@@ -3158,6 +3184,7 @@ func _on_enemy_killed(enemy: Node3D) -> void:
 func _is_hoofgrove_mission_enemy(enemy_kind: StringName) -> bool:
 	return enemy_kind == SISEnemy.ENEMY_KIND_CENTAUR \
 		or enemy_kind == SISEnemy.ENEMY_KIND_HUMAN_WARRIOR \
+		or enemy_kind == SISEnemy.ENEMY_KIND_CLERIC \
 		or enemy_kind == SISEnemy.ENEMY_KIND_GIANT
 
 func _maybe_say_after_kill_whisper() -> void:
@@ -3166,11 +3193,11 @@ func _maybe_say_after_kill_whisper() -> void:
 
 func _on_chest_opened(chest: Node3D) -> void:
 	_play_sound(TREASURE_CHEST_SOUND, -1.0)
-	var chest_gold := rng.randi_range(18, 38)
+	var chest_gold := rng.randi_range(28, 58)
 	if player != null:
 		var loot_luck := player.get_socket_loot_luck_bonus()
 		if loot_luck > 0.0 and rng.randf() < loot_luck:
-			chest_gold += rng.randi_range(8, 16)
+			chest_gold += rng.randi_range(12, 24)
 	_spawn_gold(chest.global_position + Vector3(0.0, 0.4, 0.0), chest_gold)
 	if rng.randf() < 0.45:
 		_say_whisper("Tribute in a box. How thoughtful of the dead.")
@@ -3315,6 +3342,16 @@ func _add_map(map_id: String) -> bool:
 		hud.update_stats(_stats_for_hud(player.get_stats()))
 	return true
 
+func _add_diamond_reward(diamond_id: String) -> bool:
+	var clean_id := diamond_id.strip_edges()
+	if clean_id.is_empty():
+		return false
+	owned_faded_diamonds[clean_id] = int(owned_faded_diamonds.get(clean_id, 0)) + 1
+	_apply_socketed_diamond_bonuses()
+	if hud != null and player != null:
+		hud.update_stats(_stats_for_hud(player.get_stats()))
+	return true
+
 func _learn_spell_reward(spell_id: String) -> bool:
 	if player == null:
 		return false
@@ -3360,6 +3397,22 @@ func _spell_display_name(spell_id: String) -> String:
 		if String(spell["id"]) == spell_id:
 			return String(spell["name"])
 	return spell_id.replace("_", " ").capitalize()
+
+func _diamond_display_name(diamond_id: String) -> String:
+	var clean_id := diamond_id.strip_edges()
+	for tier in LootTableScript.DIAMOND_TIERS:
+		var tier_id := String(tier["id"])
+		var base_id := clean_id
+		if clean_id.begins_with("%s_" % tier_id):
+			base_id = clean_id.substr(("%s_" % tier_id).length())
+		for diamond in FADED_DIAMOND_CATALOG:
+			var source_id := String(diamond["id"])
+			var source_base_id := source_id
+			if source_id.begins_with("faded_"):
+				source_base_id = source_id.substr("faded_".length())
+			if base_id == source_base_id:
+				return "%s %s" % [String(tier["name"]), String(diamond["name"]).replace("Faded ", "")]
+	return clean_id.replace("_", " ").capitalize()
 
 func _ensure_faded_socket_size() -> void:
 	while socketed_faded_diamonds.size() < GLOVE_SOCKET_COUNT:
@@ -3716,6 +3769,7 @@ func _enter_black_vault_from_velmora() -> void:
 	active_dialogue_id = ""
 	active_dialogue_npc_id = ""
 	if hud != null:
+		hud.hide_character_panel()
 		hud.hide_dialogue()
 		hud.hide_shop()
 		hud.hide_diamond_store()
@@ -3743,6 +3797,7 @@ func _enter_velmora() -> void:
 	active_dialogue_id = ""
 	active_dialogue_npc_id = ""
 	if hud != null:
+		hud.hide_character_panel()
 		hud.hide_shop()
 		hud.hide_diamond_store()
 		hud.hide_spell_store()
@@ -3766,6 +3821,7 @@ func _enter_hoofgrove_wilds() -> void:
 	active_dialogue_id = ""
 	active_dialogue_npc_id = ""
 	if hud != null:
+		hud.hide_character_panel()
 		hud.hide_dialogue()
 		hud.hide_shop()
 		hud.hide_diamond_store()
@@ -3789,7 +3845,7 @@ func _spawn_hoofgrove_centaurs() -> void:
 		return
 	hoofgrove_centaurs_spawned = true
 	hoofgrove_centaurs_remaining = HOOFGROVE_CENTAUR_COUNT
-	hoofgrove_hostiles_remaining = HOOFGROVE_CENTAUR_COUNT + HOOFGROVE_WARRIOR_COUNT + HOOFGROVE_GIANT_COUNT
+	hoofgrove_hostiles_remaining = HOOFGROVE_CENTAUR_COUNT + HOOFGROVE_WARRIOR_COUNT + HOOFGROVE_CLERIC_COUNT + HOOFGROVE_GIANT_COUNT
 	var local_points := [
 		Vector3(-11.0, 0.1, 21.0),
 		Vector3(12.0, 0.1, 18.0),
@@ -3802,7 +3858,11 @@ func _spawn_hoofgrove_centaurs() -> void:
 		Vector3(-24.0, 0.1, -25.0),
 		Vector3(24.0, 0.1, -25.0),
 		Vector3(-2.0, 0.1, -34.0),
-		Vector3(3.0, 0.1, 0.0)
+		Vector3(3.0, 0.1, 0.0),
+		Vector3(-30.0, 0.1, 4.0),
+		Vector3(30.0, 0.1, -4.0),
+		Vector3(-12.0, 0.1, -36.0),
+		Vector3(12.0, 0.1, -36.0)
 	]
 	for index in range(mini(HOOFGROVE_CENTAUR_COUNT, local_points.size())):
 		_spawn_enemy_at(HOOFGROVE_ORIGIN + local_points[index], false, SISEnemy.ENEMY_KIND_CENTAUR)
@@ -3811,6 +3871,11 @@ func _spawn_hoofgrove_centaurs() -> void:
 		var point_index := warrior_start + index
 		if point_index < local_points.size():
 			_spawn_enemy_at(HOOFGROVE_ORIGIN + local_points[point_index], false, SISEnemy.ENEMY_KIND_HUMAN_WARRIOR)
+	var cleric_start := warrior_start + HOOFGROVE_WARRIOR_COUNT
+	for index in range(HOOFGROVE_CLERIC_COUNT):
+		var point_index := cleric_start + index
+		if point_index < local_points.size():
+			_spawn_enemy_at(HOOFGROVE_ORIGIN + local_points[point_index], false, SISEnemy.ENEMY_KIND_CLERIC)
 	_spawn_enemy_at(HOOFGROVE_ORIGIN + Vector3(0.0, 0.1, -40.0), false, SISEnemy.ENEMY_KIND_GIANT)
 
 func _on_vendor_entered(body: Node3D, vendor_id: String) -> void:
@@ -4148,11 +4213,12 @@ func _on_skill_tree_point_requested(node_key: String) -> void:
 
 func _update_objective() -> void:
 	if current_area == AREA_VELMORA:
-		var open_missions := _active_mission_count(AREA_VELMORA)
-		if open_missions > 0:
-			hud.set_objective("Velmora missions: %s open." % open_missions)
+		var active_missions := mission_system.get_active_missions(AREA_VELMORA) if mission_system != null else []
+		if not active_missions.is_empty():
+			var mission := active_missions[0] as Dictionary
+			hud.set_objective(String(mission.get("title", mission.get("text", "Velmora has work waiting."))))
 		else:
-			hud.set_objective("Velmora reached. Visit vendors to buy diamonds and spells.")
+			hud.set_objective("Velmora reached. Upgrade, choose a destination, then hunt again.")
 		_refresh_current_missions_display()
 		return
 	if current_area == AREA_HOOFGROVE_WILDS:

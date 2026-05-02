@@ -24,6 +24,7 @@ const EXP_BAR_TEXTURE: Texture2D = preload("res://assets/images/hud/exp-bar.png"
 const EXP_FILL_TEXTURE: Texture2D = preload("res://assets/images/hud/exp-actual-bar.png")
 const MINIMAP_TEXTURE: Texture2D = preload("res://assets/images/hud/minimap.png")
 const DEMON_MENU_TEXTURE: Texture2D = preload("res://assets/images/hud/demon.png")
+const LEVEL_UP_WHISPER_SOUND_PATH := "res://assets/audio/sounds/levelling-whisper.mp3"
 const CONFIG_MENU_TEXTURE: Texture2D = preload("res://assets/images/config/config.png")
 const RITUAL_MENU_TEXTURE: Texture2D = preload("res://assets/images/hud/ritual-button.png")
 const EQUIP_TEXTURE: Texture2D = preload("res://assets/images/hud/equip/equip.png")
@@ -252,7 +253,7 @@ const DEMON_MENU_HEALTH_TOP_OVERLAP := 2.0
 const DEMON_MENU_BOTTOM_OFFSET := -(HUD_BOTTOM_MARGIN + LIFE_BAR_SIZE.y - DEMON_MENU_HEALTH_TOP_OVERLAP)
 const DEMON_MENU_TOP_OFFSET := DEMON_MENU_BOTTOM_OFFSET - DEMON_MENU_BUTTON_SIZE.y
 const DEMON_MENU_PANEL_GAP := 14.0
-const DEMON_LEVEL_LABEL_SIZE := Vector2(144.0, 28.0)
+const DEMON_LEVEL_LABEL_SIZE := Vector2(260.0, 48.0)
 const DEMON_LEVEL_LABEL_GAP := 10.0
 const DEMON_MENU_Z_INDEX := 1000
 const CONFIG_MENU_BUTTON_SIZE := Vector2(172.0, 104.0)
@@ -291,7 +292,8 @@ const MAP_DESTINATION_VELMORA := "velmora"
 const MAP_DESTINATION_HOOFGROVE_WILDS := "hoofgrove_wilds"
 const MAP_HOOFGROVE_UNLOCK_ID := "world-map-velmora-after-torren.png"
 const LEVEL_UP_BLINK_SPEED := 0.35
-const LEVEL_UP_FEEDBACK_SECONDS := 2.4
+const LEVEL_UP_FEEDBACK_SECONDS := 2.5
+const LEVEL_UP_LABEL_FADE_SECONDS := 0.45
 const CORRUPTION_STAGE_LINES := [
 	"I am only near you.",
 	"We are learning the same rhythm.",
@@ -425,10 +427,13 @@ var _spells_hovered_name := ""
 var _distortion_overlay: ColorRect
 var _vignette_overlay: ColorRect
 var _chromatic_flash_overlay: ColorRect
+var _level_up_pulse_overlay: ColorRect
+var _level_up_ember_layer: Control
 var _vein_cracks_overlay: Control
 var _heartbeat_pulse_overlay: ColorRect
 var _screen_noise_overlay: ColorRect
 var _heartbeat_player: AudioStreamPlayer
+var _level_up_player: AudioStreamPlayer
 var _whisper_tween: Tween
 var _whispers_enabled := false
 var _corruption := 0.0
@@ -832,6 +837,9 @@ func hide_shop() -> void:
 	hide_diamond_store()
 	hide_spell_store()
 	shop_closed.emit()
+
+func hide_character_panel() -> void:
+	_set_character_panel_visible(false)
 
 func is_mouse_over_character_panel() -> bool:
 	if _character_panel == null or not _character_panel.visible:
@@ -1351,6 +1359,17 @@ void fragment() {
 	_chromatic_flash_overlay.color = Color(0.0, 0.62, 1.0, 0.0)
 	root.add_child(_chromatic_flash_overlay)
 
+	_level_up_pulse_overlay = ColorRect.new()
+	_level_up_pulse_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_level_up_pulse_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_level_up_pulse_overlay.color = Color(0.42, 0.0, 0.0, 0.0)
+	root.add_child(_level_up_pulse_overlay)
+
+	_level_up_ember_layer = Control.new()
+	_level_up_ember_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_level_up_ember_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_level_up_ember_layer)
+
 	_vein_cracks_overlay = Control.new()
 	_vein_cracks_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_vein_cracks_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1386,6 +1405,11 @@ void fragment() {
 	_heartbeat_player.stream = _make_heartbeat_stream()
 	_heartbeat_player.volume_db = -18.0
 	add_child(_heartbeat_player)
+
+	_level_up_player = AudioStreamPlayer.new()
+	_level_up_player.stream = AudioStreamMP3.load_from_file(ProjectSettings.globalize_path(LEVEL_UP_WHISPER_SOUND_PATH))
+	_level_up_player.volume_db = -4.0
+	add_child(_level_up_player)
 
 func _make_vein_crack_lines() -> void:
 	var crack_sets := [
@@ -2446,7 +2470,7 @@ func _make_mission_panel(root: Control) -> void:
 func _position_demon_level_label(rise: float = 0.0) -> void:
 	if _demon_level_label == null:
 		return
-	var label_left := DEMON_MENU_LEFT_OFFSET + (DEMON_MENU_BUTTON_SIZE.x - DEMON_LEVEL_LABEL_SIZE.x) * 0.5
+	var label_left := DEMON_MENU_LEFT_OFFSET
 	var label_top := DEMON_MENU_TOP_OFFSET - DEMON_LEVEL_LABEL_GAP - DEMON_LEVEL_LABEL_SIZE.y - rise
 	_demon_level_label.offset_left = label_left
 	_demon_level_label.offset_top = label_top
@@ -4137,8 +4161,15 @@ func _trigger_level_up_feedback(level_gain: int) -> void:
 	_level_up_pending_ack = true
 	_level_up_feedback_timer = LEVEL_UP_FEEDBACK_SECONDS
 	if _demon_level_label != null:
-		_demon_level_label.text = "+1 Level"
+		_demon_level_label.text = "RITUAL DEEPENED\nSkill Point Granted" if level_gain <= 1 else "RITUAL DEEPENED\nSkill Points Granted"
 		_demon_level_label.visible = true
+		_demon_level_label.modulate = Color(1.0, 0.82, 0.42, 1.0)
+		_demon_level_label.scale = Vector2(1.2, 1.2)
+		var label_tween := _demon_level_label.create_tween()
+		label_tween.tween_property(_demon_level_label, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_play_level_up_sound()
+	_pulse_level_up_screen()
+	_spawn_level_up_embers()
 	_refresh_demon_menu_visuals()
 
 func _update_level_up_feedback(delta: float) -> void:
@@ -4154,10 +4185,45 @@ func _update_level_up_feedback(delta: float) -> void:
 	if _demon_level_label != null:
 		var rise := sin(_ui_time * (LEVEL_UP_BLINK_SPEED * 0.9)) * 2.5
 		_position_demon_level_label(rise)
-		var blink_on := int(_ui_time * (LEVEL_UP_BLINK_SPEED * 2.0)) % 2 == 0
-		_demon_level_label.modulate = Color(1.0, 0.84, 0.48, 1.0 if blink_on else 0.45)
+		var fade := clampf(_level_up_feedback_timer / LEVEL_UP_LABEL_FADE_SECONDS, 0.0, 1.0)
+		_demon_level_label.modulate = Color(1.0, 0.82, 0.42, fade)
 		_demon_level_label.visible = true
 	_refresh_demon_menu_visuals()
+
+func _play_level_up_sound() -> void:
+	if _level_up_player == null:
+		return
+	_level_up_player.stop()
+	_level_up_player.play()
+
+func _pulse_level_up_screen() -> void:
+	if _level_up_pulse_overlay == null:
+		return
+	_level_up_pulse_overlay.color = Color(0.42, 0.0, 0.0, 0.28)
+	var pulse_tween := _level_up_pulse_overlay.create_tween()
+	pulse_tween.tween_property(_level_up_pulse_overlay, "color:a", 0.0, 0.42).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func _spawn_level_up_embers() -> void:
+	if _level_up_ember_layer == null:
+		return
+	var origin := Vector2(
+		DEMON_MENU_LEFT_OFFSET + DEMON_MENU_BUTTON_SIZE.x * 0.5,
+		DEMON_MENU_TOP_OFFSET + DEMON_MENU_BUTTON_SIZE.y * 0.15
+	)
+	for i in range(18):
+		var ember := ColorRect.new()
+		ember.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ember_size := _rng.randf_range(2.0, 5.0)
+		ember.size = Vector2(ember_size, ember_size)
+		ember.position = origin + Vector2(_rng.randf_range(-34.0, 34.0), _rng.randf_range(-8.0, 16.0))
+		ember.color = Color(1.0, _rng.randf_range(0.32, 0.68), 0.08, _rng.randf_range(0.78, 1.0))
+		_level_up_ember_layer.add_child(ember)
+		var drift := Vector2(_rng.randf_range(-26.0, 26.0), _rng.randf_range(-86.0, -38.0))
+		var ember_tween := ember.create_tween()
+		ember_tween.tween_property(ember, "position", ember.position + drift, _rng.randf_range(0.75, 1.25)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		ember_tween.parallel().tween_property(ember, "color:a", 0.0, _rng.randf_range(0.65, 1.05))
+		ember_tween.parallel().tween_property(ember, "scale", Vector2.ONE * _rng.randf_range(0.35, 0.7), 0.9)
+		ember_tween.tween_callback(Callable(ember, "queue_free"))
 
 func _refresh_demon_menu_visuals() -> void:
 	if _demon_menu_button == null:
