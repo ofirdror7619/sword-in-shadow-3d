@@ -112,6 +112,10 @@ const HOOFGROVE_GIANT_COUNT := 1
 const HOOFGROVE_CHEST_COUNT := 7
 const SCROLL_LEVEL_BLACK_VAULT := 1
 const SCROLL_LEVEL_HOOFGROVE_WILDS := 2
+const SAVE_PATH := "user://sworn_progression.json"
+const PROGRESSION_SAVE_ENABLED := false
+const RESET_PROGRESS_SAVE_ON_START := false
+const DUPLICATE_SPELLBOOK_GOLD := 120
 const GLOVE_SOCKET_COUNT := 8
 const FADED_DIAMOND_CATALOG := [
 	{"id": "faded_rush", "icon": "R", "name": "Faded Diamond of Rush", "description": "Increases movement speed.", "gold_cost": 120, "color": Color(1.0, 0.48, 0.12)},
@@ -299,6 +303,10 @@ func _ready() -> void:
 	_make_whisper_voice()
 	_make_mission_system()
 	_make_whisper_system()
+	if RESET_PROGRESS_SAVE_ON_START:
+		_delete_progression_save()
+	if PROGRESSION_SAVE_ENABLED:
+		_load_progression_save()
 	if START_IN_VELMORA_FOR_TESTING:
 		player.add_gold(TEST_VELMORA_START_GOLD)
 		player.add_diamonds(TEST_VELMORA_START_DIAMONDS)
@@ -308,6 +316,12 @@ func _ready() -> void:
 		player.add_diamonds(TEST_VELMORA_START_DIAMONDS)
 		_add_relic("teleport_device")
 		_add_map("world-map-velmora-after-torren.png")
+		_enter_hoofgrove_wilds()
+	elif current_area == AREA_VELMORA:
+		_enter_velmora()
+	elif current_area == AREA_HOOFGROVE_WILDS:
+		if not _has_relic("teleport_device"):
+			_add_relic("teleport_device")
 		_enter_hoofgrove_wilds()
 	else:
 		_spawn_encounter()
@@ -704,12 +718,14 @@ func _on_mission_completed(area: String, mission: Dictionary) -> void:
 	var mission_text := String(mission.get("text", ""))
 	if area == AREA_BLACK_VAULT and String(mission.get("id", "")) == "clear_black_vault":
 		mission_text = _format_black_vault_mission_text(mission_text)
+	_save_progression()
 	if mission_text.is_empty():
 		return
 	_say_whisper("Done. %s" % mission_text)
 
 func _on_mission_action_requested(_area: String, action: Dictionary, _mission: Dictionary) -> void:
-	_apply_mission_action(action)
+	if _apply_mission_action(action):
+		_save_progression()
 
 func _apply_mission_action(action: Dictionary) -> bool:
 	var action_type := String(action.get("type", "")).to_lower()
@@ -888,6 +904,7 @@ func _grant_mission_given_items(area: String, mission: Dictionary) -> void:
 			did_apply = _apply_mission_action((grant_variant as Dictionary).duplicate(true)) or did_apply
 	if did_apply:
 		mission_given_flags[grant_key] = true
+		_save_progression()
 
 func _dialogue_path_for_mission(mission: Dictionary) -> String:
 	return _resolve_dialogue_path(String(mission.get("dialogue_file", "")))
@@ -3344,6 +3361,7 @@ func _on_gold_picked_up(amount: int) -> void:
 		multiplier = player.get_gold_gain_multiplier()
 	var payout := maxi(1, int(round(float(amount) * multiplier)))
 	player.add_gold(payout)
+	_save_progression()
 
 func _on_loot_item_picked_up(drop: Dictionary) -> void:
 	_play_sound(TREASURE_CHEST_SOUND, -4.5)
@@ -3361,15 +3379,39 @@ func _on_loot_item_picked_up(drop: Dictionary) -> void:
 			if hud != null:
 				hud.update_stats(_stats_for_hud(player.get_stats()))
 			_say_whisper("Diamond claimed. %s." % display_name)
+			_save_progression()
 		LootTableScript.TYPE_RELIC:
 			if _add_relic(item_id):
 				_say_whisper("Relic gained. %s." % _relic_display_name(item_id))
+				_save_progression()
 		LootTableScript.TYPE_SPELL:
-			if _learn_spell_reward(item_id):
-				_say_whisper("Spell learned. %s." % _spell_display_name(item_id))
-			else:
-				player.add_gold(120)
-				_say_whisper("%s was already etched into you. It became gold." % display_name)
+			_handle_spellbook_pickup(item_id, display_name)
+
+func _handle_spellbook_pickup(spell_id: String, display_name: String) -> void:
+	var clean_id := spell_id.strip_edges()
+	if clean_id.is_empty() or player == null:
+		return
+	var spell_name := _spell_display_name(clean_id)
+	if not player.has_spell(clean_id):
+		if _learn_spell_reward(clean_id):
+			if hud != null:
+				hud.show_spellbook_popup(spell_name, "New spell learned.")
+			_say_whisper("Spell etched into flesh. %s answers now." % spell_name)
+			_save_progression()
+		return
+	if player.upgrade_spell(clean_id):
+		var upgrade_level := player.get_spell_upgrade_level(clean_id)
+		if hud != null:
+			hud.update_stats(_stats_for_hud(player.get_stats()))
+			hud.show_spellbook_popup(spell_name, "Upgrade %s/%s. The sigil cuts deeper." % [upgrade_level, PlayerScript.MAX_SPELL_UPGRADE_LEVEL])
+		_say_whisper("%s deepens. You are easier to write on now." % spell_name)
+	else:
+		player.add_gold(DUPLICATE_SPELLBOOK_GOLD)
+		if hud != null:
+			hud.update_stats(_stats_for_hud(player.get_stats()))
+			hud.show_spellbook_popup(spell_name, "Already complete. Converted to %s gold." % DUPLICATE_SPELLBOOK_GOLD)
+		_say_whisper("%s was already etched into you. It became gold." % display_name)
+	_save_progression()
 
 func _on_player_stats_changed(stats: Dictionary) -> void:
 	if hud != null:
@@ -3389,6 +3431,105 @@ func _stats_for_hud(base_stats: Dictionary) -> Dictionary:
 	payload["unlocked_maps"] = unlocked_maps.duplicate()
 	payload["current_area"] = current_area
 	return payload
+
+func _save_progression() -> void:
+	if not PROGRESSION_SAVE_ENABLED:
+		return
+	if player == null:
+		return
+	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		push_warning("Could not write save file: %s" % SAVE_PATH)
+		return
+	file.store_string(JSON.stringify(_progression_save_state(), "\t"))
+
+func _load_progression_save() -> void:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
+	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if file == null:
+		push_warning("Could not open save file: %s" % SAVE_PATH)
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not (parsed is Dictionary):
+		push_warning("Ignored malformed save file: %s" % SAVE_PATH)
+		return
+	_apply_progression_save_state(parsed as Dictionary)
+
+func _delete_progression_save() -> void:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
+	var error := DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	if error != OK:
+		push_warning("Could not delete save file: %s" % SAVE_PATH)
+
+func _progression_save_state() -> Dictionary:
+	return {
+		"version": 1,
+		"current_area": current_area,
+		"player": player.get_progression_state() if player != null and player.has_method("get_progression_state") else {},
+		"owned_faded_diamonds": owned_faded_diamonds.duplicate(true),
+		"socketed_faded_diamonds": socketed_faded_diamonds.duplicate(),
+		"owned_relics": owned_relics.duplicate(true),
+		"unlocked_maps": unlocked_maps.duplicate(),
+		"dialogue_flags": dialogue_flags.duplicate(true),
+		"mission_given_flags": mission_given_flags.duplicate(true),
+		"mission_state": mission_system.get_save_state() if mission_system != null and mission_system.has_method("get_save_state") else {},
+		"whisper_corruption": float(whisper_system.corruption) if whisper_system != null else 0.0,
+		"full_possession_points_awarded": full_possession_points_awarded
+	}
+
+func _apply_progression_save_state(state: Dictionary) -> void:
+	var player_state: Variant = state.get("player", {})
+	if player != null and player_state is Dictionary and player.has_method("apply_progression_state"):
+		player.apply_progression_state(player_state as Dictionary)
+	owned_faded_diamonds = _string_int_dictionary(state.get("owned_faded_diamonds", {}))
+	socketed_faded_diamonds = _string_array(state.get("socketed_faded_diamonds", []))
+	_ensure_faded_socket_size()
+	owned_relics = _string_int_dictionary(state.get("owned_relics", {}))
+	unlocked_maps = _string_array(state.get("unlocked_maps", []))
+	dialogue_flags = _string_bool_dictionary(state.get("dialogue_flags", {}))
+	mission_given_flags = _string_bool_dictionary(state.get("mission_given_flags", {}))
+	full_possession_points_awarded = clampi(int(state.get("full_possession_points_awarded", full_possession_points_awarded)), 0, 1)
+	var saved_area := String(state.get("current_area", current_area))
+	if saved_area in MISSION_AREAS:
+		current_area = saved_area
+	if mission_system != null and state.get("mission_state", {}) is Dictionary and mission_system.has_method("apply_save_state"):
+		mission_system.apply_save_state(state.get("mission_state", {}) as Dictionary)
+	if whisper_system != null:
+		whisper_system.corruption = clampf(float(state.get("whisper_corruption", whisper_system.corruption)), 0.0, 100.0)
+	if player != null:
+		_apply_socketed_diamond_bonuses()
+		if hud != null:
+			hud.update_stats(_stats_for_hud(player.get_stats()))
+			if whisper_system != null:
+				hud.set_corruption_ui(float(whisper_system.corruption), _current_hp_percent())
+				hud.set_possession_ratio(whisper_system.get_corruption_ratio())
+
+func _string_array(value: Variant) -> Array[String]:
+	var result: Array[String] = []
+	if value is Array:
+		for entry_variant in value:
+			var entry := String(entry_variant).strip_edges()
+			if not entry.is_empty():
+				result.append(entry)
+	return result
+
+func _string_int_dictionary(value: Variant) -> Dictionary:
+	var result := {}
+	if value is Dictionary:
+		var source := value as Dictionary
+		for key in source.keys():
+			result[String(key)] = maxi(0, int(source[key]))
+	return result
+
+func _string_bool_dictionary(value: Variant) -> Dictionary:
+	var result := {}
+	if value is Dictionary:
+		var source := value as Dictionary
+		for key in source.keys():
+			result[String(key)] = bool(source[key])
+	return result
 
 func _faded_catalog_for_hud() -> Array[Dictionary]:
 	var list: Array[Dictionary] = []
@@ -3758,6 +3899,7 @@ func _on_inventory_socket_drop_requested(slot_index: int, diamond_id: String, so
 			return
 		socketed_faded_diamonds[slot_index] = diamond_id
 	_apply_socketed_diamond_bonuses()
+	_save_progression()
 
 func _on_inventory_socket_clear_requested(slot_index: int) -> void:
 	if player == null:
@@ -3769,6 +3911,7 @@ func _on_inventory_socket_clear_requested(slot_index: int) -> void:
 		return
 	socketed_faded_diamonds[slot_index] = ""
 	_apply_socketed_diamond_bonuses()
+	_save_progression()
 
 func _on_spell_slot_spell_selected(category: String, spell_id: String) -> void:
 	if player == null:
@@ -3776,6 +3919,7 @@ func _on_spell_slot_spell_selected(category: String, spell_id: String) -> void:
 	player.set_active_spell(category, spell_id)
 	if hud != null:
 		hud.update_stats(_stats_for_hud(player.get_stats()))
+	_save_progression()
 
 func _on_player_damaged(amount: int) -> void:
 	if whisper_system != null:
@@ -4286,6 +4430,7 @@ func _buy_faded_diamond(item_id: String) -> String:
 			return "Not enough gold."
 		owned_faded_diamonds[item_id] = int(owned_faded_diamonds.get(item_id, 0)) + 1
 		_apply_socketed_diamond_bonuses()
+		_save_progression()
 		return "Purchased %s." % String(diamond["name"])
 	return "Syra does not offer that diamond."
 
@@ -4299,6 +4444,7 @@ func _buy_spell(item_id: String) -> String:
 		if not player.spend_gold(cost):
 			return "Not enough gold."
 		player.learn_spell(item_id)
+		_save_progression()
 		return "Learned %s." % String(spell["name"])
 	return "The spell vendor cannot teach that."
 
@@ -4308,7 +4454,8 @@ func _on_shop_closed() -> void:
 func _on_skill_tree_point_requested(node_key: String) -> void:
 	if player == null:
 		return
-	player.unlock_skill_node(node_key)
+	if player.unlock_skill_node(node_key):
+		_save_progression()
 
 func _update_objective() -> void:
 	if current_area == AREA_VELMORA:
@@ -4386,6 +4533,7 @@ func _on_corruption_changed(corruption: float, ratio: float) -> void:
 		possession_fx_played = true
 		if player != null:
 			player.flash_possession_red()
+	_save_progression()
 
 func _award_possession_points(corruption: float) -> void:
 	if player == null:

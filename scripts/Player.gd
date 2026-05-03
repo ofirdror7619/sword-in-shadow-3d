@@ -88,6 +88,8 @@ const SPELL_ID_TO_DISPLAY_NAME := {
 	"soul_harvest": "Soul Harvest"
 }
 const DEATH_XP_LOSS_RATIO := 0.10
+const MAX_SPELL_UPGRADE_LEVEL := 5
+const SPELL_UPGRADE_DAMAGE_BONUS := 0.12
 
 var max_life := 120
 var life := 120
@@ -105,6 +107,7 @@ var move_target: Vector3
 var has_move_target := false
 var learned_spells: Array[String] = ["fire_storm"]
 var unlocked_skill_nodes: Array[String] = []
+var spell_upgrade_levels: Dictionary = {}
 var active_spell_slots := {"attack": "fire_storm"}
 var _ignore_mouse_until_released := false
 var _attacks_enabled := true
@@ -196,6 +199,7 @@ func get_stats() -> Dictionary:
 		"gold": gold,
 		"diamonds": diamonds,
 		"learned_spells": learned_spells.duplicate(),
+		"spell_upgrade_levels": spell_upgrade_levels.duplicate(true),
 		"active_spell_slots": active_spell_slots.duplicate(true),
 		"unlocked_skill_nodes": unlocked_skill_nodes.duplicate(),
 		"firestorm_cooldown": firestorm_cooldown,
@@ -318,11 +322,26 @@ func learn_spell(spell_id: String) -> bool:
 	if learned_spells.has(spell_id):
 		return false
 	learned_spells.append(spell_id)
+	if not spell_upgrade_levels.has(spell_id):
+		spell_upgrade_levels[spell_id] = 0
 	var category := _spell_category_for_id(spell_id)
 	if category != "attack" and not active_spell_slots.has(category):
 		active_spell_slots[category] = spell_id
 	stats_changed.emit(get_stats())
 	return true
+
+func upgrade_spell(spell_id: String) -> bool:
+	if not learned_spells.has(spell_id):
+		return false
+	var current_level := int(spell_upgrade_levels.get(spell_id, 0))
+	if current_level >= MAX_SPELL_UPGRADE_LEVEL:
+		return false
+	spell_upgrade_levels[spell_id] = current_level + 1
+	stats_changed.emit(get_stats())
+	return true
+
+func get_spell_upgrade_level(spell_id: String) -> int:
+	return int(spell_upgrade_levels.get(spell_id, 0))
 
 func has_spell(spell_id: String) -> bool:
 	return learned_spells.has(spell_id)
@@ -641,10 +660,69 @@ func get_active_attack_spell_damage() -> int:
 	total_damage = int(round(float(total_damage) * _socket_attack_damage_multiplier))
 	total_damage = int(round(float(total_damage) * get_socket_spell_effect_multiplier(active_spell_id)))
 	total_damage = int(round(float(total_damage) * get_skill_spell_theme_multiplier(active_spell_id)))
+	total_damage = int(round(float(total_damage) * _spell_upgrade_damage_multiplier(active_spell_id)))
 	if active_spell_id == "fire_storm" and has_spell("fire_storm"):
 		total_damage = int(round(float(total_damage) * 1.25))
 	total_damage = int(round(float(total_damage) * get_skill_damage_multiplier()))
 	return total_damage
+
+func get_progression_state() -> Dictionary:
+	return {
+		"level": level,
+		"xp": xp,
+		"skill_points": skill_points,
+		"possession_points": possession_points,
+		"gold": gold,
+		"diamonds": diamonds,
+		"life": life,
+		"max_life_penalty": _max_life_penalty,
+		"learned_spells": learned_spells.duplicate(),
+		"spell_upgrade_levels": spell_upgrade_levels.duplicate(true),
+		"active_spell_slots": active_spell_slots.duplicate(true),
+		"unlocked_skill_nodes": unlocked_skill_nodes.duplicate()
+	}
+
+func apply_progression_state(state: Dictionary) -> void:
+	level = clampi(int(state.get("level", level)), 1, ProgressionConfigScript.MAX_PLAYER_LEVEL)
+	xp = maxi(0, int(state.get("xp", xp)))
+	skill_points = maxi(0, int(state.get("skill_points", skill_points)))
+	possession_points = maxi(0, int(state.get("possession_points", possession_points)))
+	gold = maxi(0, int(state.get("gold", gold)))
+	diamonds = maxi(0, int(state.get("diamonds", diamonds)))
+	_max_life_penalty = maxi(0, int(state.get("max_life_penalty", _max_life_penalty)))
+
+	learned_spells.clear()
+	for spell_variant in state.get("learned_spells", ["fire_storm"]):
+		var spell_id := String(spell_variant).strip_edges()
+		if not spell_id.is_empty() and not learned_spells.has(spell_id):
+			learned_spells.append(spell_id)
+	if not learned_spells.has("fire_storm"):
+		learned_spells.insert(0, "fire_storm")
+
+	spell_upgrade_levels.clear()
+	var saved_upgrades: Dictionary = state.get("spell_upgrade_levels", {})
+	for key in saved_upgrades.keys():
+		var spell_key := String(key)
+		if learned_spells.has(spell_key):
+			spell_upgrade_levels[spell_key] = clampi(int(saved_upgrades[key]), 0, MAX_SPELL_UPGRADE_LEVEL)
+
+	active_spell_slots = {"attack": "fire_storm"}
+	var saved_slots: Dictionary = state.get("active_spell_slots", {})
+	for key in saved_slots.keys():
+		var category := String(key)
+		var spell_id := String(saved_slots[key])
+		if learned_spells.has(spell_id) and _spell_category_for_id(spell_id) == category:
+			active_spell_slots[category] = spell_id
+
+	unlocked_skill_nodes.clear()
+	for node_variant in state.get("unlocked_skill_nodes", []):
+		var node_key := String(node_variant).strip_edges()
+		if node_key in SKILL_TREE_NODE_KEYS and not unlocked_skill_nodes.has(node_key):
+			unlocked_skill_nodes.append(node_key)
+
+	_sync_progression_stats(false)
+	life = clampi(int(state.get("life", max_life)), 1, max_life)
+	stats_changed.emit(get_stats())
 
 func get_active_attack_spell_cooldown_duration() -> float:
 	return _firestorm_cooldown_duration()
@@ -680,6 +758,9 @@ func _spell_theme_for_id(spell_id: String) -> String:
 			return "Electricity"
 		_:
 			return "Beyond"
+
+func _spell_upgrade_damage_multiplier(spell_id: String) -> float:
+	return 1.0 + float(get_spell_upgrade_level(spell_id)) * SPELL_UPGRADE_DAMAGE_BONUS
 
 func set_move_target(target: Vector3) -> void:
 	move_target = target

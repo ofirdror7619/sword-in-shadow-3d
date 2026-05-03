@@ -62,6 +62,26 @@ func unlock_mission(area: String, mission_id: String) -> bool:
 		missions_changed.emit(area, get_active_missions(area))
 	return not was_unlocked
 
+func get_save_state() -> Dictionary:
+	return {
+		"completed_by_area": _completed_by_area.duplicate(true),
+		"unlocked_by_area": _unlocked_by_area.duplicate(true),
+		"mission_file_by_area": _mission_file_by_area.duplicate(true)
+	}
+
+func apply_save_state(state: Dictionary) -> void:
+	_completed_by_area = _string_array_dictionary(state.get("completed_by_area", {}))
+	_unlocked_by_area = _string_array_dictionary(state.get("unlocked_by_area", {}))
+	_mission_file_by_area.clear()
+	var files_variant: Variant = state.get("mission_file_by_area", {})
+	if files_variant is Dictionary:
+		var files := files_variant as Dictionary
+		for area_key in files.keys():
+			_mission_file_by_area[String(area_key)] = String(files[area_key])
+	_missions_by_area.clear()
+	if not _current_area.is_empty():
+		reload_area(_current_area)
+
 func set_area_mission_file(area: String, mission_file: String) -> bool:
 	var clean_area := area.strip_edges()
 	var clean_file := mission_file.strip_edges()
@@ -441,3 +461,19 @@ func _unlock_mission(area: String, mission_id: String) -> void:
 	if not unlocked.has(mission_id):
 		unlocked.append(mission_id)
 	_unlocked_by_area[area] = unlocked
+
+func _string_array_dictionary(value: Variant) -> Dictionary:
+	var result := {}
+	if not (value is Dictionary):
+		return result
+	var source := value as Dictionary
+	for area_key in source.keys():
+		var entries: Array[String] = []
+		var raw_entries: Variant = source[area_key]
+		if raw_entries is Array:
+			for entry_variant in raw_entries:
+				var entry := String(entry_variant).strip_edges()
+				if not entry.is_empty() and not entries.has(entry):
+					entries.append(entry)
+		result[String(area_key)] = entries
+	return result

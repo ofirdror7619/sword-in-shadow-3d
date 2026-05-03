@@ -172,8 +172,6 @@ static func _roll_spell(rng: RandomNumberGenerator, player: Node, spell_catalog:
 		var spell_id := String(spell.get("id", ""))
 		if spell_id.is_empty() or spell_id == "fire_storm":
 			continue
-		if player.has_method("has_spell") and bool(player.call("has_spell", spell_id)):
-			continue
 		candidates.append(spell)
 	if candidates.is_empty():
 		return {}

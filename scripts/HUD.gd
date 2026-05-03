@@ -349,6 +349,10 @@ var _death_panel: PanelContainer
 var _scroll_panel: PanelContainer
 var _scroll_title_label: Label
 var _scroll_body_label: Label
+var _spellbook_popup_panel: PanelContainer
+var _spellbook_popup_title_label: Label
+var _spellbook_popup_detail_label: Label
+var _spellbook_popup_tween: Tween
 var _offer_panel: PanelContainer
 var _offer_title_label: Label
 var _offer_description_label: Label
@@ -706,6 +710,37 @@ func show_scroll(title: String, body: String) -> void:
 func hide_scroll() -> void:
 	if _scroll_panel != null:
 		_scroll_panel.visible = false
+
+func show_spellbook_popup(spell_name: String, detail: String) -> void:
+	if _spellbook_popup_panel == null:
+		return
+	if _spellbook_popup_tween != null:
+		_spellbook_popup_tween.kill()
+		_spellbook_popup_tween = null
+	_spellbook_popup_title_label.text = "Spell Etched Into Flesh"
+	_spellbook_popup_detail_label.text = "%s\n%s" % [spell_name, detail]
+	_spellbook_popup_panel.visible = true
+	_spellbook_popup_panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_spellbook_popup_panel.scale = Vector2(0.92, 0.92)
+	_spellbook_popup_panel.move_to_front()
+	_chromatic_flash_timer = maxf(_chromatic_flash_timer, 0.42)
+	_vein_flash_timer = maxf(_vein_flash_timer, 0.36)
+	_spellbook_popup_tween = create_tween()
+	_spellbook_popup_tween.set_parallel(true)
+	_spellbook_popup_tween.tween_property(_spellbook_popup_panel, "modulate:a", 1.0, 0.14)
+	_spellbook_popup_tween.tween_property(_spellbook_popup_panel, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_spellbook_popup_tween.set_parallel(false)
+	_spellbook_popup_tween.tween_interval(1.65)
+	_spellbook_popup_tween.set_parallel(true)
+	_spellbook_popup_tween.tween_property(_spellbook_popup_panel, "modulate:a", 0.0, 0.34)
+	_spellbook_popup_tween.tween_property(_spellbook_popup_panel, "scale", Vector2(1.03, 1.03), 0.34)
+	_spellbook_popup_tween.set_parallel(false)
+	_spellbook_popup_tween.tween_callback(Callable(self, "_hide_spellbook_popup"))
+
+func _hide_spellbook_popup() -> void:
+	if _spellbook_popup_panel != null:
+		_spellbook_popup_panel.visible = false
+	_spellbook_popup_tween = null
 
 func show_offer(offer: Dictionary) -> void:
 	if _offer_panel == null:
@@ -1349,6 +1384,8 @@ void fragment() {
 	close_scroll_button.pressed.connect(hide_scroll)
 	scroll_content.add_child(close_scroll_button)
 
+	_make_spellbook_popup(root)
+
 	_distortion_overlay = ColorRect.new()
 	_distortion_overlay.color = Color(0.52, 0.0, 0.04, 0.0)
 	_distortion_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1360,10 +1397,48 @@ void fragment() {
 	_shop_panel.move_to_front()
 	_death_panel.move_to_front()
 	_scroll_panel.move_to_front()
+	_spellbook_popup_panel.move_to_front()
 	_demon_menu_button.move_to_front()
 	_config_menu_button.move_to_front()
 	_character_panel.move_to_front()
 	_config_panel.move_to_front()
+
+func _make_spellbook_popup(root: Control) -> void:
+	_spellbook_popup_panel = PanelContainer.new()
+	_spellbook_popup_panel.visible = false
+	_spellbook_popup_panel.anchor_left = 0.5
+	_spellbook_popup_panel.anchor_top = 0.26
+	_spellbook_popup_panel.anchor_right = 0.5
+	_spellbook_popup_panel.anchor_bottom = 0.26
+	_spellbook_popup_panel.offset_left = -245.0
+	_spellbook_popup_panel.offset_top = -58.0
+	_spellbook_popup_panel.offset_right = 245.0
+	_spellbook_popup_panel.offset_bottom = 58.0
+	_spellbook_popup_panel.pivot_offset = Vector2(245.0, 58.0)
+	_spellbook_popup_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spellbook_popup_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.035, 0.012, 0.026, 0.94)))
+	root.add_child(_spellbook_popup_panel)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 7)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_spellbook_popup_panel.add_child(content)
+
+	_spellbook_popup_title_label = _label("Spell Etched Into Flesh", 24)
+	_spellbook_popup_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_spellbook_popup_title_label.add_theme_color_override("font_color", Color(1.0, 0.66, 0.26))
+	_spellbook_popup_title_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.92))
+	_spellbook_popup_title_label.add_theme_constant_override("shadow_offset_x", 1)
+	_spellbook_popup_title_label.add_theme_constant_override("shadow_offset_y", 2)
+	content.add_child(_spellbook_popup_title_label)
+
+	_spellbook_popup_detail_label = _label("", 17)
+	_spellbook_popup_detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_spellbook_popup_detail_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_spellbook_popup_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_spellbook_popup_detail_label.add_theme_color_override("font_color", Color(0.92, 0.84, 0.74))
+	content.add_child(_spellbook_popup_detail_label)
 
 func _make_corruption_fx_layers(root: Control) -> void:
 	_vignette_overlay = ColorRect.new()
