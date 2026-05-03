@@ -10,6 +10,7 @@ const DIAMOND_WHISPERING_TEXTURE_PATH := "res://assets/images/objects/diamond-wh
 const DIAMOND_CORRUPTED_TEXTURE_PATH := "res://assets/images/objects/diamond-corrupted.png"
 const DIAMOND_ABYSSAL_TEXTURE_PATH := "res://assets/images/objects/diamond-abyssal.png"
 const DIAMOND_DIVINE_TEXTURE_PATH := "res://assets/images/objects/diamond-divine.png"
+const SPELLBOOK_TEXTURE_PATH := "res://assets/images/objects/spellbook.png"
 const FALLBACK_DIAMOND_TEXTURE: Texture2D = preload("res://assets/images/objects/diamond.png")
 
 var loot: Dictionary = {}
@@ -89,19 +90,33 @@ func _make_visuals() -> void:
 	add_child(_light)
 
 func _loot_texture() -> Texture2D:
-	var image_path := String(loot.get("image", ""))
-	if not image_path.is_empty() and ResourceLoader.exists(image_path):
-		var texture := load(image_path) as Texture2D
-		if texture != null:
-			return texture
 	var loot_type := String(loot.get("type", ""))
+	if loot_type == LootTableScript.TYPE_SPELL:
+		var spellbook_texture := _load_texture_from_path(SPELLBOOK_TEXTURE_PATH)
+		if spellbook_texture != null:
+			return spellbook_texture
+	var image_path := String(loot.get("image", ""))
+	var image_texture := _load_texture_from_path(image_path)
+	if image_texture != null:
+		return image_texture
 	if loot_type == LootTableScript.TYPE_DIAMOND:
 		var texture_path := _diamond_texture_path(String(loot.get("tier", LootTableScript.TIER_FADED)))
-		if ResourceLoader.exists(texture_path):
-			var diamond_texture := load(texture_path) as Texture2D
-			if diamond_texture != null:
-				return diamond_texture
+		var diamond_texture := _load_texture_from_path(texture_path)
+		if diamond_texture != null:
+			return diamond_texture
 	return FALLBACK_DIAMOND_TEXTURE
+
+func _load_texture_from_path(path: String) -> Texture2D:
+	if path.is_empty():
+		return null
+	if ResourceLoader.exists(path):
+		var texture := load(path) as Texture2D
+		if texture != null:
+			return texture
+	var image := Image.load_from_file(path)
+	if image == null:
+		return null
+	return ImageTexture.create_from_image(image)
 
 func _diamond_texture_path(tier: String) -> String:
 	match tier:

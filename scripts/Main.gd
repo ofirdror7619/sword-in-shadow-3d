@@ -11,6 +11,7 @@ const IceSmashScript := preload("res://scripts/IceSmash.gd")
 const LightningVortexScript := preload("res://scripts/LightningVortex.gd")
 const HudScript := preload("res://scripts/HUD.gd")
 const WhisperSystemScript := preload("res://scripts/WhisperSystem.gd")
+const WhisperVoiceScript := preload("res://scripts/WhisperVoice.gd")
 const MissionSystemScript := preload("res://scripts/MissionSystem.gd")
 const EXIT_TEXTURE: Texture2D = preload("res://assets/images/objects/portal.png")
 const FLOOR_TEXTURE: Texture2D = preload("res://assets/images/floor/black-vault-stone-floor.png")
@@ -18,7 +19,7 @@ const OPENING_LOGO_TEXTURE: Texture2D = preload("res://assets/images/opening/log
 const OPENING_WHISPER_FONT: FontFile = preload("res://assets/fonts/Simbiot.ttf")
 const BLACK_VAULT_MUSIC: AudioStreamMP3 = preload("res://assets/audio/music/black-vault.mp3")
 const VELMORA_MUSIC: AudioStreamMP3 = preload("res://assets/audio/music/velmora.mp3")
-const HOOFGROVE_WILDS_MUSIC_PATH := "res://assets/audio/music/hoofgrove-wilds.mp3"
+const HOOFGROVE_WILDS_MUSIC: AudioStreamMP3 = preload("res://assets/audio/music/hoofgrove-wilds.mp3")
 const OPENING_AURA_SOUND: AudioStreamMP3 = preload("res://assets/audio/sounds/aura.mp3")
 const ANGEL_DEAD_SOUND: AudioStream = preload("res://assets/audio/sounds/angel-dead.mp3")
 const EXIT_SOUND: AudioStream = preload("res://assets/audio/sounds/exit.mp3")
@@ -109,6 +110,8 @@ const HOOFGROVE_WARRIOR_COUNT := 4
 const HOOFGROVE_CLERIC_COUNT := 2
 const HOOFGROVE_GIANT_COUNT := 1
 const HOOFGROVE_CHEST_COUNT := 7
+const SCROLL_LEVEL_BLACK_VAULT := 1
+const SCROLL_LEVEL_HOOFGROVE_WILDS := 2
 const GLOVE_SOCKET_COUNT := 8
 const FADED_DIAMOND_CATALOG := [
 	{"id": "faded_rush", "icon": "R", "name": "Faded Diamond of Rush", "description": "Increases movement speed.", "gold_cost": 120, "color": Color(1.0, 0.48, 0.12)},
@@ -192,6 +195,7 @@ var player: SISPlayer
 var camera: Camera3D
 var hud: SISHUD
 var whisper_system: Node
+var whisper_voice: Node
 var mission_system: SISMissionSystem
 var opening_layer: CanvasLayer
 var opening_enter_label: Label
@@ -200,8 +204,8 @@ var opening_active := false
 var opening_elapsed := 0.0
 var opening_whisper_revealed := false
 var music_player: AudioStreamPlayer
-var hoofgrove_wilds_music: AudioStreamMP3
 var opening_aura_player: AudioStreamPlayer
+var audio_woken := false
 var enemies: Array[Node3D] = []
 var rng := RandomNumberGenerator.new()
 var game_level := 2
@@ -232,6 +236,7 @@ var idle_seconds := 0.0
 var idle_whisper_cooldown := 0.0
 var reveal_enemies_on_minimap := true
 var possession_fx_played := false
+var full_possession_points_awarded := 0
 var camera_zoom := CAMERA_ZOOM_DEFAULT
 var camera_shake_time := 0.0
 var camera_shake_duration := 0.0
@@ -291,6 +296,7 @@ func _ready() -> void:
 	_make_player()
 	_make_exit()
 	_make_hud()
+	_make_whisper_voice()
 	_make_mission_system()
 	_make_whisper_system()
 	if START_IN_VELMORA_FOR_TESTING:
@@ -306,7 +312,7 @@ func _ready() -> void:
 	else:
 		_spawn_encounter()
 		_spawn_chests()
-		_spawn_scroll_for_game_level(game_level)
+		_spawn_scroll_for_game_level(SCROLL_LEVEL_BLACK_VAULT)
 		_update_objective()
 	_make_opening_screen()
 	get_tree().paused = true
@@ -320,7 +326,7 @@ func _process(delta: float) -> void:
 	camera.global_position = camera.global_position.lerp(player.global_position + _camera_follow_offset(), 0.12)
 	_apply_camera_shake(delta)
 	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
-	if whisper_system != null:
+	if whisper_system != null and not _is_whisper_muted_for_area():
 		whisper_system.update(delta, player)
 	_animate_exit_fx(delta)
 	_animate_hoofgrove_birds(delta)
@@ -329,6 +335,8 @@ func _process(delta: float) -> void:
 	_update_minimap()
 
 func _input(event: InputEvent) -> void:
+	if _is_audio_unlock_event(event):
+		_wake_audio()
 	if not opening_active:
 		var block_zoom := hud != null and hud.is_blocking_ui_visible()
 		if event is InputEventKey and event.pressed:
@@ -437,6 +445,9 @@ func _make_hud() -> void:
 	hud.teleport_device_requested.connect(_on_teleport_device_requested)
 	hud.teleport_destination_requested.connect(_on_teleport_destination_requested)
 	hud.spell_slot_spell_selected.connect(_on_spell_slot_spell_selected)
+	hud.whisper_silence_changed.connect(_on_whisper_silence_changed)
+	hud.whisper_audio_mix_changed.connect(_on_whisper_audio_mix_changed)
+	hud.whisper_voice_requested.connect(_on_hud_whisper_voice_requested)
 	hud.update_stats(_stats_for_hud(player.get_stats()))
 	_update_possession()
 
@@ -461,6 +472,30 @@ func _make_whisper_system() -> void:
 	hud.offer_accepted.connect(whisper_system.accept_offer)
 	hud.offer_rejected.connect(whisper_system.reject_offer)
 
+func _make_whisper_voice() -> void:
+	whisper_voice = WhisperVoiceScript.new()
+	add_child(whisper_voice)
+	if hud != null:
+		whisper_voice.set_enabled(not hud.is_whisper_silenced())
+		whisper_voice.set_voice_volume(hud.get_chant_volume())
+		whisper_voice.set_echo_amount(hud.get_echo_volume())
+
+func _on_whisper_silence_changed(silenced: bool) -> void:
+	if whisper_voice != null:
+		whisper_voice.set_enabled(not silenced)
+
+func _on_whisper_audio_mix_changed(chant_volume: float, echo_volume: float) -> void:
+	if whisper_voice == null:
+		return
+	whisper_voice.set_voice_volume(chant_volume)
+	whisper_voice.set_echo_amount(echo_volume)
+
+func _on_hud_whisper_voice_requested(text: String) -> void:
+	if hud == null or whisper_voice == null or text.is_empty() or _is_whisper_muted_for_area():
+		return
+	if hud.are_whispers_enabled():
+		whisper_voice.speak(text)
+
 func _make_music_player() -> void:
 	music_player = AudioStreamPlayer.new()
 	music_player.name = "BlackVaultMusic"
@@ -483,11 +518,7 @@ func _set_background_music(track: AudioStreamMP3) -> void:
 		music_player.play()
 
 func _hoofgrove_wilds_music() -> AudioStreamMP3:
-	if hoofgrove_wilds_music == null:
-		hoofgrove_wilds_music = AudioStreamMP3.load_from_file(HOOFGROVE_WILDS_MUSIC_PATH)
-	if hoofgrove_wilds_music != null:
-		return hoofgrove_wilds_music
-	return VELMORA_MUSIC
+	return HOOFGROVE_WILDS_MUSIC if HOOFGROVE_WILDS_MUSIC != null else VELMORA_MUSIC
 
 func _make_opening_aura_player() -> void:
 	opening_aura_player = AudioStreamPlayer.new()
@@ -508,12 +539,35 @@ func _make_opening_aura_player() -> void:
 func _play_sound(stream: AudioStream, volume_db: float = 0.0) -> void:
 	if DisplayServer.get_name() == "headless":
 		return
+	_wake_audio()
 	var player: AudioStreamPlayer = AudioStreamPlayer.new()
 	player.stream = stream
 	player.volume_db = volume_db
 	add_child(player)
 	player.finished.connect(Callable(player, "queue_free"))
 	player.play()
+
+func _is_audio_unlock_event(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		return event.pressed
+	if event is InputEventKey:
+		return event.pressed
+	if event is InputEventScreenTouch:
+		return event.pressed
+	return false
+
+func _wake_audio() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var master_bus := AudioServer.get_bus_index("Master")
+	if master_bus >= 0:
+		AudioServer.set_bus_mute(master_bus, false)
+		AudioServer.set_bus_volume_db(master_bus, 0.0)
+	if audio_woken:
+		return
+	audio_woken = true
+	if music_player != null and not opening_active and not music_player.playing:
+		music_player.play()
 
 func _load_whisper_texts() -> void:
 	introduction_whisper = _load_whisper_file_as_text(WHISPER_INTRODUCTION_PATH)
@@ -884,10 +938,15 @@ func _strip_wrapping_quotes(line: String) -> String:
 	return line
 
 func _say_whisper(text: String) -> void:
-	if hud == null or text.is_empty():
+	if hud == null or text.is_empty() or _is_whisper_muted_for_area():
 		return
 	hud.whisper(text)
+	if whisper_voice != null and hud.are_whispers_enabled():
+		whisper_voice.speak(text)
 	idle_whisper_cooldown = rng.randf_range(IDLE_WHISPER_INTERVAL_MIN, IDLE_WHISPER_INTERVAL_MAX)
+
+func _is_whisper_muted_for_area() -> bool:
+	return current_area == AREA_VELMORA
 
 func _say_random_whisper(lines: Array[String]) -> void:
 	if lines.is_empty():
@@ -898,6 +957,9 @@ func _mark_player_activity() -> void:
 	idle_seconds = 0.0
 
 func _process_idle_whispers(delta: float) -> void:
+	if _is_whisper_muted_for_area():
+		_mark_player_activity()
+		return
 	if idle_whisper_cooldown > 0.0:
 		idle_whisper_cooldown = maxf(idle_whisper_cooldown - delta, 0.0)
 	if not _is_player_waiting():
@@ -3006,16 +3068,26 @@ func _spawn_scroll_for_game_level(scroll_level: int) -> void:
 		return
 	if spawned_scroll_game_levels.has(scroll_level):
 		return
-	if active_scroll != null and is_instance_valid(active_scroll):
-		return
 	var scroll := ScrollScript.new()
 	scroll.scroll_level = scroll_level
-	scroll.position = _random_scroll_position()
+	scroll.position = _scroll_spawn_position_for_level(scroll_level)
 	scroll.rotation.y = rng.randf_range(0.0, TAU)
-	add_child(scroll)
+	_scroll_parent_for_level(scroll_level).add_child(scroll)
 	scroll.read_requested.connect(_on_scroll_read_requested)
 	active_scroll = scroll
 	spawned_scroll_game_levels.append(scroll_level)
+
+func _scroll_parent_for_level(scroll_level: int) -> Node:
+	if scroll_level == SCROLL_LEVEL_HOOFGROVE_WILDS and hoofgrove_root != null:
+		return hoofgrove_root
+	return self
+
+func _scroll_spawn_position_for_level(scroll_level: int) -> Vector3:
+	match scroll_level:
+		SCROLL_LEVEL_HOOFGROVE_WILDS:
+			return _random_hoofgrove_scroll_position()
+		_:
+			return _random_scroll_position()
 
 func _random_scroll_position() -> Vector3:
 	var anchors := _scroll_spawn_anchors()
@@ -3047,6 +3119,32 @@ func _scroll_spawn_anchors() -> Array[Vector3]:
 		Vector3(0.0, 0.1, -22.0),
 		Vector3(-6.0, 0.1, 0.0),
 		Vector3(6.0, 0.1, 0.0)
+	]
+
+func _random_hoofgrove_scroll_position() -> Vector3:
+	var anchors := _hoofgrove_scroll_spawn_anchors()
+	var best_position := anchors[rng.randi_range(0, anchors.size() - 1)]
+	for attempt in range(18):
+		var local_anchor: Vector3 = anchors[rng.randi_range(0, anchors.size() - 1)]
+		var local_position := local_anchor + Vector3(rng.randf_range(-4.0, 4.0), 0.0, rng.randf_range(-4.0, 4.0))
+		local_position.x = clampf(local_position.x, -HOOFGROVE_HALF_SIZE + 5.0, HOOFGROVE_HALF_SIZE - 5.0)
+		local_position.z = clampf(local_position.z, -HOOFGROVE_HALF_SIZE + 5.0, HOOFGROVE_HALF_SIZE - 5.0)
+		var world_position := HOOFGROVE_ORIGIN + local_position
+		if player != null and world_position.distance_to(player.global_position) < 9.0:
+			continue
+		best_position = local_position
+		break
+	best_position.y = 0.12
+	return best_position
+
+func _hoofgrove_scroll_spawn_anchors() -> Array[Vector3]:
+	return [
+		Vector3(-34.0, 0.1, 16.0),
+		Vector3(34.0, 0.1, 12.0),
+		Vector3(-30.0, 0.1, -18.0),
+		Vector3(30.0, 0.1, -20.0),
+		Vector3(-13.0, 0.1, -35.0),
+		Vector3(13.0, 0.1, -35.0)
 	]
 
 func _enemy_spawn_points() -> Array[Vector3]:
@@ -3777,7 +3875,7 @@ func _enter_black_vault_from_velmora() -> void:
 		hud.set_minimap_visible(true)
 	_spawn_encounter()
 	_spawn_chests()
-	_spawn_scroll_for_game_level(game_level)
+	_spawn_scroll_for_game_level(SCROLL_LEVEL_BLACK_VAULT)
 	player.teleport_to(PLAYER_START_POSITION)
 	camera.global_position = player.global_position + _camera_follow_offset()
 	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
@@ -3832,6 +3930,7 @@ func _enter_hoofgrove_wilds() -> void:
 		player.teleport_to(HOOFGROVE_SPAWN_POSITION)
 	_spawn_hoofgrove_centaurs()
 	_spawn_hoofgrove_chests()
+	_spawn_scroll_for_game_level(SCROLL_LEVEL_HOOFGROVE_WILDS)
 	camera.global_position = player.global_position + _camera_follow_offset()
 	camera.look_at(player.global_position + Vector3(0.0, 0.7, 0.0), Vector3.UP)
 	_update_objective()
@@ -4250,13 +4349,10 @@ func _update_objective() -> void:
 func _update_possession() -> void:
 	if hud == null:
 		return
-	var directive_steps := 0
-	if exit_open:
-		directive_steps += 1
-	if exit_directive_completed:
-		directive_steps += 1
-	var max_possession_steps := STAGE_ENEMY_COUNT + 2
-	hud.set_possession_ratio(float(kills + directive_steps) / float(max_possession_steps))
+	if whisper_system != null:
+		hud.set_possession_ratio(whisper_system.get_corruption_ratio())
+		return
+	hud.set_possession_ratio(0.0)
 
 func _update_minimap() -> void:
 	if hud == null or player == null:
@@ -4284,11 +4380,25 @@ func _on_corruption_changed(corruption: float, ratio: float) -> void:
 	if hud == null:
 		return
 	_update_possession()
+	_award_possession_points(corruption)
 	hud.set_corruption_ui(corruption, _current_hp_percent())
 	if corruption >= 100.0 and not possession_fx_played:
 		possession_fx_played = true
 		if player != null:
 			player.flash_possession_red()
+
+func _award_possession_points(corruption: float) -> void:
+	if player == null:
+		return
+	var earned_points := 1 if corruption >= 100.0 else 0
+	if earned_points <= full_possession_points_awarded:
+		return
+	var gained := earned_points - full_possession_points_awarded
+	full_possession_points_awarded = earned_points
+	player.add_possession_points(gained)
+	if hud != null:
+		hud.flash_possession_point()
+	call_deferred("_say_whisper", "A piece of you opens. Spend it where I can reach.")
 
 func _current_hp_percent() -> float:
 	if player == null:
@@ -4308,6 +4418,14 @@ func _on_whisper_effect_requested(effect_id: String, data: Dictionary) -> void:
 		"borrowed_life":
 			player.heal_full()
 			player.reduce_max_life(maxi(4, int(round(float(player.max_life) * 0.06))))
+		"borrowed_hands":
+			player.apply_timed_damage_multiplier(1.45, 12.0)
+			player.apply_control_lapse(1.15)
+			player.reduce_max_life_percent(0.03)
+		"open_wound":
+			player.apply_lifesteal(0.9, 12.0)
+			player.take_damage(maxi(6, int(round(float(player.max_life) * 0.14))))
+			player.reduce_max_life_percent(0.04)
 		"relentless_reward":
 			player.apply_timed_damage_multiplier(1.28, 10.0)
 		"relentless_fail":
@@ -4325,6 +4443,11 @@ func _on_whisper_effect_requested(effect_id: String, data: Dictionary) -> void:
 			player.apply_timed_damage_multiplier(1.6, 8.0)
 		"obedience_fail":
 			pass
+		"martyr_mark_reward":
+			player.apply_timed_damage_multiplier(1.38, 9.0)
+			player.reduce_max_life_percent(0.025)
+		"martyr_mark_fail":
+			player.apply_timed_slow(0.82, 4.0)
 		"control_lapse":
 			player.apply_control_lapse(float(data.get("duration", 0.8)))
 		_:

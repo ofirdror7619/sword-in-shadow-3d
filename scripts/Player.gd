@@ -38,7 +38,12 @@ const SKILL_TREE_NODE_KEYS := [
 	"soul_1", "soul_2", "soul_3", "soul_major", "soul_lifesteal_1", "soul_shield_1", "soul_regen_1",
 	"cur_1", "cur_2", "cur_3", "cur_major", "cur_dot_1", "cur_buff_1", "cur_control_1",
 	"bridge_inf_cur", "bridge_mys_soul",
-	"whisper_1", "whisper_2", "whisper_3", "whisper_4"
+	"whisper_1", "whisper_2", "whisper_3", "whisper_4",
+	"possession_fury", "possession_reach", "possession_rhythm", "possession_feast"
+]
+const POSSESSION_SKILL_NODE_KEYS := [
+	"whisper_1", "whisper_2", "whisper_3", "whisper_4",
+	"possession_fury", "possession_reach", "possession_rhythm", "possession_feast"
 ]
 const SPELL_GROUP_CATEGORY_BY_ID := {
 	"fire_storm": "attack",
@@ -90,6 +95,7 @@ var level := 1
 var xp := 0
 var xp_to_next := 100
 var skill_points := 0
+var possession_points := 0
 var gold := 0
 var diamonds := 0
 var firestorm_cooldown := 0.0
@@ -186,6 +192,7 @@ func get_stats() -> Dictionary:
 		"xp": xp,
 		"xp_to_next": xp_to_next,
 		"skill_points": skill_points,
+		"possession_points": possession_points,
 		"gold": gold,
 		"diamonds": diamonds,
 		"learned_spells": learned_spells.duplicate(),
@@ -343,12 +350,26 @@ func unlock_skill_node(node_key: String) -> bool:
 		return false
 	if unlocked_skill_nodes.has(node_key):
 		return false
-	if skill_points <= 0:
-		return false
-	skill_points -= 1
+	if _is_possession_skill_node(node_key):
+		if possession_points <= 0:
+			return false
+		possession_points -= 1
+	else:
+		if skill_points <= 0:
+			return false
+		skill_points -= 1
 	unlocked_skill_nodes.append(node_key)
 	stats_changed.emit(get_stats())
 	return true
+
+func add_possession_points(amount: int) -> void:
+	if amount <= 0:
+		return
+	possession_points += amount
+	stats_changed.emit(get_stats())
+
+func _is_possession_skill_node(node_key: String) -> bool:
+	return node_key in POSSESSION_SKILL_NODE_KEYS
 
 func heal_full() -> void:
 	life = max_life
@@ -502,6 +523,8 @@ func get_skill_damage_multiplier() -> float:
 				bonus += 0.07
 			"whisper_3":
 				bonus += 0.10
+			"possession_fury":
+				bonus += 0.08
 	if unlocked_skill_nodes.has("damage"):
 		return 1.0 + bonus
 	return 1.0 + bonus
@@ -522,6 +545,8 @@ func get_skill_radius_bonus() -> float:
 				bonus += 0.45
 			"bridge_mys_soul":
 				bonus += 0.2
+			"possession_reach":
+				bonus += 0.3
 	if unlocked_skill_nodes.has("radius"):
 		return bonus
 	return bonus
@@ -546,6 +571,8 @@ func get_skill_cooldown_reduction() -> float:
 				reduction += 0.05
 			"whisper_2":
 				reduction += 0.15
+			"possession_rhythm":
+				reduction += 0.12
 	if unlocked_skill_nodes.has("cooldown"):
 		return reduction
 	return reduction
@@ -578,6 +605,8 @@ func get_skill_heal_on_kill_ratio() -> float:
 		ratio += 0.03
 	if unlocked_skill_nodes.has("whisper_4"):
 		ratio += 0.05
+	if unlocked_skill_nodes.has("possession_feast"):
+		ratio += 0.03
 	return ratio
 
 func get_skill_spell_theme_multiplier(spell_id: String) -> float:

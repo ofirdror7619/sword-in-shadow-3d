@@ -14,7 +14,7 @@ const DEFAULT_ZOOM := 0.36
 const WHEEL_ZOOM_STEP := 1.14
 const BASE_BRANCH_RADIUS := 600.0
 const CORE_RADIUS := 40.0
-const TOOLTIP_SIZE := Vector2(292.0, 188.0)
+const TOOLTIP_SIZE := Vector2(292.0, 218.0)
 const FIT_PADDING := Vector2(120.0, 96.0)
 
 const BRANCH_COLORS := {
@@ -32,6 +32,7 @@ const LEGACY_SKILL_NODE_ALIASES := {
 	"radius": "mys_aoe_1",
 	"cooldown": "mys_cd_1"
 }
+const POSSESSION_NODE_TYPE := "whisper"
 
 const RITUAL_NODES := [
 	{
@@ -417,7 +418,7 @@ const RITUAL_NODES := [
 		"gameplay_key": "whisper_1",
 		"min_corruption": 0.2,
 		"description": "Forbidden force leaks through Infernal scars.",
-		"stats": ["Beyond damage +10%", "Requires 20% corruption"]
+		"stats": ["Beyond damage +10%", "Costs 1 possession point", "Requires 20% possession"]
 	},
 	{
 		"id": "whisper_2",
@@ -430,7 +431,7 @@ const RITUAL_NODES := [
 		"gameplay_key": "whisper_2",
 		"min_corruption": 0.3,
 		"description": "The map between spells grows thin.",
-		"stats": ["Cooldown reduction -0.15s", "Requires 30% corruption"]
+		"stats": ["Cooldown reduction -0.15s", "Costs 1 possession point", "Requires 30% possession"]
 	},
 	{
 		"id": "whisper_3",
@@ -443,7 +444,7 @@ const RITUAL_NODES := [
 		"gameplay_key": "whisper_3",
 		"min_corruption": 0.45,
 		"description": "Power is given. Control is taken.",
-		"stats": ["Attack damage +10%", "Requires 45% corruption"]
+		"stats": ["Attack damage +10%", "Costs 1 possession point", "Requires 45% possession"]
 	},
 	{
 		"id": "whisper_4",
@@ -456,7 +457,55 @@ const RITUAL_NODES := [
 		"gameplay_key": "whisper_4",
 		"min_corruption": 0.6,
 		"description": "The bargain learns where your life is kept.",
-		"stats": ["Heal 5% max life on kill", "Requires 60% corruption"]
+		"stats": ["Heal 5% max life on kill", "Costs 1 possession point", "Requires 60% possession"]
+	},
+	{
+		"id": "possession_fury",
+		"label": "Possession: Fury",
+		"type": "whisper",
+		"branch": "whisper",
+		"position": Vector2(-845.0, -335.0),
+		"radius": 19.0,
+		"requires": [],
+		"gameplay_key": "possession_fury",
+		"description": "A free-standing pact. No path leads here; only possession opens it.",
+		"stats": ["Attack damage +8%", "Costs 1 possession point", "No prerequisites"]
+	},
+	{
+		"id": "possession_reach",
+		"label": "Possession: Reach",
+		"type": "whisper",
+		"branch": "whisper",
+		"position": Vector2(845.0, -335.0),
+		"radius": 19.0,
+		"requires": [],
+		"gameplay_key": "possession_reach",
+		"description": "A free-standing pact. The shadow stretches without asking the tree.",
+		"stats": ["Attack radius +0.3", "Costs 1 possession point", "No prerequisites"]
+	},
+	{
+		"id": "possession_rhythm",
+		"label": "Possession: Rhythm",
+		"type": "whisper",
+		"branch": "whisper",
+		"position": Vector2(845.0, 335.0),
+		"radius": 19.0,
+		"requires": [],
+		"gameplay_key": "possession_rhythm",
+		"description": "A free-standing pact. Spells return sooner when the Beyond keeps time.",
+		"stats": ["Cooldown reduction -0.12s", "Costs 1 possession point", "No prerequisites"]
+	},
+	{
+		"id": "possession_feast",
+		"label": "Possession: Feast",
+		"type": "whisper",
+		"branch": "whisper",
+		"position": Vector2(-845.0, 335.0),
+		"radius": 19.0,
+		"requires": [],
+		"gameplay_key": "possession_feast",
+		"description": "A free-standing pact. Every kill leaves a little more behind for you.",
+		"stats": ["Heal 3% max life on kill", "Costs 1 possession point", "No prerequisites"]
 	}
 ]
 
@@ -477,6 +526,7 @@ const RITUAL_CONNECTIONS := [
 
 var pulse := 0.0
 var _available_points := 0
+var _available_possession_points := 0
 var _unlocked_nodes := {
 	"core": true,
 	"damage": false,
@@ -552,8 +602,9 @@ func _zoom_from_wheel(button_index: int, factor: float, mouse_position: Vector2)
 		return true
 	return false
 
-func set_skill_data(points: int, unlocked_nodes: Array) -> void:
+func set_skill_data(points: int, possession_points: int, unlocked_nodes: Array) -> void:
 	_available_points = maxi(points, 0)
+	_available_possession_points = maxi(possession_points, 0)
 	_unlocked_nodes.clear()
 	for node in RITUAL_NODES:
 		var node_id := String(node.get("id", ""))
@@ -594,7 +645,8 @@ func _draw_background(tree_rect: Rect2) -> void:
 	draw_arc(center, 707.0 * _zoom, -PI * 0.75, TAU - PI * 0.75, 128, Color(0.86, 0.86, 0.82, 0.18 + _corruption_ratio * 0.18), 1.4, true)
 	_draw_left_string("Shadow Constellation", Vector2(tree_rect.position.x + 12.0, tree_rect.position.y + 28.0), 17, Color(0.96, 0.78, 0.56, 0.95))
 	_draw_left_string("Skill Points: %s" % _available_points, Vector2(tree_rect.position.x + 12.0, tree_rect.position.y + 50.0), 14, Color(0.9, 0.74, 0.58, 0.9))
-	_draw_left_string("Whisper: %d%% corruption" % int(round(_corruption_ratio * 100.0)), Vector2(tree_rect.position.x + 12.0, tree_rect.position.y + 70.0), 13, Color(0.74, 0.72, 0.68, 0.82))
+	_draw_left_string("Possession Points: %s" % _available_possession_points, Vector2(tree_rect.position.x + 12.0, tree_rect.position.y + 70.0), 14, Color(0.86, 0.86, 0.82, 0.9))
+	_draw_left_string("Whisper: %d%% possession" % int(round(_corruption_ratio * 100.0)), Vector2(tree_rect.position.x + 12.0, tree_rect.position.y + 90.0), 13, Color(0.74, 0.72, 0.68, 0.82))
 
 func _draw_tree(tree_rect: Rect2) -> void:
 	for pair in RITUAL_CONNECTIONS:
@@ -750,10 +802,13 @@ func _draw_hover_panel(tree_rect: Rect2, node: Dictionary, mouse_position: Vecto
 		hint_color = Color(0.95, 0.84, 0.66, 0.84)
 	elif not _is_unlockable_node(node):
 		if _is_corruption_locked(node):
-			hint = "Needs %d%% corruption" % int(round(float(node.get("min_corruption", 0.0)) * 100.0))
+			hint = "Needs %d%% possession" % int(round(float(node.get("min_corruption", 0.0)) * 100.0))
 		else:
 			hint = "Locked by prerequisites"
 		hint_color = Color(0.72, 0.58, 0.44, 0.82)
+	elif _needs_possession_point(node):
+		hint = "Need possession point"
+		hint_color = Color(0.78, 0.76, 0.72, 0.84)
 	elif _available_points <= 0:
 		hint = "Need skill points"
 		hint_color = Color(0.74, 0.6, 0.48, 0.82)
@@ -886,7 +941,7 @@ func _node_state(node: Dictionary) -> String:
 		if _is_preview_node(node) or _is_corruption_locked(node):
 			return "sealed"
 		return "locked"
-	if _available_points > 0:
+	if _node_has_currency(node):
 		return "available"
 	return "locked"
 
@@ -907,7 +962,18 @@ func _is_unlockable_node(node: Dictionary) -> bool:
 	return _prerequisites_met(node_id)
 
 func _can_unlock(node: Dictionary) -> bool:
-	return _is_unlockable_node(node) and _available_points > 0
+	return _is_unlockable_node(node) and _node_has_currency(node)
+
+func _node_has_currency(node: Dictionary) -> bool:
+	if _uses_possession_point(node):
+		return _available_possession_points > 0
+	return _available_points > 0
+
+func _needs_possession_point(node: Dictionary) -> bool:
+	return _uses_possession_point(node) and _available_possession_points <= 0
+
+func _uses_possession_point(node: Dictionary) -> bool:
+	return String(node.get("type", "")) == POSSESSION_NODE_TYPE
 
 func _is_corruption_locked(node: Dictionary) -> bool:
 	var required_corruption := float(node.get("min_corruption", 0.0))

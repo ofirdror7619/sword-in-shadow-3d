@@ -13,6 +13,9 @@ signal dialogue_finished
 signal teleport_device_requested
 signal teleport_destination_requested(destination_id: String)
 signal spell_slot_spell_selected(category: String, spell_id: String)
+signal whisper_silence_changed(silenced: bool)
+signal whisper_audio_mix_changed(chant_volume: float, echo_volume: float)
+signal whisper_voice_requested(text: String)
 
 const FIRESTORM_TEXTURE: Texture2D = preload("res://assets/images/spells/attack/firestorm.png")
 const LIFE_BAR_TEXTURE: Texture2D = preload("res://assets/images/hud/health-bar.png")
@@ -24,7 +27,7 @@ const EXP_BAR_TEXTURE: Texture2D = preload("res://assets/images/hud/exp-bar.png"
 const EXP_FILL_TEXTURE: Texture2D = preload("res://assets/images/hud/exp-actual-bar.png")
 const MINIMAP_TEXTURE: Texture2D = preload("res://assets/images/hud/minimap.png")
 const DEMON_MENU_TEXTURE: Texture2D = preload("res://assets/images/hud/demon.png")
-const LEVEL_UP_WHISPER_SOUND_PATH := "res://assets/audio/sounds/levelling-whisper.mp3"
+const LEVEL_UP_WHISPER_SOUND: AudioStream = preload("res://assets/audio/sounds/levelling-whisper.mp3")
 const CONFIG_MENU_TEXTURE: Texture2D = preload("res://assets/images/config/config.png")
 const RITUAL_MENU_TEXTURE: Texture2D = preload("res://assets/images/hud/ritual-button.png")
 const EQUIP_TEXTURE: Texture2D = preload("res://assets/images/hud/equip/equip.png")
@@ -445,6 +448,7 @@ var _passive_whisper_timer := 9.0
 var _chromatic_flash_timer := 0.0
 var _vein_flash_timer := 0.0
 var _full_possession_timer := 0.0
+var _possession_gain_timer := 0.0
 var _minimap_blink_timer := 0.0
 var _next_minimap_blink := 7.0
 var _skill_glitch_timer := 0.0
@@ -590,8 +594,11 @@ func set_possession_ratio(ratio: float) -> void:
 		_sync_character_panel()
 
 func set_corruption_ui(corruption: float, hp_percent: float = -1.0) -> void:
+	var previous_corruption := _corruption
 	_corruption = clampf(corruption, 0.0, 100.0)
 	_corruption_ratio = _corruption / 100.0
+	if _corruption > previous_corruption + 0.2:
+		_possession_gain_timer = maxf(_possession_gain_timer, 0.24)
 	if hp_percent >= 0.0:
 		_hp_percent = clampf(hp_percent, 0.0, 1.0)
 	_apply_corruption_stage()
@@ -610,6 +617,12 @@ func notify_kill_feedback(kill_streak: int) -> void:
 func flash_offer_acceptance() -> void:
 	_vein_flash_timer = maxf(_vein_flash_timer, 0.62)
 	_chromatic_flash_timer = maxf(_chromatic_flash_timer, 0.18)
+	_possession_gain_timer = maxf(_possession_gain_timer, 0.42)
+
+func flash_possession_point() -> void:
+	_vein_flash_timer = maxf(_vein_flash_timer, 0.9)
+	_chromatic_flash_timer = maxf(_chromatic_flash_timer, 0.36)
+	_possession_gain_timer = maxf(_possession_gain_timer, 0.74)
 
 func update_minimap(player_position: Vector3, enemy_positions: Array[Vector3], arena_half_size: float) -> void:
 	if _minimap_marker_layer == null or _minimap_player_dot == null:
@@ -646,6 +659,18 @@ func whisper(text: String) -> void:
 		return
 	_show_whisper(text)
 
+func are_whispers_enabled() -> bool:
+	return _whispers_enabled
+
+func is_whisper_silenced() -> bool:
+	return _config_silence_whisper
+
+func get_chant_volume() -> float:
+	return _config_chant_volume
+
+func get_echo_volume() -> float:
+	return _config_echo_volume
+
 func _show_whisper(text: String) -> void:
 	if _whisper_tween != null:
 		_whisper_tween.kill()
@@ -660,6 +685,10 @@ func _clear_whisper_text() -> void:
 	if _whisper_label != null:
 		_whisper_label.text = ""
 	_whisper_tween = null
+
+func _show_voiced_whisper(text: String) -> void:
+	_show_whisper(text)
+	whisper_voice_requested.emit(text)
 
 func show_death() -> void:
 	_death_panel.visible = true
@@ -1407,7 +1436,7 @@ void fragment() {
 	add_child(_heartbeat_player)
 
 	_level_up_player = AudioStreamPlayer.new()
-	_level_up_player.stream = AudioStreamMP3.load_from_file(ProjectSettings.globalize_path(LEVEL_UP_WHISPER_SOUND_PATH))
+	_level_up_player.stream = LEVEL_UP_WHISPER_SOUND
 	_level_up_player.volume_db = -4.0
 	add_child(_level_up_player)
 
@@ -2939,6 +2968,7 @@ func _add_config_slider(parent: VBoxContainer, label_text: String, value: float,
 func _on_config_silence_toggled(enabled: bool) -> void:
 	_config_silence_whisper = enabled
 	set_whispers_enabled(not enabled)
+	whisper_silence_changed.emit(enabled)
 
 func _on_config_slider_value_changed(value: float, key: String, value_label: Label) -> void:
 	match key:
@@ -2948,6 +2978,8 @@ func _on_config_slider_value_changed(value: float, key: String, value_label: Lab
 			_config_echo_volume = value
 	if value_label != null:
 		value_label.text = "%d%%" % int(round(value))
+	if key == "chant" or key == "echo":
+		whisper_audio_mix_changed.emit(_config_chant_volume, _config_echo_volume)
 
 func _on_config_menu_button_mouse_entered() -> void:
 	_config_menu_hovered = true
@@ -3083,8 +3115,9 @@ func _sync_skill_tree_view() -> void:
 	if _skill_tree_view == null:
 		return
 	var points: int = int(_latest_stats.get("skill_points", 0))
+	var possession_points: int = int(_latest_stats.get("possession_points", 0))
 	var unlocked_nodes: Array = _latest_stats.get("unlocked_skill_nodes", [])
-	_skill_tree_view.set_skill_data(points, unlocked_nodes)
+	_skill_tree_view.set_skill_data(points, possession_points, unlocked_nodes)
 	_skill_tree_view.set_corruption_ratio(_corruption_ratio)
 
 func _make_spells_view() -> Control:
@@ -4128,20 +4161,24 @@ func _character_stats_text() -> String:
 	var level: int = int(_latest_stats.get("level", 1))
 	var xp: int = int(_latest_stats.get("xp", 0))
 	var xp_to_next: int = int(_latest_stats.get("xp_to_next", 100))
+	var skill_points: int = int(_latest_stats.get("skill_points", 0))
+	var possession_points: int = int(_latest_stats.get("possession_points", 0))
 	var gold: int = int(_latest_stats.get("gold", 0))
 	var shield: int = int(_latest_stats.get("shield", 0))
 	var active_attack_spell: String = String(_latest_stats.get("active_attack_spell", "Firestorm"))
 	var active_attack_damage_min: int = int(_latest_stats.get("active_attack_damage_min", 0))
 	var active_attack_damage_max: int = int(_latest_stats.get("active_attack_damage_max", active_attack_damage_min))
 	var active_attack_cooldown: float = float(_latest_stats.get("active_attack_cooldown_duration", 4.5))
-	return "Life: %s / %s\nPossession: %s%%\nShield: %s\nLevel: %s\nXP: %s / %s\nGold: %s\n\nActive Attack Spell: %s\ndamage: %s - %s\ncooldown: %.1fs" % [
+	return "Life: %s / %s\nPossession: %s%%\nPossession Points: %s\nShield: %s\nLevel: %s\nXP: %s / %s\nSkill Points: %s\nGold: %s\n\nActive Attack Spell: %s\ndamage: %s - %s\ncooldown: %.1fs" % [
 		life,
 		max_life,
 		int(round(_possession_ratio * 100.0)),
+		possession_points,
 		shield,
 		level,
 		xp,
 		xp_to_next,
+		skill_points,
 		gold,
 		active_attack_spell,
 		active_attack_damage_min,
@@ -4290,7 +4327,7 @@ func _show_stage_whisper() -> void:
 	if _corruption_stage <= 0 and not _whispers_enabled:
 		return
 	var index: int = clampi(_corruption_stage, 0, CORRUPTION_STAGE_LINES.size() - 1)
-	_show_whisper(CORRUPTION_STAGE_LINES[index])
+	_show_voiced_whisper(CORRUPTION_STAGE_LINES[index])
 
 func _update_static_corruption_layers() -> void:
 	if _possession_fill_texture == null:
@@ -4311,6 +4348,7 @@ func _update_corruption_fx(delta: float) -> void:
 	_chromatic_flash_timer = maxf(_chromatic_flash_timer - delta, 0.0)
 	_vein_flash_timer = maxf(_vein_flash_timer - delta, 0.0)
 	_full_possession_timer = maxf(_full_possession_timer - delta, 0.0)
+	_possession_gain_timer = maxf(_possession_gain_timer - delta, 0.0)
 	_minimap_blink_timer = maxf(_minimap_blink_timer - delta, 0.0)
 	_skill_glitch_timer = maxf(_skill_glitch_timer - delta, 0.0)
 	_update_bar_pulses()
@@ -4333,8 +4371,7 @@ func _update_bar_pulses() -> void:
 		_life_fill_texture.modulate.a = 1.0
 		_possession_fill_texture.modulate.a = 1.0
 	if _possession_cluster != null:
-		var scale_wave := 1.0 + sin(_ui_time * 2.0) * (0.002 + _corruption_ratio * 0.006)
-		_possession_cluster.scale = Vector2.ONE * scale_wave
+		_possession_cluster.scale = Vector2.ONE
 
 func _update_overlay_materials() -> void:
 	if _screen_noise_overlay != null:
@@ -4420,7 +4457,7 @@ func _update_passive_whispers(delta: float) -> void:
 	if _passive_whisper_timer > 0.0:
 		return
 	var index: int = clampi(_corruption_stage, 0, CORRUPTION_STAGE_LINES.size() - 1)
-	_show_whisper(CORRUPTION_STAGE_LINES[index])
+	_show_voiced_whisper(CORRUPTION_STAGE_LINES[index])
 	_passive_whisper_timer = _rng.randf_range(8.0, 15.0) - _corruption_ratio * 4.0
 
 func _label(text: String, size: int) -> Label:
@@ -4926,7 +4963,7 @@ func _refresh_bar_tooltips() -> void:
 	if _life_hover_region != null:
 		_life_hover_region.tooltip_text = "Life: %s%%" % int(round(_hp_percent * 100.0))
 	if _possession_hover_region != null:
-		_possession_hover_region.tooltip_text = "Possesion: %s%%" % int(round(_possession_ratio * 100.0))
+		_possession_hover_region.tooltip_text = "Possession: %s%%" % int(round(_possession_ratio * 100.0))
 
 func _make_hover_region() -> Button:
 	var hover_region := Button.new()

@@ -14,6 +14,10 @@ const MAX_CORRUPTION := 100.0
 const FAST_KILL_WINDOW := 4.8
 const OFFER_COOLDOWN := 18.0
 const DIRECTIVE_COOLDOWN := 16.0
+const FIRST_KILL_CORRUPTION := 6.0
+const KILL_CORRUPTION := 2.2
+const FAST_KILL_CORRUPTION := 1.8
+const DESPERATE_KILL_CORRUPTION := 1.2
 
 var corruption := 0.0
 var kill_streak := 0
@@ -51,6 +55,7 @@ func record_kill(total_kills: int, player: Node) -> void:
 	else:
 		kill_streak = 1
 	kill_streak_timer = FAST_KILL_WINDOW
+	_add_corruption(_kill_corruption_gain(total_kills, player))
 	if kill_streak >= 3:
 		_add_corruption(3.0)
 		effect_requested.emit("hunger_kill", {})
@@ -67,6 +72,9 @@ func record_player_damage(_amount: int, _player: Node) -> void:
 		return
 	if active_directive.get("id", "") == "no_mercy":
 		_fail_directive("Disappointing.")
+	elif active_directive.get("id", "") == "martyr_mark":
+		active_directive["progress"] = 1
+		_complete_directive()
 
 func accept_offer() -> void:
 	if active_offer.is_empty():
@@ -91,6 +99,14 @@ func reject_offer() -> void:
 
 func get_corruption_ratio() -> float:
 	return clampf(corruption / MAX_CORRUPTION, 0.0, 1.0)
+
+func _kill_corruption_gain(total_kills: int, player: Node) -> float:
+	var gain := FIRST_KILL_CORRUPTION if total_kills == 1 else KILL_CORRUPTION
+	if kill_streak >= 2:
+		gain += FAST_KILL_CORRUPTION
+	if _is_player_desperate(player):
+		gain += DESPERATE_KILL_CORRUPTION
+	return gain
 
 func _should_offer(total_kills: int, player: Node) -> bool:
 	if total_kills <= 1:
@@ -161,6 +177,24 @@ func _offers() -> Array[Dictionary]:
 			"cost_hint": "...some debts are paid in flesh.",
 			"accepted_effect": "borrowed_life",
 			"corruption": 18.0
+		},
+		{
+			"id": "borrowed_hands",
+			"title": "Borrowed Hands",
+			"description": "Let me do the killing cleanly...",
+			"reward": "Your strikes become violent for a short time.",
+			"cost_hint": "...your hands may answer before you do.",
+			"accepted_effect": "borrowed_hands",
+			"corruption": 20.0
+		},
+		{
+			"id": "open_wound",
+			"title": "Open Wound",
+			"description": "Pain is a door. Hold it open.",
+			"reward": "Gain fierce lifesteal for a short time.",
+			"cost_hint": "...your body will have less room for you.",
+			"accepted_effect": "open_wound",
+			"corruption": 18.0
 		}
 	]
 
@@ -213,6 +247,15 @@ func _directives() -> Array[Dictionary]:
 			"progress": 0.0,
 			"reward_effect": "obedience_reward",
 			"failure_effect": "obedience_fail"
+		},
+		{
+			"id": "martyr_mark",
+			"text": "Bleed for me.",
+			"duration": 10.0,
+			"target": 1,
+			"progress": 0,
+			"reward_effect": "martyr_mark_reward",
+			"failure_effect": "martyr_mark_fail"
 		}
 	]
 
